@@ -1,0 +1,127 @@
+---
+description: Mandatory workflow for Teamyar Lua bots — catalog + src examples
+alwaysApply: true
+---
+
+# Teamyar Bots — Always Learn Before Writing
+
+When the user asks to create, edit, or fix a **Teamyar Lua bot** (`src/*_bot.lua`):
+
+## Step 1 — Read catalog
+
+Open and follow `docs/context/TeamyarBotsCatalog.md`.
+If user references a **Teamyar bot by id/URL** (e.g. `id=933`), read `docs/context/TeamyarBotsLiveRegistry.json` and sync if missing:
+
+```powershell
+.\scripts\sync_teamyar_bot_registry.ps1 -BotId {id} -CatId {cat_id}
+```
+
+Then read the bot's `local_src` as the primary pattern (**«شبیه بات فلان»**).
+
+## Step 2 — Read closest example in src/
+
+Pick one file by task type, then **read it fully** before writing code:
+
+| Task | Read first |
+|------|------------|
+| Simple JSON list | `src/bot_commands_json_bot.lua` |
+| Bot usage analytics | `src/bot_analytics_json_bot.lua` |
+| PM replaced products | `src/service_replaced_products_json_bot.lua` |
+| Schema / metadata | `src/db_schema_json_bot.lua` |
+| Tasks + steps aggregate | `src/open_tasks_steps_json_bot.lua` |
+| Single task detail | `src/task_steps_json_bot.lua` |
+| HTML timing report | `src/timing_report_bot.lua` |
+| HTML pivot | `src/tat_pivot_report_bot.lua` or `tat_pivot_report_3day_bot.lua` |
+
+Copy structure, naming, error handling, and helpers from that file.
+
+## Step 3 — Schema
+
+- Bot tables: `docs/context/BotSchema.md`
+- Other tables: `db_schema_json_bot.lua` at runtime
+- Never load `docs/context/DatabaseSchema.md` (~3 MB)
+
+## Code rules
+
+- **هدر اجباری:** اولین خط هر فایل `src/*_bot.lua` باید دقیقاً این کامنت باشد (قبل از هر کد یا کامنت دیگر):
+  ```lua
+  -- تحلیل و ایجاد توسط مهدی جهانی 09125632329
+  ```
+- **تاریخ ویرایش (اجباری در هر تغییر):** بلافاصله بعد از هدر بالا، تاریخ و ساعت **شمسی** اعمال ویرایش را بگذارید (منطقه زمانی ایران). هر بار که فایل را ویرایش می‌کنید این خط را به‌روز کنید:
+  ```lua
+  -- Last Edit = 1405/04/25 14:41
+  ```
+  فرمت ثابت: `YYYY/MM/DD HH:MM` شمسی. اگر چند ویرایش در یک نشست باشد، فقط همان خط را با زمان آخرین اعمال عوض کنید (لاگ نسخه جدا لازم نیست مگر کاربر بخواهد).
+- Parameterized SQL only; always `db.query_free()`
+- JSON: `{ ok, error? }` with Persian messages
+- Reuse `fmt_jalali_datetime`, `format_duration`, `fetch_rows` — do not rewrite
+- New files: `{domain}_{purpose}_{json|report}_bot.lua`
+- After creating a bot, add one row to `TeamyarBotsCatalog.md`
+
+## Step 4 — Deploy to Teamyar (mandatory on «بساز بات»)
+
+When the user asks to **create/build a bot** (`بساز بات`, `بات بساز`, etc.) and the Lua code is **final**:
+
+1. Choose **Persian `name`** from the topic (e.g. `گزارش ریز هزینه شعبات گارانتی`).
+2. Choose **`run_path`** from the filename — lowercase, underscores, **no spaces** (e.g. `warranty_branch_expense_detail_report`).
+3. Run `scripts/deploy_teamyar_bot.ps1` with `-BotId 0` — uploads full body including `command`.
+4. **Success** = HTTP **200** + body = یک **integer** (همان bot ID).
+5. **Failure** = هر چیز دیگر (کد غیر 200، body غیر عدد) → خطا؛ بات ساخته نشده گزارش ندهید.
+6. Session: `$env:TEAMYAR_SID` (Cookie `SID=...`).
+7. **Defaults (اجباری مگر کاربر خلافش بگوید):**
+   - **`cat_id=69`** — همیشه هنگام create/update (مگر URL/دستور صریح کاربر `cat_id` دیگری بدهد)
+   - **`نوع خروجی` = HTML** — یعنی `result_type=0` / `-ResultFormat html` (هرگز JSON به‌عنوان نوع خروجی پلتفرم نگذارید مگر کاربر صریحاً بخواهد)
+
+**Response contract:** `200` + integer ID = OK | otherwise = ERR
+
+### Update existing bot (fix / redeploy)
+
+When updating a bot that was already created:
+
+1. Query param **`id`** = bot ID from create response (e.g. `941`)
+2. Query/body **`cat_id`** = همان دسته بات (پیش‌فرض **69**)
+3. **Body** = same fields as create (name, run_path, form, `result_type=0` / HTML, ...)
+4. **Only `command` changes** — new Lua from `src/*.lua`
+5. Run `scripts/deploy_teamyar_bot.ps1` with `-BotId {saved_id}` (و در صورت نیاز `-CatId 69`)
+6. **Success** = HTTP **200** + body = integer (همان bot ID). **Failure** = otherwise → خطا
+
+```powershell
+$env:TEAMYAR_SID = 'YOUR_SID'
+# Create — cat_id=69 و نوع خروجی HTML به‌صورت پیش‌فرض
+.\scripts\deploy_teamyar_bot.ps1 `
+  -ScriptPath 'src\example_report_bot.lua' `
+  -Name 'عنوان فارسی بات' `
+  -RunPath 'example_report' `
+  -BotId 0 `
+  -CatId 69 `
+  -ResultFormat html
+
+# Update — same name/run_path, only command (lua) changes
+.\scripts\deploy_teamyar_bot.ps1 `
+  -ScriptPath 'src\example_report_bot.lua' `
+  -Name 'عنوان فارسی بات' `
+  -RunPath 'example_report' `
+  -BotId 941 `
+  -CatId 69 `
+  -ResultFormat html
+```
+
+See `docs/context/TeamyarBotsCatalog.md` → **Create / Update Bot (curl)** and **Run Bot (curl)** for API details.
+
+**Run contract:** HTTP **200** + body = bot output (matches `result_type` from create). Otherwise = error.
+
+## Sales query (`service_replaced_products_*_bot.lua`) — DO NOT BREAK
+
+When editing warranty/COGS/costs in the replaced-products bots:
+
+- **Never** change `fetch_sales_by_product_code` / `sales_invoice_filter_sql` without testing `product_code=32030020282` (expect `sales_quantity_total` ≈ 108646).
+- Sales filter: `DELETED/CANCELED/REJECT=0` + `TYPE NOT IN (1, 5)` — **never** `PRE_INVOICE`, **never** `TYPE=4` only.
+- Join `wh_product` via `COALESCE(NULLIF(sip.PRODUCT_ID,0), NULLIF(sip.product_id_info,0))`.
+- Sales loads in **`load_product_sales_stats`** (separate `pcall` in main) — **never** inside warranty query; warranty timeout must not skip sales.
+
+## Warranty stats (`service_replaced_products_*_bot.lua`) — DO NOT BREAK
+
+- **Never** use one mega-query with `product_family_sql` repeated 3× — it timeouts and warranty shows zero.
+- Flow: `build_product_family_maps` → `fetch_warranty_counts_by_product_ids` + `fetch_receipt_counts_by_product_ids` → aggregate per code.
+- Warranty loads in **`load_product_warranty_stats`** (separate `pcall`) — must not block sales.
+- Test with `product_code=32030020282` before changing warranty logic.

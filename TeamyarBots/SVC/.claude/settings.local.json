@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(split -b 6000 -d fixed_bot.txt chunk_)",
+      "Bash(rm -f chunk_*)",
+      "Bash(base64 -w0 fixed_bot.txt)",
+      "Bash(split -b 6000 -d fixed_bot_b64.txt chunk_)"
+    ]
+  }
+}

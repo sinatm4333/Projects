@@ -1,0 +1,50 @@
+
+with cte_group_product as( with recursive cte (PRODUCT_ID,ATTRIBUTE_ID,id, name, MODULE_PARENT_ID,dd) as
+( select PRODUCT_ID,ATTRIBUTE_ID, id, name, MODULE_PARENT_ID , 
+Coalesce((select name from wh_setting_product_info where id=MODULE_PARENT_ID ),'--') dd
+from wh_setting_product_info union all select p.PRODUCT_ID,p.ATTRIBUTE_ID,p.id, p.name, p.MODULE_PARENT_ID,
+concat((select name from wh_setting_product_info where id=p.MODULE_PARENT_ID),'/',cte.dd) dd from wh_setting_product_info p
+inner join cte on p.MODULE_PARENT_ID = cte.id where p.TYPE = 1 and p.MODULE_ID = 23 ) select PRODUCT_ID,max(dd)GroupProd from cte group by PRODUCT_ID ) 
+, cte_address as(
+select distinct
+(CASE WHEN Trim(Coalesce(rc.NAME_P,'')) IS NULL THEN 'بدون کشور' WHEN Trim(Coalesce(rc.NAME_P,''))='' THEN 'بدون کشور' ELSE Trim(Coalesce(rc.NAME_P,'')) END)NEWCOUNTRY,
+(CASE WHEN Trim(Coalesce(pua.CITY,'')) IS NULL THEN 'بدون شهر' WHEN  Trim(Coalesce(pua.CITY,''))='' THEN 'بدون شهر' ELSE Trim(Coalesce(pua.CITY,'')) END )NEWCITY,
+(CASE WHEN Trim(Coalesce(pua.STATE,'')) IS NULL THEN 'بدون استان' WHEN  Trim(Coalesce(pua.STATE,''))='' THEN 'بدون استان' ELSE Trim(Coalesce(pua.STATE,'')) END) NEWSTATE,
+pua.USER_ID as profileID,pua.COUNTRY_CODE,rc.NAME_P,rc.ID as countryId,pua.STATE,pua.CITY,cl.id client_id
+from profile_user_info pui
+join profile_user_address pua   on (pui.ID = pua.USER_ID) and (pua.TYPE = 3 or pua.TYPE = 2 or pua.TYPE = 1)
+join report_country rc  on pua.COUNTRY_CODE = rc.ID
+ inner join pa_client cl on cl.REFFERE_ID = pua.USER_ID  where pua.CITY is not null and pua.STATE is not null and pua.CITY <> '' and pua.STATE<>'' 
+), data as(
+
+select  i.id,i.INVOICE_ID invoice_number,i.run_date,(select name from pa_floating where id=i.FLOATING_ID and org_id =i.org_id) FloatName,(select name from pa_center where id=i.SALES_CENTER)  CenterName
+,( select name from pa_client where id=i.SALES_AGENT) AgentName,   (Case Coalesce(i.TYPE,0) WHEN 1 THEN 'فاکتور فروش' WHEN 2 THEN 'پیش فاکتور فروش' WHEN 3 THEN 'برگشت از فروش' WHEN 5 THEN 'سفارش فروش' WHEN 6 THEN 'مجوز فروش' WHEN 7 THEN 'قرارداد فروش' ELSE 'نامشخص' END )  InvoiceType,
+i.account_id code,(select name from pa_client where id=i.CLIENT_ID) client_name,
+(select code from pa_client where id=i.CLIENT_ID) client_code,(select FULL_CODE from wh_product  where id=ip.PRODUCT_ID)full_code,
+(select PRODUCT_NAME from WH_VIEW_GET_PRODUCT_NAMES  where PRODUCT_ID=ip.PRODUCT_ID and ATTRIBUTE_ID=ip.ATTRIBUTE_ID )product_name ,(select name from wh_stock where id=ip.stock_id)stock_name,(select GroupProd from cte_group_product where PRODUCT_ID=ip.product_id) GroupProduct,(select name from wh_stock_capacity  where id= ip.UNIT_ID_SEC ) unit_name
+ ,(case coalesce(i.TYPE,0)  when 3 then -1*(ip.QUANTITY) else (ip.QUANTITY) end ) QUANTITY
+ ,(case coalesce(i.TYPE,0) when 3 then -1*(ip.QUANTITY_SEC) else (ip.QUANTITY_SEC) end ) QUANTITY_SEC
+
+,(case coalesce(i.TYPE,0)  when 3 then -1*(ip.fee/1000) else (ip.fee/1000) end ) fee
+,case coalesce(i.TYPE,0) when 3 then coalesce((-1*(coalesce(round((ip.fee/1000),2),0)*coalesce((ip.QUANTITY),0))),0) else coalesce(((coalesce(round((ip.fee/1000),2),0)*coalesce((ip.QUANTITY),0))),0) end amountt
+,(case coalesce(i.TYPE,0) when 3 then -1*coalesce((ip.DISCOUNT),0) else coalesce((ip.DISCOUNT),0) end)DISCOUNT
+,(case coalesce(i.TYPE,0) when 3 then -1*coalesce((ip.VALUE_ADDED),0) else coalesce((ip.VALUE_ADDED),0) end) ValueAdd
+,(case coalesce(i.TYPE,0) when 3 then -1*coalesce((ip.tax/1000),0) else coalesce((ip.tax/1000),0) end )tax
+,(case coalesce(i.TYPE,0) when 3 then -1*coalesce((ip.toll/1000),0)else coalesce((ip.toll/1000),0) end)toll
+
+,(case coalesce(i.TYPE,0) when 3 then coalesce((-1*(coalesce(round((ip.fee/1000),2),0)*coalesce((ip.QUANTITY),0))),0) else 0 end) returned
+
+,coalesce((case coalesce(i.TYPE,0)  when 3 then coalesce((-1 *(coalesce((ip.fee/1000*ip.QUANTITY),0)-coalesce((ip.DISCOUNT),0)+coalesce((ip.VALUE_ADDED),0)+coalesce((ip.tax/1000),0)+coalesce((ip.toll/1000),0))),0)
+ else coalesce((coalesce((ip.fee/1000*ip.QUANTITY),0)-coalesce((ip.DISCOUNT),0)+coalesce((ip.VALUE_ADDED),0)+coalesce((ip.tax/1000),0)+coalesce((ip.toll/1000),0)),0) end),0) AMOUNT
+
+,addr.NEWCOUNTRY,addr.NEWCITY,addr.NEWSTATE,'' Month,'','' Year ,i.CLIENT_ID clientID,i.note note,i.org_id,i.SALES_CENTER,ip.stock_id stockID,ip.PRODUCT_ID productID,i.SALES_AGENT,i.type InvType,
+i.status InvStatus,addr.countryId,(select group_concat(cc.REFERE_ID) from  crm_cross cc where  cc.client_id=i.client_id ) radeID,i.client_id clientIDD from  sales_invoice i inner join sales_invoice_product ip on ip.INVOICE_ID=i.id  left join cte_address addr on addr.client_id=i.client_id
+
+ {{where_condition}}
+ order by i.run_date desc
+ 
+
+)
+ 
+  select  {{select}} from data
+{{slicePageNumber}}

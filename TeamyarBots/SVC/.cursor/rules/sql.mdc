@@ -1,0 +1,29 @@
+---
+description: SQL Server development standards, T-SQL optimization and query writing rules
+globs:
+  - "**/*.sql"
+  - "**/*.cs"
+alwaysApply: true
+---
+
+# SQL Server Development Rules
+
+## General SQL Principles
+
+- Write production-ready SQL.
+- Optimize for performance and scalability.
+- Always consider execution plans.
+- Avoid unnecessary database load.
+- Never write queries without considering indexes.
+
+---
+
+# Query Writing Rules
+
+## Never Use SELECT *
+
+Bad:
+
+```sql
+SELECT *
+FROM Customers

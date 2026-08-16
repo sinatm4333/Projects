@@ -1,0 +1,38 @@
+---
+description: Project Architecture
+alwaysApply: true
+---
+
+Layers
+
+Presentation
+
+↓
+
+Application
+
+↓
+
+Domain
+
+↓
+
+Infrastructure
+
+↓
+
+Database
+
+Repositories must never contain business logic.
+
+Business logic belongs to Application.
+
+DTO ← Mapper ← Entity
+
+No circular dependency.
+
+Use MediatR pattern.
+
+Use CQRS where applicable.
+
+Prefer Specification Pattern for complex filtering.

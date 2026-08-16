@@ -1,0 +1,15 @@
+
+Always read and consider this file before:
+
+- Creating new queries
+- Optimizing LINQ expressions
+- Creating indexes
+- Modifying database access code
+- Designing reports
+- Reviewing performance issues
+
+---
+
+# Source of Truth
+
+The file:

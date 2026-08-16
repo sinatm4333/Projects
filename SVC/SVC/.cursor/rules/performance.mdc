@@ -1,0 +1,29 @@
+---
+description: Application performance optimization rules for Blazor, .NET, EF Core and SQL Server
+globs:
+  - "**/*.cs"
+  - "**/*.razor"
+  - "**/*.sql"
+alwaysApply: true
+---
+
+# Performance Development Rules
+
+## General Performance Principles
+
+- Performance must be considered during design, not after implementation.
+- Avoid unnecessary database calls.
+- Avoid unnecessary UI rendering.
+- Prefer async operations.
+- Optimize for scalability.
+
+---
+
+# Async Programming Rules
+
+Always use asynchronous APIs.
+
+Correct:
+
+```csharp
+var data = await service.GetDataAsync();

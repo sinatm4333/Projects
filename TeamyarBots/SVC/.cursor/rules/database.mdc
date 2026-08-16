@@ -1,0 +1,35 @@
+---
+description: Database architecture and EF Core development rules
+globs:
+  - "**/*.cs"
+  - "**/*.sql"
+  - "**/*.json"
+alwaysApply: true
+---
+
+# Database Development Rules
+
+## General Database Principles
+
+- Database design must follow clean architecture principles.
+- Use SQL Server as the primary database engine.
+- Never create database logic inside UI components.
+- All database access must go through Repository / Service layers.
+- Avoid direct DbContext usage inside Razor components.
+- Keep database operations asynchronous.
+
+---
+
+# Entity Framework Core Rules
+
+## DbContext
+
+- DbContext must be injected using Dependency Injection.
+- Never create DbContext manually with `new`.
+- Use scoped lifetime for DbContext.
+
+Example:
+
+```csharp
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(connectionString));

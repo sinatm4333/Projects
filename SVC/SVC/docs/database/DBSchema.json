@@ -1,0 +1,49 @@
+
+Always read and consider this schema before generating or modifying:
+
+- Entity classes
+- EF Core configurations
+- DbContext
+- LINQ queries
+- SQL queries
+- Stored procedures
+- Repositories
+- Services
+- API endpoints
+- Database migrations
+
+---
+
+# Schema Rules
+
+## Table Usage
+
+Never create code against unknown tables.
+
+Before using a table:
+
+Check in DBSchema.json:
+
+- Table name
+- Columns
+- Data types
+- Primary keys
+- Foreign keys
+- Indexes
+- Constraints
+
+---
+
+# Entity Generation Rules
+
+When generating entities:
+
+- Match table names exactly.
+- Match column names exactly.
+- Match data types correctly.
+- Preserve nullable definitions.
+- Create navigation properties based on relationships.
+
+Example:
+
+Database:

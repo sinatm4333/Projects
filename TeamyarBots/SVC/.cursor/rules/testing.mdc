@@ -1,0 +1,36 @@
+---
+description: Testing standards for .NET, Blazor, EF Core and Enterprise applications
+globs:
+  - "**/*.cs"
+  - "**/*.razor"
+  - "**/*.tests.cs"
+alwaysApply: true
+---
+
+# Testing Development Rules
+
+## General Testing Principles
+
+- Every important business rule must have automated tests.
+- Write tests before or together with production code.
+- Tests must be readable and maintainable.
+- Avoid testing implementation details.
+- Test business behavior and expected results.
+
+---
+
+# Testing Strategy
+
+The application should include:
+
+1. Unit Tests
+2. Integration Tests
+3. Database Tests
+4. API Tests
+5. UI Component Tests
+
+---
+
+# Test Project Structure
+
+Recommended:

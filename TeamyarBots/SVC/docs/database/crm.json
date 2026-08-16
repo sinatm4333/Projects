@@ -1,0 +1,36 @@
+
+Always read and consider this schema before:
+
+- Creating entities
+- Writing queries
+- Creating repositories
+- Creating services
+- Creating API endpoints
+- Modifying database models
+
+---
+
+# Entity Generation Rules
+
+When creating C# entities:
+
+- Follow the table structure from crm.json.
+- Preserve column names and data types.
+- Create proper navigation properties.
+- Add validation based on database constraints.
+
+---
+
+# Database Mapping Rules
+
+Use:
+
+- Entity Framework Core Fluent API
+- Explicit table mapping
+- Explicit relationships
+
+Example:
+
+```csharp
+modelBuilder.Entity<Customer>()
+    .ToTable("Customers");

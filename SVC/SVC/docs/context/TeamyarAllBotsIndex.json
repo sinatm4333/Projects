@@ -1,0 +1,5695 @@
+{
+ "generated_from": "bot 933 getallbots",
+ "total": 711,
+ "synced_at": "2026-07-25",
+ "bots": [
+  {
+   "id": 1,
+   "name": "BotJahani",
+   "run_count": 7,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 2,
+   "name": "test api",
+   "run_count": 6,
+   "disabled": false,
+   "description": "teamyar.call_url\r\n\r\nتوضیح:\r\n     \r\n\r\nورودی:\r\n\r\n(context,[[{\"secure\":false,\"ssl\":false,\"port\":80,\"domain\":\"\",\"url\":\"\",\"method\":\"GET\",\"data\":[],\"data_str\":\"\",\"header\":[]}]]);\r\n\r\nخروجی:\r\n\r\n{\"type\":\"ok\",\"result\":{\"status\": ,\"header\":\"\",\"body\":\"\"}}\r\n\r\n{\"type\":\"failed\",\"message\":\"\"}\r\n\r\nنمونه:\r\n\r\nteamyar.call_url(context,[[{\"domain\":\"www.teamyar.com\",\"port\":443,\"url\":\"/fa/\",\"ssl\":true,\"secure\":false\"header\":[{\"name\":\"Content-Type\",\"value\":\"application/json\"},{\"name\":\"Authorization\",\"value\":\"Bearer\"}],\r\n\r\n\"data\":[{\"name\":\"symbol\",\"value\":\"EAUUSD\"},{\"name\":\"flag\",\"value\":1}]}]]);",
+   "project_bot": false
+  },
+  {
+   "id": 3,
+   "name": "فرم ثبت درخواست قیمت استقرار",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 4,
+   "name": "باشگاه مشتریان",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 5,
+   "name": "تست باشگاه مشتریان",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 6,
+   "name": "تست Input",
+   "run_count": 11,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 7,
+   "name": "تست 1 کوئری",
+   "run_count": 19,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 8,
+   "name": "BotJahani2",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 9,
+   "name": "تستmj",
+   "run_count": 12,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 11,
+   "name": "PmServiceRequest",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 12,
+   "name": "filetime",
+   "run_count": 4,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 13,
+   "name": "TAT",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 14,
+   "name": "database",
+   "run_count": 12,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 15,
+   "name": "FinalTAT",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 16,
+   "name": "موجود در اجرا - غیر آماده تحویل",
+   "run_count": 18,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 17,
+   "name": "TATReportAPI",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 18,
+   "name": "TAT",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 19,
+   "name": "CountAPI",
+   "run_count": 11,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 20,
+   "name": "Voip",
+   "run_count": 55,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 21,
+   "name": "VoipFinal",
+   "run_count": 72,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 22,
+   "name": "count",
+   "run_count": 11,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 23,
+   "name": "VoipFinal2",
+   "run_count": 1415,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 24,
+   "name": "VoipFinal2",
+   "run_count": 45482,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 25,
+   "name": "Bot Call",
+   "run_count": 36,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 26,
+   "name": "cteReceipts",
+   "run_count": 57,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 27,
+   "name": "receiptsQueryString",
+   "run_count": 7368,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 28,
+   "name": "CountReceipts",
+   "run_count": 149,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 30,
+   "name": "TATReportAPIPerMonth",
+   "run_count": 448,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 31,
+   "name": "TATReportAPIPerYear",
+   "run_count": 272,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 32,
+   "name": "localApi",
+   "run_count": 100,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 33,
+   "name": "TATPerKarshenas",
+   "run_count": 254,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 37,
+   "name": "NemuneCode",
+   "run_count": 77,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 38,
+   "name": "test_ra",
+   "run_count": 76,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 39,
+   "name": "test_lua_sh",
+   "run_count": 9,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 50,
+   "name": "تست فرم سفارشی",
+   "run_count": 233,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 55,
+   "name": "report",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 59,
+   "name": "map-iran",
+   "run_count": 114,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 62,
+   "name": "دریافت اطلاعات شهرها",
+   "run_count": 103,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 63,
+   "name": "تست ایجاد اقدام از طریق api",
+   "run_count": 30,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 108,
+   "name": "mj",
+   "run_count": 56,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 109,
+   "name": "تست",
+   "run_count": 21,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 111,
+   "name": "مجموع فروش هر مشتری بر اساس مشتری",
+   "run_count": 504,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 112,
+   "name": "Stacked percentage column",
+   "run_count": 13,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 115,
+   "name": "مجموع فروش هر مشتری بر اساس مرکز فروش",
+   "run_count": 114,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 120,
+   "name": "نشان دادن 2 بات در یک بات",
+   "run_count": 30,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 124,
+   "name": "داشبورد نهایی",
+   "run_count": 16,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 125,
+   "name": "نمودار پای چارت میزان فروش به تفکیک مراکز فروش",
+   "run_count": 186,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 127,
+   "name": "1_نمودار پای چارت drilldown",
+   "run_count": 12,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 128,
+   "name": "six_Pie_Chart_Simple_with_query",
+   "run_count": 14,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 130,
+   "name": "پارامتر پیج و لودینگ برای مشکل کوئری",
+   "run_count": 91,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 131,
+   "name": "مجموع فروش هر مشتری بر اساس مرکز فروش",
+   "run_count": 4,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 132,
+   "name": "2_نمودار ستونی drilldown",
+   "run_count": 11,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 133,
+   "name": "فرم بدست آوردن تاریخ برای کوئری",
+   "run_count": 1456,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 135,
+   "name": "2bot",
+   "run_count": 147,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 137,
+   "name": "نمودار دریل داوون مرکز فروش ها و عامل فروش ها",
+   "run_count": 45,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 141,
+   "name": "مجموع فروش هر مشتری بر اساس مرکز فروش",
+   "run_count": 457,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 142,
+   "name": "نمودار ستونی drilldown",
+   "run_count": 84,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 144,
+   "name": "3_Line_chart",
+   "run_count": 7,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 145,
+   "name": "4_Basic_column",
+   "run_count": 5,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 146,
+   "name": "5_Fixed_placement_columns",
+   "run_count": 7,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 147,
+   "name": "6_Data_defined_in_table",
+   "run_count": 9,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 148,
+   "name": "7_Styled_mode_column",
+   "run_count": 11,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 149,
+   "name": "8_Responsive_chart",
+   "run_count": 8,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 150,
+   "name": "9_3D_donut",
+   "run_count": 10,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 151,
+   "name": "10_3D_column_with_stacking_and_grouping",
+   "run_count": 6,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 152,
+   "name": "11_3D_column",
+   "run_count": 5,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 153,
+   "name": "12_Sync_of_highlight_cursor",
+   "run_count": 17,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 154,
+   "name": "13_Sync_panning_demo",
+   "run_count": 20,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 155,
+   "name": "نمودار ستونی drilldown + مجموع فروش",
+   "run_count": 89,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 156,
+   "name": "نمودار ستونی drilldown + مجموع فروش",
+   "run_count": 402,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 157,
+   "name": "نمودار ستونی drilldown گروه کالا / کالا",
+   "run_count": 33,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 158,
+   "name": "نمودار ستونی drilldown گروه کالا / کالا_1",
+   "run_count": 47,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 159,
+   "name": "فایل های جیسون",
+   "run_count": 69,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 160,
+   "name": "گزارش مجموع فروش بر اساس موقعیت مکانی",
+   "run_count": 98,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 161,
+   "name": "گزارش گروه کالا / کالا بر اساس ماژول فروش_2",
+   "run_count": 26,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 162,
+   "name": "گزارش گروه کالا / کالا بر اساس ماژول فروش",
+   "run_count": 50,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 163,
+   "name": "پارامتر پیج و لودینگ برای مشکل کوئری2",
+   "run_count": 11761,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 164,
+   "name": "پارامتر پیج و لودینگ برای مشکل کوئری3",
+   "run_count": 13,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 165,
+   "name": "تست فایل های جیسون",
+   "run_count": 80,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 166,
+   "name": "گزارش فروش بر اساس کشور استان شهر مشتری",
+   "run_count": 50,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 167,
+   "name": "پارامتر پیج برای مشکل دیتا مشتری ها در کوئری",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 168,
+   "name": "گزارش گروه کالا / کالا بر اساس ماژول فروش_3",
+   "run_count": 9,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 169,
+   "name": "گزارش فروش بر اساس کشور استان شهر",
+   "run_count": 31,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 170,
+   "name": "فایل های جیسون 3 برای فروش بر اساس استان",
+   "run_count": 7,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 171,
+   "name": "تست فایل های جیسون 4",
+   "run_count": 24,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 172,
+   "name": "تست فایل های جیسون5",
+   "run_count": 43,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 173,
+   "name": "گزارش فروش بر اساس استان",
+   "run_count": 81,
+   "disabled": false,
+   "description": "تکمیل شده \r\n منتظر Verification و Debugging هستم\r\n لیمیت",
+   "project_bot": false
+  },
+  {
+   "id": 174,
+   "name": "گزارش فروش بر اساس استان",
+   "run_count": 10,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 175,
+   "name": "پارامتر پیج و لودینگ برای مشکل کوئری4",
+   "run_count": 22,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 176,
+   "name": "تست روش جدید برای ارتباط با دیتا بیس",
+   "run_count": 40,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 177,
+   "name": "نحوه جدید وارد کردن کوئری",
+   "run_count": 5,
+   "disabled": false,
+   "description": "نحوه جدید وارد کردن کوئری \r\nنیازمند 2 تا بات داره\r\n 1: کوئری در بات اول نوشته میشه و یک پیجینگ درست میکنیم و اطلاعات کامل کوئری رو دریافت میکنیم از دیتابیس\r\n2: در بات دوم همه ی اطلاعات رو از بات یک میگیره تا وقتی که پاسخی دریافت نکنه",
+   "project_bot": false
+  },
+  {
+   "id": 178,
+   "name": "فروش کلی به ازای مراکز فروش",
+   "run_count": 23,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 179,
+   "name": "فروش کلی به ازای مراکز فروش",
+   "run_count": 7,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 182,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 1602,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 184,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز",
+   "run_count": 309,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 186,
+   "name": "1.1.4_فروش به ازای برترین مشتریان",
+   "run_count": 1394,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 188,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 1715,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 190,
+   "name": "1.1.6_فروش به ازای گروه کالایی",
+   "run_count": 761,
+   "disabled": false,
+   "description": "فروش بر اساس گروه کالا / کالا (ماژول فروش)",
+   "project_bot": false
+  },
+  {
+   "id": 192,
+   "name": "1.1.7_فروش به ازای کالا",
+   "run_count": 1503,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 194,
+   "name": "1.1.8_تحقق تارگت های ریالی نمایندگان",
+   "run_count": 32,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 196,
+   "name": "1.1.9_تحقق تارگت تعدادی نمایندگان",
+   "run_count": 8,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 198,
+   "name": "1.1.10_فروش دفاتر به تفکیک گروه کالایی ها",
+   "run_count": 0,
+   "disabled": false,
+   "description": "تکراری میشود",
+   "project_bot": false
+  },
+  {
+   "id": 200,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز",
+   "run_count": 104,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 201,
+   "name": "1.1.6_فروش به ازای گروه کالایی",
+   "run_count": 22,
+   "disabled": false,
+   "description": "فروش بر اساس گروه کالا / کالا (ماژول فروش)",
+   "project_bot": false
+  },
+  {
+   "id": 202,
+   "name": "1.1.6_فروش به ازای گروه کالایی 2",
+   "run_count": 66,
+   "disabled": false,
+   "description": "فروش بر اساس گروه کالا / کالا (ماژول فروش)",
+   "project_bot": false
+  },
+  {
+   "id": 203,
+   "name": "کشور استان شهر",
+   "run_count": 40,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 204,
+   "name": "کشور استان شهر",
+   "run_count": 12,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 205,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 6,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 207,
+   "name": "فروش کلی به ازای مراکز فروش",
+   "run_count": 48,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 208,
+   "name": "time_date_test",
+   "run_count": 16,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 209,
+   "name": "test_moghayese",
+   "run_count": 14,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 210,
+   "name": "1.2.1_مقایسه فروش مراکز به ازای سال های مشابه قبلی",
+   "run_count": 903,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 211,
+   "name": "1.2.2_مقایسه فروش مراکز به ازای فصل مشابه در سال قبل",
+   "run_count": 740,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 212,
+   "name": "1.2.3_مقایسه فروش مراکز به ازای ماه مشابه از سال 1401 به بعد",
+   "run_count": 685,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 213,
+   "name": "1.2.4_مقایسه فروش عوامل هر مرکز در هر ماه از سال با سال قبل",
+   "run_count": 701,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 214,
+   "name": "1.2.5_مقایسه فروش به نمایندگان در ماه مشابه سال قبل",
+   "run_count": 685,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 215,
+   "name": "1.2.6_مقایسه فروش استان ها در فصل و ماه مشابه در سال قبل",
+   "run_count": 665,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 216,
+   "name": "1.2.7_مقایسه فروش گروه کالایی ها در فصل ها و ماه های مشابه در سال قبل",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 217,
+   "name": "1.2.8_مقایسه فروش پرفروش ترین کالاها در فصل ها و ماه های مشابه در سال قبل",
+   "run_count": 591,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 218,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش سال 1401",
+   "run_count": 174,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 220,
+   "name": "زیرفروشی در بات",
+   "run_count": 8286,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 221,
+   "name": "تست 2 کوئری در یک بات",
+   "run_count": 109,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 222,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 18,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 223,
+   "name": "تبدیل تاریخ از timestamp به شمسی",
+   "run_count": 809,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 224,
+   "name": "مجموع فروش هر مشتری بر اساس مشتری",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 225,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 0,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 226,
+   "name": "1.2.4_مقایسه فروش عوامل هر مرکز در هر ماه از سال با سال قبل",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 229,
+   "name": "1.2.8_مقایسه فروش پرفروش ترین کالاها در فصل ها و ماه های مشابه در سال قبل",
+   "run_count": 11,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 230,
+   "name": "1.2.8_مقایسه فروش پرفروش ترین کالاها در فصل ها و ماه های مشابه در سال قبل",
+   "run_count": 4,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 231,
+   "name": "1.3.1_پرفروش ترین کالاها به تفکیک مراکز فروش و عاملین فروش",
+   "run_count": 576,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 232,
+   "name": "1.3.2_ پرفروش ترین کالاها از لحاظ تعدادی",
+   "run_count": 445,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 233,
+   "name": "1.3.3_ پرفروش ترین کالاها ریالی",
+   "run_count": 183,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 234,
+   "name": "1.1.6_فروش به ازای گروه کالایی",
+   "run_count": 1,
+   "disabled": false,
+   "description": "فروش بر اساس گروه کالا / کالا (ماژول فروش)",
+   "project_bot": false
+  },
+  {
+   "id": 235,
+   "name": "1.3.4_مقایسه فروش تعدادی عوامل هر مرکز در سال با سال قبل",
+   "run_count": 570,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 236,
+   "name": "1.3.5_فروش تعدادی کالا هر عامل به تفکیک مرکز",
+   "run_count": 36,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 237,
+   "name": "1.3.6_مقایسه تعدادی کالا هر عامل به تفکیک مرکز با سلکتور",
+   "run_count": 348,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 238,
+   "name": "1.3.3_ پرفروش ترین کالاهای هر مرکز فروش",
+   "run_count": 21,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 239,
+   "name": "1.3.3_ پرفروش ترین کالاهای هر مرکز فروش",
+   "run_count": 6,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 240,
+   "name": "test_db",
+   "run_count": 10,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 241,
+   "name": "1.2.8_مقایسه فروش پرفروش ترین کالاها در فصل ها و ماه های مشابه در سال قبل",
+   "run_count": 17,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 242,
+   "name": "1.2.8_مقایسه تعدادی پرفروش ترین کالاها در فصل ها و ماه های مشابه در سال قبل",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 243,
+   "name": "1.3.7_مقایسه تعدادی پرفروش ترین کالاها در فصل ها و ماه های مشابه در سال قبل",
+   "run_count": 568,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 244,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 10,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 245,
+   "name": "1.2.5_مقایسه فروش به نمایندگان در ماه مشابه سال قبل",
+   "run_count": 10,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 246,
+   "name": "1.2.4_مقایسه فروش عوامل هر مرکز در هر ماه از سال با سال قبل",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 247,
+   "name": "test_db",
+   "run_count": 5,
+   "disabled": false,
+   "description": "این بات رو اجرا نکید در سرور اصلی تغییر ایجاد میکند.",
+   "project_bot": false
+  },
+  {
+   "id": 248,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 11,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 249,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 7,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 250,
+   "name": "گزارش تحقق تارگت ریالی",
+   "run_count": 12,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 251,
+   "name": "1.2.1_مقایسه فروش مراکز به ازای سال های مشابه قبلی",
+   "run_count": 20,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 252,
+   "name": "1.2.2_مقایسه فروش مراکز به ازای فصل مشابه در سال قبل",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 253,
+   "name": "1.2.3_مقایسه فروش مراکز به ازای ماه مشابه در سال قبل",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 254,
+   "name": "1.2.1_مقایسه فروش مراکز به ازای سال های مشابه قبلی",
+   "run_count": 113,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 255,
+   "name": "1.2.1_مقایسه فروش مراکز به ازای سال های مشابه قبلی",
+   "run_count": 5,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 256,
+   "name": "1.2.6_مقایسه فروش استان ها در فصل و ماه مشابه در سال قبل",
+   "run_count": 18,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 258,
+   "name": "1.2.6_مقایسه فروش استان ها در فصل و ماه مشابه در سال قبل",
+   "run_count": 1043,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 259,
+   "name": "1.2.6_مقایسه فروش استان ها در فصل و ماه مشابه در سال قبل",
+   "run_count": 18,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 260,
+   "name": "گزارش تحقق تارگت ریالی",
+   "run_count": 35,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 261,
+   "name": "گزارش تحقق تارگت ریالی",
+   "run_count": 21,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 262,
+   "name": "گزارش تحقق تارگت ریالی",
+   "run_count": 29,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 263,
+   "name": "گزارش تحقق تارگت ریالی",
+   "run_count": 20,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 264,
+   "name": "1.2.1_مقایسه فروش مراکز به ازای سال های مشابه قبلی",
+   "run_count": 7,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 265,
+   "name": "مقایسه فروش مراکز با سال های قبل",
+   "run_count": 748,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 266,
+   "name": "مقایسه فروش مراکز فروش بر اساس استان",
+   "run_count": 718,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 267,
+   "name": "گزارش تحقق تارگت",
+   "run_count": 557,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 268,
+   "name": "1.1.6_فروش به ازای گروه کالایی",
+   "run_count": 20,
+   "disabled": false,
+   "description": "فروش بر اساس گروه کالا / کالا (ماژول فروش)",
+   "project_bot": false
+  },
+  {
+   "id": 269,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز فروش گروه کالا",
+   "run_count": 49,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 270,
+   "name": "گزارش گروه کالایی نهایی",
+   "run_count": 73,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 271,
+   "name": "استان _ گروه کالا",
+   "run_count": 98,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 273,
+   "name": "مرکز فروش _ عامل فروش _ مشتری _ گروه کالا",
+   "run_count": 20,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 274,
+   "name": "مرکز فروش _ گروه کالا",
+   "run_count": 15,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 275,
+   "name": "مرکز فروش _ عامل فروش _ گروه کالا",
+   "run_count": 10,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 276,
+   "name": "مرکز فروش _ عامل فروش _ مشتری _گروه کالا",
+   "run_count": 16,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 277,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا",
+   "run_count": 155,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 278,
+   "name": "عامل فروش _ گروه کالایی _ ماه ها _ 1403 _ 3 تا سلکتور",
+   "run_count": 63,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 280,
+   "name": "گروه کالایی _ ماه ها _ 1402",
+   "run_count": 318,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 282,
+   "name": "گروه کالایی _ ماه ها _ 1403",
+   "run_count": 44,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 283,
+   "name": "فرزاد وجیهی _ تست",
+   "run_count": 6,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 284,
+   "name": "بررسی مبلغ پرداخت",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 285,
+   "name": "بررسی سند بودجه",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 286,
+   "name": "ثبت سند حسابداری",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 287,
+   "name": "فرزاد وجیهی _ تست",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 288,
+   "name": "عامل فروش _ گروه کالایی _ ماه ها_ 1403",
+   "run_count": 81,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 290,
+   "name": "عامل فروش _ گروه کالایی _ ماه ها_ 1402",
+   "run_count": 32,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 292,
+   "name": "مشتری _ گروه کالایی _ ماه ها _ 1403",
+   "run_count": 78,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 293,
+   "name": "مشتری _ گروه کالایی _ ماه ها _ 1402",
+   "run_count": 44,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 294,
+   "name": "مقایسه گروه کالایی ها 5 سال",
+   "run_count": 38,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 295,
+   "name": "مقایسه فروش گروه کالاها بر اساس ریال و تعداد",
+   "run_count": 67,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 296,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا",
+   "run_count": 31,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 297,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا",
+   "run_count": 92,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 298,
+   "name": "گروه کالایی _ ماه ها _ 1402_تعدادی",
+   "run_count": 14,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 299,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 2598,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 300,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 37,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 301,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 2520,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 302,
+   "name": "1.1.4_فروش به ازای برترین مشتریان",
+   "run_count": 2508,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 303,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز فروش گروه کالا",
+   "run_count": 667,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 304,
+   "name": "1.1.7_فروش به ازای تک کالا",
+   "run_count": 2500,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 305,
+   "name": "1.2.4_مقایسه فروش عوامل هر مرکز در هر ماه از سال با سال قبل",
+   "run_count": 2491,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 306,
+   "name": "1.2.2_مقایسه فروش مراکز به ازای فصل مشابه در سال قبل",
+   "run_count": 2489,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 307,
+   "name": "1.2.3_مقایسه فروش مراکز به ازای ماه مشابه در سال قبل",
+   "run_count": 2500,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 308,
+   "name": "1.2.8_مقایسه فروش پرفروش ترین گروه کالاها در فصل ها و ماه های مشابه در سال قبل",
+   "run_count": 8,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 309,
+   "name": "مقایسه فروش گروه کالاها بر اساس ریال و تعداد",
+   "run_count": 4,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 310,
+   "name": "1.2.5_مقایسه فروش به نمایندگان در ماه مشابه سال قبل",
+   "run_count": 2507,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 313,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 36,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 314,
+   "name": "مقایسه گروه کالایی ها 5 سال کوئری جدید",
+   "run_count": 43,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 315,
+   "name": "استان _ مرکزفروش _ گروه کالا",
+   "run_count": 30,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 318,
+   "name": "گروه کالایی_کالا final",
+   "run_count": 141,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 319,
+   "name": "گروه کالایی_کالا final 2 22",
+   "run_count": 55,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 320,
+   "name": "sales_invoice_product",
+   "run_count": 20,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 321,
+   "name": "گروه کالایی_کالا final_test",
+   "run_count": 27,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 322,
+   "name": "گروه کالایی_کالا final_final_final_final",
+   "run_count": 130,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 323,
+   "name": "test_db_ساخت جدول در دیتابیس",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 324,
+   "name": "test_db_ساخت crud_برای جدول های دیتابیس",
+   "run_count": 12,
+   "disabled": false,
+   "description": "این بات رو اجرا نکید در سرور اصلی تغییر ایجاد میکند.",
+   "project_bot": false
+  },
+  {
+   "id": 325,
+   "name": "گزارش گروه کالایی نهایی",
+   "run_count": 31,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 326,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا",
+   "run_count": 34,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 327,
+   "name": "استان _ گروه کالا",
+   "run_count": 20,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 328,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا",
+   "run_count": 12,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 330,
+   "name": "گزارش گروه کالایی نهایی",
+   "run_count": 12,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 331,
+   "name": "مرکز فروش _ عامل فروش _ مشتری _ گروه کالا _ کالا",
+   "run_count": 6,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 332,
+   "name": "مقایسه فروش گروه کالاها بر اساس ریال و تعداد",
+   "run_count": 29,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 333,
+   "name": "مقایسه فروش گروه کالاها بر اساس ریال و تعداد",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 334,
+   "name": "گروه کالایی_کالا با جدول",
+   "run_count": 35,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 335,
+   "name": "گروه کالایی_کالا با جدول",
+   "run_count": 11,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 336,
+   "name": "گروه کالایی_کالا با جدول test",
+   "run_count": 9,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 337,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا test",
+   "run_count": 12,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 338,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا test",
+   "run_count": 8,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 339,
+   "name": "گروه کالایی_کالا با جدول213123123",
+   "run_count": 36,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 340,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا final test",
+   "run_count": 20,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 341,
+   "name": "گروه کالایی_کالا با جدول213123123",
+   "run_count": 4,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 342,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا final test",
+   "run_count": 5,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 343,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا final test",
+   "run_count": 12,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 344,
+   "name": "عامل فروش _ گروه کالایی _ ماه ها_ 1403",
+   "run_count": 19,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 345,
+   "name": "عامل فروش _ گروه کالایی _ ماه ها_ 1402",
+   "run_count": 7,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 347,
+   "name": "گروه کالایی _ ماه ها _ 1402",
+   "run_count": 15,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 348,
+   "name": "گروه کالایی _ ماه ها _ 1403",
+   "run_count": 12,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 349,
+   "name": "مقایسه گروه کالایی ها 5 سال END",
+   "run_count": 10,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 350,
+   "name": "مقایسه فروش گروه کالاها بر اساس ریال و تعداد END",
+   "run_count": 6,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 351,
+   "name": "مقایسه فروش گروه کالاها بر اساس ریال و تعداد END",
+   "run_count": 147,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 352,
+   "name": "مقایسه گروه کالایی ها 5 سال END",
+   "run_count": 6,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 353,
+   "name": "گروه کالایی _ ماه ها _ 1403",
+   "run_count": 149,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 354,
+   "name": "گروه کالایی _ ماه ها _ 1402",
+   "run_count": 147,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 355,
+   "name": "عامل فروش _ گروه کالایی _ ماه ها_ 1402",
+   "run_count": 146,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 356,
+   "name": "عامل فروش _ گروه کالایی _ ماه ها_ 1403",
+   "run_count": 161,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 357,
+   "name": "عامل فروش _ گروه کالایی _ ماه ها_ 1403 USER ID",
+   "run_count": 44,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 358,
+   "name": "گروه کالایی _ ماه ها _ 1403_ USER_ID",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 359,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا final + user id",
+   "run_count": 25,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 360,
+   "name": "مقایسه فروش گروه کالاها بر اساس ریال و تعداد + USER ID",
+   "run_count": 771,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 361,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا final + user id",
+   "run_count": 772,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 362,
+   "name": "مقایسه گروه کالایی ها 5 سال END user id",
+   "run_count": 19,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 363,
+   "name": "مقایسه گروه کالایی ها 5 سال END user id",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 364,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا final + user id",
+   "run_count": 10,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 365,
+   "name": "عامل فروش _ گروه کالایی _ ماه ها_ 1403",
+   "run_count": 4,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 366,
+   "name": "عامل فروش _ گروه کالایی _ ماه ها_ 1402",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 367,
+   "name": "گروه کالایی _ ماه ها _ 1402",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 368,
+   "name": "گروه کالایی _ ماه ها _ 1403",
+   "run_count": 7,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 369,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا END",
+   "run_count": 83,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 370,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 4,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 371,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id",
+   "run_count": 23,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 372,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + مرکز فروش موبایلی",
+   "run_count": 71,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 373,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + مرکز فروش موبایلی",
+   "run_count": 40,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 374,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + مرکز فروش صوتی",
+   "run_count": 28,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 375,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + مرکز فروش کامپیوتری تست",
+   "run_count": 22,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 376,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + مرکز فروش کامپیوتری",
+   "run_count": 11,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 377,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + مرکز فروش موبایلی",
+   "run_count": 6,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 378,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + دفتر خوزستان",
+   "run_count": 9,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 379,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 380,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id test",
+   "run_count": 30,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 381,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 22,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 382,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 31,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 383,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + برای همه مراکز",
+   "run_count": 22,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 384,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + برای همه مراکز",
+   "run_count": 43,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 386,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 41,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 387,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 14,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 388,
+   "name": "1.1.5_فروش به ازای استان + user id + برای همه مراکز",
+   "run_count": 53,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 391,
+   "name": "1.1.4_فروش به ازای برترین مشتریان _ user_id",
+   "run_count": 47,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 392,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز فروش گروه کالا",
+   "run_count": 26,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 393,
+   "name": "1.1.7_فروش به ازای تک کالا",
+   "run_count": 43,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 394,
+   "name": "1.2.4_مقایسه فروش عوامل هر مرکز در هر ماه از سال با سال قبل",
+   "run_count": 37,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 396,
+   "name": "1.2.2_مقایسه فروش مراکز به ازای فصل مشابه در سال قبل",
+   "run_count": 34,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 406,
+   "name": "1.2.5_مقایسه فروش به نمایندگان در ماه مشابه سال قبل",
+   "run_count": 38,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 407,
+   "name": "1.2.2_مقایسه فروش مراکز به ازای فصل مشابه در سال قبل",
+   "run_count": 18,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 408,
+   "name": "StockRoomIO",
+   "run_count": 11,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 409,
+   "name": "inkserials",
+   "run_count": 2846,
+   "disabled": false,
+   "description": "api/link_serials",
+   "project_bot": false
+  },
+  {
+   "id": 410,
+   "name": "ویجت 1 بخش فروش",
+   "run_count": 25,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 423,
+   "name": "تامین (مرحله1) : وضعیت محصولات (تامین)",
+   "run_count": 177,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 424,
+   "name": "تامین (مرحله3) : وضعیت نهایی تارگت فروش",
+   "run_count": 268,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 425,
+   "name": "تامین (مرحله4) : وضعیت درصد تارگت عوامل فروش",
+   "run_count": 85,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 426,
+   "name": "تامین (مرحله5) : تسهیم تارگت ها به واحد های فروش",
+   "run_count": 582,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 427,
+   "name": "تامین (مرحله5) : تسهیم تارگت ها به واحد های فروش _ کامپیوتری",
+   "run_count": 69,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 428,
+   "name": "تامین (مرحله5) : تسهیم تارگت ها به واحد های فروش _ موبایل",
+   "run_count": 94,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 429,
+   "name": "تامین (مرحله5) : تسهیم تارگت ها به واحد های فروش _ صوتی",
+   "run_count": 5,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 430,
+   "name": "تامین (مرحله5) : تسهیم تارگت ها به واحد های فروش _ گیمینگ",
+   "run_count": 8,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 431,
+   "name": "تامین (مرحله5) : تسهیم تارگت ها به واحد های فروش _ سازمانی",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 432,
+   "name": "تامین (مرحله5) : تسهیم تارگت ها به واحد های فروش _ متفرقه",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 433,
+   "name": "تامین (مرحله5) : تسهیم تارگت ها به واحد های فروش _ واحد سازمانی",
+   "run_count": 18,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 434,
+   "name": "بات بررسی وضعیت مرحله باتی اقدام",
+   "run_count": 223,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 438,
+   "name": "res",
+   "run_count": 13814,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 439,
+   "name": "بات ترتیب مراحل",
+   "run_count": 4591,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 440,
+   "name": "گزارش تحقق تارگت تست 1",
+   "run_count": 9,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 441,
+   "name": "ویجت 1 بخش فروش",
+   "run_count": 38,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 442,
+   "name": "گزارش تحقق تارگت تست  1",
+   "run_count": 7,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 443,
+   "name": "گزارش تحقق تارگت تست  3",
+   "run_count": 3,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 444,
+   "name": "گزارش تحقق تارگت تست  4",
+   "run_count": 3,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 445,
+   "name": "گزارش تحقق تارگت تست  5",
+   "run_count": 18,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 446,
+   "name": "گزارش تحقق تارگت تست  6",
+   "run_count": 9,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 447,
+   "name": "گزارش تحقق تارگت تست  7",
+   "run_count": 27,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 448,
+   "name": "گزارش تحقق تارگت تست  8",
+   "run_count": 19,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 449,
+   "name": "تست ویجت گزارش تحقق تارگت _ 1",
+   "run_count": 9,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 450,
+   "name": "تست ویجت گزارش تحقق تارگت _ 2",
+   "run_count": 10,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 451,
+   "name": "تست ویجت گزارش تحقق تارگت _ 3",
+   "run_count": 3,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 452,
+   "name": "تست ویجت گزارش تحقق تارگت _ 4",
+   "run_count": 16,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 455,
+   "name": "گزارش تحقق تارگت مراکز فروش",
+   "run_count": 2,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 456,
+   "name": "گزارش تحقق تارگت مراکز فروش FINAL",
+   "run_count": 16,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 457,
+   "name": "گزارش تحقق تارگت مراکز فروش FINAL",
+   "run_count": 13,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 458,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + برای همه مراکز",
+   "run_count": 13,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 460,
+   "name": "گزارش تحقق تارگت مراکز فروش تست 2 کوئری",
+   "run_count": 2,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 461,
+   "name": "گزارش تحقق تارگت مراکز فروش فروردین",
+   "run_count": 49,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 462,
+   "name": "گزارش تحقق تارگت مراکز فروش FINAL",
+   "run_count": 3,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 463,
+   "name": "گزارش تحقق تارگت مراکز فروش اردیبهشت",
+   "run_count": 7,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 464,
+   "name": "تست ویجت گزارش تحقق تارگت _ 4",
+   "run_count": 2,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 465,
+   "name": "تست ویجت گزارش تحقق تارگت _ 4",
+   "run_count": 10,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 466,
+   "name": "تست ویجت گزارش تحقق تارگت _ 4",
+   "run_count": 41,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 467,
+   "name": "تست ویجت گزارش تحقق تارگت _ 4 _ سازمانی و مراکز",
+   "run_count": 18,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 468,
+   "name": "تست ویجت گزارش تحقق تارگت _ 4",
+   "run_count": 33,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 469,
+   "name": "تست ویجت گزارش تحقق تارگت _ 4 _ سازمانی و مراکز تست تیمیار",
+   "run_count": 10,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 470,
+   "name": "تست ویجت گزارش تحقق تارگت _ 4 _ سازمانی و مراکز",
+   "run_count": 7,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 471,
+   "name": "تست ویجت گزارش تحقق تارگت _ 4 query test",
+   "run_count": 15,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 472,
+   "name": "موجودی کالا (قبل و بعد از رزرو) بدون ویژگی",
+   "run_count": 168,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 480,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 152,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 481,
+   "name": "1.1.5_فروش به ازای استان + user id + برای همه مراکز",
+   "run_count": 121,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 482,
+   "name": "1.1.4_فروش به ازای برترین مشتریان _ user_id",
+   "run_count": 153,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 485,
+   "name": "1.1.7_فروش به ازای تک کالا",
+   "run_count": 148,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 486,
+   "name": "1.2.2_مقایسه فروش مراکز به ازای فصل مشابه در سال قبل",
+   "run_count": 143,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 487,
+   "name": "1.2.4_مقایسه فروش عوامل هر مرکز در هر ماه از سال با سال قبل",
+   "run_count": 160,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 488,
+   "name": "1.2.5_مقایسه فروش به نمایندگان در ماه مشابه سال قبل",
+   "run_count": 147,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 489,
+   "name": "1.2.3_مقایسه فروش مراکز به ازای ماه مشابه در سال قبل",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 492,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + برای همه مراکز",
+   "run_count": 40,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 493,
+   "name": "ویجت 1 بخش فروش",
+   "run_count": 5,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 494,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 331,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 495,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 324,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 496,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز",
+   "run_count": 158,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 497,
+   "name": "1.1.4_فروش به ازای برترین مشتریان",
+   "run_count": 308,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 498,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 321,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 499,
+   "name": "1.1.7_فروش به ازای کالا",
+   "run_count": 310,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 501,
+   "name": "BOM Inventory",
+   "run_count": 128,
+   "disabled": false,
+   "description": "BOM Inventory",
+   "project_bot": false
+  },
+  {
+   "id": 502,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 567,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 503,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 560,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 504,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز",
+   "run_count": 5,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 505,
+   "name": "1.1.4_فروش به ازای برترین مشتریان",
+   "run_count": 561,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 506,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 562,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 507,
+   "name": "1.1.7_فروش به ازای کالا",
+   "run_count": 561,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 508,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 712,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 509,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 707,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 510,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز",
+   "run_count": 5,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 511,
+   "name": "1.1.4_فروش به ازای برترین مشتریان",
+   "run_count": 701,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 512,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 704,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 514,
+   "name": "1.1.7_فروش به ازای کالا",
+   "run_count": 704,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 515,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 229,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 516,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 215,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 517,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز",
+   "run_count": 117,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 518,
+   "name": "1.1.4_فروش به ازای برترین مشتریان",
+   "run_count": 94,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 519,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 97,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 520,
+   "name": "1.1.7_فروش به ازای کالا",
+   "run_count": 94,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 521,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 314,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 522,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 296,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 523,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 524,
+   "name": "1.1.4_فروش به ازای برترین مشتریان",
+   "run_count": 288,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 525,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 290,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 526,
+   "name": "1.1.7_فروش به ازای کالا",
+   "run_count": 289,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 527,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 38,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 528,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 37,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 529,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 530,
+   "name": "1.1.4_فروش به ازای برترین مشتریان",
+   "run_count": 36,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 531,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 37,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 532,
+   "name": "1.1.7_فروش به ازای کالا",
+   "run_count": 35,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 533,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 84,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 534,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 95,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 535,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 536,
+   "name": "1.1.4_فروش به ازای برترین مشتریان",
+   "run_count": 85,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 537,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 82,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 538,
+   "name": "1.1.7_فروش به ازای کالا",
+   "run_count": 81,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 539,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 89,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 540,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 87,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 541,
+   "name": "1.1.3_فروش به ازای عوامل فروش مراکز",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 542,
+   "name": "1.1.4_فروش به ازای برترین مشتریان",
+   "run_count": 86,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 543,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 86,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 544,
+   "name": "1.1.7_فروش به ازای کالا",
+   "run_count": 88,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 545,
+   "name": "مرکز فروش_گروه کالایی_کالا",
+   "run_count": 221,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 546,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + برای همه مراکز",
+   "run_count": 47,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 547,
+   "name": "مرکز فروش_گروه کالایی_کالا",
+   "run_count": 555,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 548,
+   "name": "مرکز فروش_گروه کالایی_کالا",
+   "run_count": 714,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 549,
+   "name": "مرکز فروش_گروه کالایی_کالا",
+   "run_count": 201,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 550,
+   "name": "مرکز فروش_گروه کالایی_کالا",
+   "run_count": 302,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 551,
+   "name": "مرکز فروش_گروه کالایی_کالا",
+   "run_count": 44,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 552,
+   "name": "مرکز فروش_گروه کالایی_کالا",
+   "run_count": 88,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 553,
+   "name": "مرکز فروش_گروه کالایی_کالا",
+   "run_count": 92,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 556,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 1,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 558,
+   "name": "تبدیل تایم شمسی به یونیکس",
+   "run_count": 18,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 559,
+   "name": "موجودی کالا (قبل و بعد از رزرو) با ویژگی",
+   "run_count": 2664,
+   "disabled": false,
+   "description": "نیاز به اصلاح دارد",
+   "project_bot": false
+  },
+  {
+   "id": 561,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + برای همه مراکز",
+   "run_count": 3558,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 564,
+   "name": "مرکز فروش _ عامل فروش _ مشتری",
+   "run_count": 3596,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 565,
+   "name": "فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 3552,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 566,
+   "name": "1.1.5_فروش مشتریان به ازای استان و شهر",
+   "run_count": 3543,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 567,
+   "name": "1.1.4_فروش به ازای برترین مشتریان _ user_id",
+   "run_count": 3545,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 568,
+   "name": "1.1.7_فروش به ازای تک کالا",
+   "run_count": 3545,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 569,
+   "name": "1.2.2_مقایسه فروش مراکز به ازای فصل مشابه در سال قبل",
+   "run_count": 3500,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 570,
+   "name": "1.2.4_مقایسه فروش عوامل هر مرکز در هر ماه از سال با سال قبل",
+   "run_count": 3460,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 571,
+   "name": "1.2.5_مقایسه فروش به نمایندگان در ماه مشابه سال قبل",
+   "run_count": 3445,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 572,
+   "name": "1.2.3_مقایسه فروش مراکز به ازای ماه مشابه در سال قبل",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 573,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + برای همه مراکز",
+   "run_count": 26,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 574,
+   "name": "نقشه",
+   "run_count": 41,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 575,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + برای همه مراکز",
+   "run_count": 11,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 576,
+   "name": "create_invoice_api",
+   "run_count": 19,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 577,
+   "name": "api دوم  اطلاعات ماژول پروژه",
+   "run_count": 50,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 578,
+   "name": "snapp creat database",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 579,
+   "name": "گزارش عملکرد واحد سیستم ها و روش ها در گوگل شیت",
+   "run_count": 8504,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 580,
+   "name": "میزان بازگشتی کالا بر اساس مدل",
+   "run_count": 3034,
+   "disabled": false,
+   "description": "گزارش بازگشتی کالا بر اساس مدل",
+   "project_bot": false
+  },
+  {
+   "id": 581,
+   "name": "teamyar_root_client",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 582,
+   "name": "Bot Ledger And Factors in dif column",
+   "run_count": 22,
+   "disabled": false,
+   "description": "در صورتی که ردیف های نمایش داده شده ردیف های فاکتور باشند فیلتر حساب روی آنها بی اثر خواهد بود و درصورتی که ردیف های نمایش داده شده برای سند باشند فیلتر های فاکتور روی آنها بی اثر خواهد بود",
+   "project_bot": false
+  },
+  {
+   "id": 584,
+   "name": "گزارش بازگشتی کالا بکاپ",
+   "run_count": 37,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 585,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 7,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 586,
+   "name": "تست ویجت گزارش تحقق تارگت _ 4",
+   "run_count": 4,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 595,
+   "name": "SammaryOfInfoPersonnel",
+   "run_count": 19,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 596,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 14,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 597,
+   "name": "تست ویجت گزارش تحقق تارگت _ 4",
+   "run_count": 54,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 598,
+   "name": "گزارش فروش دفاتر به تفکیک ماه و گروه کالا (فروش هر دپارتمان)",
+   "run_count": 46,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 599,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 4,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 600,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_گروه کالایی_کالا برای مدیر فروش صوتی",
+   "run_count": 24,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 601,
+   "name": "بازگشتی گروه کالا",
+   "run_count": 44,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 602,
+   "name": "Product Serial Operation",
+   "run_count": 6,
+   "disabled": false,
+   "description": "Product Serial Operation",
+   "project_bot": false
+  },
+  {
+   "id": 607,
+   "name": "Bot Ledger And Factors in dif column",
+   "run_count": 29,
+   "disabled": false,
+   "description": "در صورتی که ردیف های نمایش داده شده ردیف های فاکتور باشند فیلتر حساب روی آنها بی اثر خواهد بود و درصورتی که ردیف های نمایش داده شده برای سند باشند فیلتر های فاکتور روی آنها بی اثر خواهد بود",
+   "project_bot": false
+  },
+  {
+   "id": 610,
+   "name": "میزان بازگشتی کالا بر اساس مدل",
+   "run_count": 1018,
+   "disabled": false,
+   "description": "گزارش بازگشتی کالا بر اساس مدل",
+   "project_bot": false
+  },
+  {
+   "id": 611,
+   "name": "JSON Product List",
+   "run_count": 13,
+   "disabled": false,
+   "description": "نمایش اطلاعات محصول با تاریخ تغییر",
+   "project_bot": false
+  },
+  {
+   "id": 612,
+   "name": "گزارش فروش دفاتر به تفکیک ماه و گروه کالا (فروش هر دپارتمان)",
+   "run_count": 2,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 613,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_گروه کالایی_کالا برای مدیر فروش صوتی",
+   "run_count": 601,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 614,
+   "name": "کالاهای آماده تحویل موجود",
+   "run_count": 769,
+   "disabled": false,
+   "description": "",
+   "project_bot": true
+  },
+  {
+   "id": 615,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه 1403/08/14 موبایلی",
+   "run_count": 18,
+   "disabled": true,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 616,
+   "name": "Human Resource Plannind",
+   "run_count": 13,
+   "disabled": false,
+   "description": "Human Resource Plannind",
+   "project_bot": false
+  },
+  {
+   "id": 617,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه 1403/08/14 موبایلی",
+   "run_count": 6,
+   "disabled": true,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 628,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه کل سازمان",
+   "run_count": 8,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 629,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه موبایلی",
+   "run_count": 127,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 630,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه کامپیوتری",
+   "run_count": 73,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 631,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه صوتی",
+   "run_count": 519,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 632,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه گیمینگ",
+   "run_count": 135,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 633,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه سازمانی",
+   "run_count": 284,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 634,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه گیلان",
+   "run_count": 56,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 635,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه مشهد",
+   "run_count": 88,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 636,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه خوزستان",
+   "run_count": 78,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 641,
+   "name": "Save Client And Factor With Api",
+   "run_count": 13,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 643,
+   "name": "Expoert Product By Sales Category",
+   "run_count": 120,
+   "disabled": false,
+   "description": "نمایش اطلاعات محصول با تاریخ تغییر",
+   "project_bot": false
+  },
+  {
+   "id": 645,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + برای همه مراکز با خروجی اکسل و جدول",
+   "run_count": 15,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 646,
+   "name": "استان_شهر_مرکز فروش_عامل فروش_مشتری_گروه کالایی_کالا برای مدیر فروش + user id + برای همه مراکز",
+   "run_count": 17,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 647,
+   "name": "List Of Voters",
+   "run_count": 49,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 651,
+   "name": "مهلت اقدام ها",
+   "run_count": 28,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 654,
+   "name": "مهلت اقدام ها",
+   "run_count": 24,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 655,
+   "name": "مهلت هر مرحله",
+   "run_count": 103,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 657,
+   "name": "Swap Product Report",
+   "run_count": 4,
+   "disabled": false,
+   "description": "show report",
+   "project_bot": false
+  },
+  {
+   "id": 658,
+   "name": "رصد نمایندگان",
+   "run_count": 20,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 660,
+   "name": "Swap Product Report",
+   "run_count": 1,
+   "disabled": false,
+   "description": "show report",
+   "project_bot": false
+  },
+  {
+   "id": 661,
+   "name": "Swap Product Report",
+   "run_count": 30508,
+   "disabled": false,
+   "description": "show report",
+   "project_bot": false
+  },
+  {
+   "id": 662,
+   "name": "Bot Ledger And Factors Remainded",
+   "run_count": 43,
+   "disabled": false,
+   "description": "در صورتی که ردیف های نمایش داده شده ردیف های فاکتور باشند فیلتر حساب روی آنها بی اثر خواهد بود و درصورتی که ردیف های نمایش داده شده برای سند باشند فیلتر های فاکتور روی آنها بی اثر خواهد بود",
+   "project_bot": false
+  },
+  {
+   "id": 663,
+   "name": "رصد نمایندگان",
+   "run_count": 478,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 664,
+   "name": "لیست انبارها بر اساس شعبه",
+   "run_count": 46,
+   "disabled": false,
+   "description": "براساس شناسه شعبه لیست انبارهای موجود در آن شعبه نمایش داده خواهد شد.",
+   "project_bot": false
+  },
+  {
+   "id": 665,
+   "name": "لیست مراکز فروش بر اساس شعبه",
+   "run_count": 13,
+   "disabled": false,
+   "description": "بر اساس شناسه شعبه تمامی مراکز فروش موجود در آن شعبه نمایش داده میشود.",
+   "project_bot": false
+  },
+  {
+   "id": 666,
+   "name": "لیست bom کالاها به تفکیک ویژگی",
+   "run_count": 23,
+   "disabled": false,
+   "description": "org_id\r\nPRODUCT_ID\r\nATTRIBUTE_ID\r\nBOM_TITLE\r\nجهت نمایش و شرط های\r\nSTATUS = 2\r\ncorrection_active = 1\r\nاستاتوس برای اینکه تب اجرا فعال شود و اکتیو برای اینکه آخرین ورژن اصلاحی رو نمایش بده",
+   "project_bot": false
+  },
+  {
+   "id": 667,
+   "name": "1_تمامی محصولات با ویژگی",
+   "run_count": 28,
+   "disabled": false,
+   "description": "این کوئری شامل تمامی کالاهای سازمان (نیمه ساخته / کامل / گروه بندی ها) میشود\r\nwh_product \r\nWH_PR_ATTRIBUTE_DETAIL\r\nwh_product_attribute\r\nwh_custom_fields\r\n\r\nاین کوئری تمام کالاهای کامل و نیمه ساخته و .. و فول کد کالا و ایدی کالا و \r\nرنگ ویژگی و ایدی ویژگی رو نمایش میدهد.\r\nبقیه ویژگی ها برای عدم تکرار کالا و مورد نیاز نبودن در شرط حذف شدند.\r\nبه دلیل اینکه کالاهای رده محصول دسته بندی فروش کامل نیستند و ممکن است تمامی کالاها نمایش داده نشود بهتر از از کالاهای رده محصول تمامی کالاها نمایش داده شود.\r\n\r\nویژگی رنگ ثابت غیر فعال شد (ممکن است 1 کالا چندین ویژگی همزمان داشته باشد.",
+   "project_bot": false
+  },
+  {
+   "id": 668,
+   "name": "Creating a table in the database",
+   "run_count": 12,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 670,
+   "name": "فروش کالا براساس آیدی کالا و تاریخ",
+   "run_count": 81,
+   "disabled": false,
+   "description": "بر اساس آیدی کالا و تاریخ میزان فروش محصولات نمایش داده میشود.\r\nدیفالت OrgId = 2 ست شده است.",
+   "project_bot": false
+  },
+  {
+   "id": 671,
+   "name": "موجودی کالاها قبل و بعد از رزرو",
+   "run_count": 121,
+   "disabled": false,
+   "description": "1_تاریخ کاردکس و رزرو باهمدیگه محاسبیه میشوند (پیشفرض دیتای سال 1403 قابل نمایش است)  \r\n 2_تمامی کالاهای که در ماژول محصول و انبار ها هستند نشان داده خواهند شد.",
+   "project_bot": false
+  },
+  {
+   "id": 672,
+   "name": "چارت و مشاغل",
+   "run_count": 1,
+   "disabled": false,
+   "description": "1_تاریخ کاردکس و رزرو باهمدیگه محاسبیه میشوند (پیشفرض دیتای سال 1403 قابل نمایش است)  \r\n 2_تمامی کالاهای که در ماژول محصول و انبار ها هستند نشان داده خواهند شد.",
+   "project_bot": false
+  },
+  {
+   "id": 673,
+   "name": "Bank Cheque Maturity",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 674,
+   "name": "[report]تعداد ورود مشتریان جدید به تفکیک ماه و فصل",
+   "run_count": 44,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 675,
+   "name": "Show CRM Remainded",
+   "run_count": 5,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 676,
+   "name": "[report]مشتری به تفکیک پیشه-شغل و طبقه بندی",
+   "run_count": 19,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 677,
+   "name": "[report]گفتگوی کاربران با مشتریان",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 678,
+   "name": "[report] مشتریانی که عامل فروش ندارند",
+   "run_count": 16,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 679,
+   "name": "[report] مشتریانی که فاکتور فروش ندارند",
+   "run_count": 62,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 680,
+   "name": "Save Client And Factor With Api",
+   "run_count": 64,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 681,
+   "name": "Export Excel Product By Sale Csategory",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 682,
+   "name": "Product Serial Query",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 683,
+   "name": "res_v2",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 684,
+   "name": "res_v2",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 685,
+   "name": "res_v2",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 686,
+   "name": "res_v2",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 689,
+   "name": "مدل / کالا / سریال",
+   "run_count": 67,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 693,
+   "name": "قیمت کالا و سطوح قیمتی",
+   "run_count": 5,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 695,
+   "name": "[report]گزارش جامع فروش نسخه اصلی",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 697,
+   "name": "res_v2",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 698,
+   "name": "res_v2",
+   "run_count": 31016,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 699,
+   "name": "رصد (امتیازات دیجیکالا)",
+   "run_count": 22,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 701,
+   "name": "CompleteCrmInformation",
+   "run_count": 15,
+   "disabled": true,
+   "description": "مرکز فروش\r\nگروه کالا\r\nزیر گروه کالا\r\nکالاهای خریداری شده\r\nنام و نام خانوادگی\r\nجنسیت\r\nشماره همراه\r\nآدرس\r\nاستان و شهر\r\nتاریخ تولد",
+   "project_bot": false
+  },
+  {
+   "id": 702,
+   "name": "مرکز فروش_گروه کالایی_عامل فروش_کالا برای مدیر فروش صوتی (دیتا کل سازمان)",
+   "run_count": 23,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 703,
+   "name": "مرکز فروش_گروه کالایی_عامل فروش_کالا برای مدیر فروش صوتی (دیتا کل سازمان)",
+   "run_count": 6,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 706,
+   "name": "CompleteCrmInfo_category",
+   "run_count": 15,
+   "disabled": true,
+   "description": "مرکز فروش\r\nگروه کالا\r\nزیر گروه کالا\r\nکالاهای خریداری شده\r\nنام و نام خانوادگی\r\nجنسیت\r\nشماره همراه\r\nآدرس\r\nاستان و شهر\r\nتاریخ تولد",
+   "project_bot": false
+  },
+  {
+   "id": 710,
+   "name": "Todo Delays",
+   "run_count": 448,
+   "disabled": false,
+   "description": "باتوجه به اینکه اقدام و مراحل برای مراکز مختلف متفاوت نیستند فیلتر سازمان اگر انتخاب شود فقط اقدام هایی نمایش داده می شود که مسئولینشان پرسنل باشند و حکم داشته باشند.",
+   "project_bot": false
+  },
+  {
+   "id": 712,
+   "name": "[report]گزارش جامع فروش نسخه اصلی",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 715,
+   "name": "ابزار اجرای کوئری",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 717,
+   "name": "[report]گزارش جامع فروش نسخه اصلی",
+   "run_count": 212,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 718,
+   "name": "[report]گزارش جامع فروش با جزئیات",
+   "run_count": 339,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 719,
+   "name": "Sum Workdays And Sales Params",
+   "run_count": 618,
+   "disabled": false,
+   "description": "به علت بروز نبودن سیستم و نداشتن امکانات پیکربندی، نام پارامتر ها به صورت هارد کد در این بات تنظیم شده اند",
+   "project_bot": false
+  },
+  {
+   "id": 720,
+   "name": "ثبت نام در پورتال - نوع یک",
+   "run_count": 7608,
+   "disabled": false,
+   "description": "این بات برای ثبت نام و ورود در پرتال طراحی شده است - دارای کانفیگ",
+   "project_bot": false
+  },
+  {
+   "id": 723,
+   "name": "User Module Permission",
+   "run_count": 928,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 724,
+   "name": "تعداد پیامک تولد ارسال شده",
+   "run_count": 157,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 725,
+   "name": "ارسال پیام گروهی به مشتریان جهت تکمیل اطلاعات",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 726,
+   "name": "[report] گزارش اطلاعات مشتریان (خروجی اکسل)",
+   "run_count": 41,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 727,
+   "name": "مدل / کالا / سریال-json",
+   "run_count": 56,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 728,
+   "name": "گزارش \" تعداد پیامک تولد ارسال شده \"",
+   "run_count": 25,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 730,
+   "name": "گزارش \" تعداد پیامک تولد ارسال شده \"",
+   "run_count": 50,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 731,
+   "name": "Used Personn Leave",
+   "run_count": 329,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 732,
+   "name": "صدور فاکتور آنلاین در تیمیار",
+   "run_count": 756,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 733,
+   "name": "نمودار های رسوب کالا",
+   "run_count": 50,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 734,
+   "name": "Save Client And Factor With Api2",
+   "run_count": 74,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 735,
+   "name": "My Todo Delays",
+   "run_count": 2711,
+   "disabled": false,
+   "description": "باتوجه به اینکه اقدام و مراحل برای مراکز مختلف متفاوت نیستند فیلتر سازمان اگر انتخاب شود فقط اقدام هایی نمایش داده می شود که مسئولینشان پرسنل باشند و حکم داشته باشند.",
+   "project_bot": false
+  },
+  {
+   "id": 736,
+   "name": "گزارش در راه های ماژول پروژه 2024",
+   "run_count": 255,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 737,
+   "name": "Manager Open Todo",
+   "run_count": 267,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 738,
+   "name": "Manager Personnel Open Todo",
+   "run_count": 166,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 739,
+   "name": "personal-todo _ Manager Personnel Open Todo",
+   "run_count": 72,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 740,
+   "name": "ارسال پیامک مناسبتی - تقویم",
+   "run_count": 558,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 742,
+   "name": "گزارش جامع منابع انسانی",
+   "run_count": 209,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 743,
+   "name": "1.2.1_مقایسه فروش مراکز به ازای سال های مشابه قبلی",
+   "run_count": 13,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 744,
+   "name": "Send SMS For Opent Todo To Managers",
+   "run_count": 86,
+   "disabled": false,
+   "description": "Send SMS",
+   "project_bot": false
+  },
+  {
+   "id": 745,
+   "name": "وضعیت محصولات کامل جهت تارگت (تامین)",
+   "run_count": 16,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 746,
+   "name": "گزارش جامع منابع انسانی",
+   "run_count": 2,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 748,
+   "name": "ارسال پیام تولد(مشتریان - پرسنل)",
+   "run_count": 438,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 749,
+   "name": "تبدیل تاریخ به یونیکس تایم",
+   "run_count": 1542,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 750,
+   "name": "صدور فاکتور با Json",
+   "run_count": 7,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 752,
+   "name": "کالا با آی دی",
+   "run_count": 1687,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 754,
+   "name": "گزارش رسوب کالا واحد تامین",
+   "run_count": 8,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 755,
+   "name": "Remainded Product Serial",
+   "run_count": 6524,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 756,
+   "name": "گزارش رسوب کالا واحد تامین (انبار محصولات کارخانه 05)",
+   "run_count": 133,
+   "disabled": true,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)\r\n12648\tکامپیوتری /\r\n12905\tموبایلی /\r\n32367\tگیمینگ /\r\n13076\tصوتی و تصویری /\r\n32109\tسازمانی /\r\n18721\tمتفرقه /",
+   "project_bot": false
+  },
+  {
+   "id": 757,
+   "name": "ویژگی با کد کالا",
+   "run_count": 38,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 758,
+   "name": "گزارش رسوب کالا واحد تامین (انبار انبار محصولات کارخانه 05)",
+   "run_count": 1,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 759,
+   "name": "گزارش گروهای کالایی و مرکز فروش اصلی",
+   "run_count": 13,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)\r\n12648\tکامپیوتری /\r\n12905\tموبایلی /\r\n32367\tگیمینگ /\r\n13076\tصوتی و تصویری /\r\n32109\tسازمانی /\r\n18721\tمتفرقه /",
+   "project_bot": false
+  },
+  {
+   "id": 760,
+   "name": "گزارش رسوب کالا واحد تامین (انبار منتظر قطعه کارخانه (تولیدات) 6019)",
+   "run_count": 13,
+   "disabled": true,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)\r\n12648\tکامپیوتری /\r\n12905\tموبایلی /\r\n32367\tگیمینگ /\r\n13076\tصوتی و تصویری /\r\n32109\tسازمانی /\r\n18721\tمتفرقه /",
+   "project_bot": false
+  },
+  {
+   "id": 761,
+   "name": "گزارش رسوب کالا واحد تامین (انبار مواد اولیه کارخانه 01)",
+   "run_count": 3,
+   "disabled": true,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)\r\n12648\tکامپیوتری /\r\n12905\tموبایلی /\r\n32367\tگیمینگ /\r\n13076\tصوتی و تصویری /\r\n32109\tسازمانی /\r\n18721\tمتفرقه /",
+   "project_bot": false
+  },
+  {
+   "id": 762,
+   "name": "Root Client",
+   "run_count": 872,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 763,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 17,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 764,
+   "name": "Crm Portal Garanti And Sms",
+   "run_count": 1110,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 765,
+   "name": "گزارش رسوب کالا واحد تامین (انبار محصولات کارخانه 05) بدون مرکز فروش و کالا",
+   "run_count": 5,
+   "disabled": true,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)\r\n12648\tکامپیوتری /\r\n12905\tموبایلی /\r\n32367\tگیمینگ /\r\n13076\tصوتی و تصویری /\r\n32109\tسازمانی /\r\n18721\tمتفرقه /",
+   "project_bot": false
+  },
+  {
+   "id": 766,
+   "name": "گزارش رسوب کالا واحد تامین (انبار محصولات کارخانه 05) (پارامتر 30 و 90 روزه)",
+   "run_count": 106,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)\r\n12648\tکامپیوتری /\r\n12905\tموبایلی /\r\n32367\tگیمینگ /\r\n13076\tصوتی و تصویری /\r\n32109\tسازمانی /\r\n18721\tمتفرقه /",
+   "project_bot": false
+  },
+  {
+   "id": 767,
+   "name": "کد مرحله نهایی",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 768,
+   "name": "رسوب کالا انبار دفتر فروش گیلان",
+   "run_count": 9,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 769,
+   "name": "گزارش رسوب کالا واحد تامین (انبار محصولات کارخانه 05) جدید",
+   "run_count": 2,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)\r\n12648\tکامپیوتری /\r\n12905\tموبایلی /\r\n32367\tگیمینگ /\r\n13076\tصوتی و تصویری /\r\n32109\tسازمانی /\r\n18721\tمتفرقه /",
+   "project_bot": false
+  },
+  {
+   "id": 770,
+   "name": "رسوب کالا انبار دفتر فروش گیلان  (پارامتر 30 و 90 روزه)",
+   "run_count": 15,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 771,
+   "name": "رسوب کالا انبار دفتر فروش مشهد  (پارامتر 30 و 90 روزه)",
+   "run_count": 13,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 772,
+   "name": "رسوب کالا انبار کالاهای فروش سازمانی  (پارامتر 30 و 90 روزه)",
+   "run_count": 5,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 773,
+   "name": "رسوب کالا انبار مواد اولیه کارخانه  (پارامتر 30 و 60 روزه)",
+   "run_count": 39,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 774,
+   "name": "رسوب کالا انبار منتظر قطعه کارخانه (تولیدات)  (پارامتر 30 و 90 روزه 50 درصد محاسبه رسوب)",
+   "run_count": 13,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 775,
+   "name": "رسوب کالا انبار قطعات نیمه ساخته (پارامتر 14 روزه بدون در نظر گرفتن ورودی)",
+   "run_count": 16,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 777,
+   "name": "رسوب کالا انبار کالای درجریان ساخت کارخانه (پارامتر 2 روزه بدون در نظر گرفتن ورودی)",
+   "run_count": 17,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 778,
+   "name": "رسوب کالا انبار محصولات تولید شده خط تولید (پارامتر 2 روزه بدون در نظر گرفتن ورودی)",
+   "run_count": 9,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 779,
+   "name": "رسوب کالا انبار مواد بسته بندی  (پارامتر 30 و 60 روزه)",
+   "run_count": 11,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 781,
+   "name": "ارسال فایل در گفتگو",
+   "run_count": 6544,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 782,
+   "name": "Custom Field Poll In TODO",
+   "run_count": 145,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 783,
+   "name": "گزارش در راه های ماژول پروژه 2025",
+   "run_count": 159,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 784,
+   "name": "Compare Operation And Invoice",
+   "run_count": 98,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 785,
+   "name": "گزارش زمان اقدام های خرید صبحانه",
+   "run_count": 19,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 786,
+   "name": "گزارش زمان اقدام های خرید صبحانه",
+   "run_count": 12,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 787,
+   "name": "1.1.1_فروش کلی به ازای مراکز فروش",
+   "run_count": 9,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 788,
+   "name": "1.1.2_فروش کلی و تفکیک به ازای هر ماه",
+   "run_count": 9,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 789,
+   "name": "مرکز فروش_گروه کالایی_کالا",
+   "run_count": 9,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 790,
+   "name": "1.1.4_فروش به ازای برترین مشتریان",
+   "run_count": 10,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 791,
+   "name": "1.1.5_فروش به ازای استان",
+   "run_count": 9,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 792,
+   "name": "1.1.7_فروش به ازای کالا",
+   "run_count": 9,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 793,
+   "name": "فروش کلی و تفکیک گروه کالا و به ازای هر ماه واحد عمومی",
+   "run_count": 10,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 794,
+   "name": "Recive Message From Watsap",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 795,
+   "name": "Send Message To Watsap",
+   "run_count": 18,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 796,
+   "name": "تامین (مرحله3) : وضعیت نهایی تارگت فروش",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 797,
+   "name": "تامین (مرحله1) : وضعیت محصولات (تامین)",
+   "run_count": 8,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 798,
+   "name": "گزارش رسوب کالا واحد تامین (انبار محصولات کارخانه 05) (پارامتر 30 و 90 روزه)",
+   "run_count": 0,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)\r\n12648\tکامپیوتری /\r\n12905\tموبایلی /\r\n32367\tگیمینگ /\r\n13076\tصوتی و تصویری /\r\n32109\tسازمانی /\r\n18721\tمتفرقه /",
+   "project_bot": false
+  },
+  {
+   "id": 799,
+   "name": "نمودار های رسوب کالا (انبار 05)",
+   "run_count": 18,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 800,
+   "name": "کالاهای پیامک شده بر اساس مدل",
+   "run_count": 48,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 801,
+   "name": "لیست کالاها و ویژگی هایشان",
+   "run_count": 266,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 802,
+   "name": "جستجوی نام کالا بصورت ترکیبی",
+   "run_count": 4,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 803,
+   "name": "گزارش رسوب کالا واحد تامین (انبار محصولات کارخانه 05) (پارامتر 30 و 90 روزه) با تغییرات",
+   "run_count": 84,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 804,
+   "name": "گزارش رسوب کالا تجمیعی با فیلترهای متغییر",
+   "run_count": 36,
+   "disabled": true,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 805,
+   "name": "گزارش رسوب کالا تجمیعی با فیلترهای متغییر",
+   "run_count": 26,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 806,
+   "name": "موجودی کالاها و ایندکس آنها در انبارهای مختلف",
+   "run_count": 8,
+   "disabled": true,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 807,
+   "name": "گزارش رسوب کالا تجمیعی با فیلترهای متغییر",
+   "run_count": 18,
+   "disabled": true,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 808,
+   "name": "موجودی کالاها و ایندکس آنها در انبارهای مختلف",
+   "run_count": 17,
+   "disabled": true,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 809,
+   "name": "موجودی کالا همراه با مواد خام (ایندکس)",
+   "run_count": 138,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 810,
+   "name": "گزارش رسوب کالا تجمیعی با فیلترهای متغیر",
+   "run_count": 1017,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 811,
+   "name": "گزارش رسوب کالا تجمیعی با فیلترهای متغییر",
+   "run_count": 5,
+   "disabled": true,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 812,
+   "name": "گزارش رسوب کالا تجمیعی با فیلترهای متغییر انبار مواد بسته بندی",
+   "run_count": 18,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 813,
+   "name": "گزارش رسوب کالا تجمیعی با فیلترهای متغییر انبار دفتر فروش گیلان",
+   "run_count": 31,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 814,
+   "name": "گزارش رسوب کالا تجمیعی با فیلترهای متغییر",
+   "run_count": 416,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 815,
+   "name": "میزان بازگشتی کالا بر اساس مدل",
+   "run_count": 103,
+   "disabled": false,
+   "description": "گزارش بازگشتی کالا بر اساس مدل",
+   "project_bot": false
+  },
+  {
+   "id": 816,
+   "name": "صدور فاکتور آنلاین در تیمیار - بدون کلاینت",
+   "run_count": 811,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 817,
+   "name": "گزارش وضعیت پروژه های در راه با سرچ کالا",
+   "run_count": 68,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 818,
+   "name": "موجودی کالا همراه با مواد خام (ایندکس) ورژن جدید",
+   "run_count": 13,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 819,
+   "name": "موجودی کالا همراه با مواد خام (ایندکس) ورژن قدیمی",
+   "run_count": 0,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 820,
+   "name": "گزارش تحقق تارگت ها",
+   "run_count": 13,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 821,
+   "name": "گزارش تحقق تارگت ها",
+   "run_count": 27,
+   "disabled": false,
+   "description": "به علت دریافت رسید حواله های هر کالا در سال جدید تاریخ شروع از آخرین روز سال گذشته انتخاب شده است.\r\nتاریخ شروع : ۱۴۰۳/۱۲/۳۰ \r\nتاریخ پایان : ۱۴۰۴/۱۲/۲۹   _   سال مالی 1404 به صورت پیشفرض میباشد (آخرین قیمت متصل شده به کالا)",
+   "project_bot": false
+  },
+  {
+   "id": 822,
+   "name": "تست گزارش جدید از 2 دیتابیس",
+   "run_count": 2,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 823,
+   "name": "گزارش جامع بازرگانی",
+   "run_count": 10,
+   "disabled": true,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 824,
+   "name": "گزارش جامع بازرگانی",
+   "run_count": 9,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 825,
+   "name": "گزارش جامع بازرگانی",
+   "run_count": 23,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 826,
+   "name": "Call Api",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 827,
+   "name": "گزارش جامع بازرگانی تجمیعی",
+   "run_count": 39,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 832,
+   "name": "گزارش جامع بازرگانی تفکیک شده",
+   "run_count": 12,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 833,
+   "name": "گزارش جامع بازرگانی تفکیک شده تست",
+   "run_count": 23,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 834,
+   "name": "گزارش جامع بازرگانی تفکیک شده",
+   "run_count": 7,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 836,
+   "name": "گزارش جامع بازرگانی 2",
+   "run_count": 6,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 837,
+   "name": "گزارش جامع بازرگانی تفکیک شده تست",
+   "run_count": 70,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 838,
+   "name": "گزارش جامع بازرگانی تفکیک شده تست",
+   "run_count": 32,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 839,
+   "name": "کد کالا با نام",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 840,
+   "name": "فاکتورهای تکراری در فروش",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 841,
+   "name": "جستجو در عنوان فاکتور با شماره HC",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 842,
+   "name": "دریافت اطلاعات حساب مشتری با crmid",
+   "run_count": 105,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 843,
+   "name": "دریافت آی دی و پرنت حساب مشتری",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 844,
+   "name": "گزارش جامع بازرگانی ورژن 4",
+   "run_count": 10,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 845,
+   "name": "گزارش جامع بازرگانی ورژن 5",
+   "run_count": 40,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 846,
+   "name": "[report]گزارش وام و مساعده",
+   "run_count": 67,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 847,
+   "name": "گزارش جامع بازرگانی ورژن  6",
+   "run_count": 11,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 848,
+   "name": "Product Recipt Count For Invoice",
+   "run_count": 14,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 849,
+   "name": "گزارش جامع بازرگانی ورژن  7",
+   "run_count": 18,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 850,
+   "name": "گزارش وام و مساعده (دارای اکسل و چاپ)",
+   "run_count": 85,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 851,
+   "name": "گزارش جامع بازرگانی ورژن  8",
+   "run_count": 91,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 852,
+   "name": "Compare Operation And Accounting",
+   "run_count": 158,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 853,
+   "name": "گزارش جامع بازرگانی ورژن 9",
+   "run_count": 118,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 855,
+   "name": "گزارش جامع بازرگانی ورژن 10",
+   "run_count": 78,
+   "disabled": false,
+   "description": "https://erp.bimehland.com/?page=/project/view/&project_id=3577\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3543\r\n\r\n\r\n\r\nhttps://erp.bimehland.com/?page=/project/view/&project_id=3445",
+   "project_bot": false
+  },
+  {
+   "id": 856,
+   "name": "Company Randman",
+   "run_count": 1207,
+   "disabled": false,
+   "description": "توسعه داده شده به درخواست تسکو در اقدام 74294",
+   "project_bot": false
+  },
+  {
+   "id": 857,
+   "name": "TAT به جزء",
+   "run_count": 7,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 858,
+   "name": "گزارش TAT گارانتی به تفکیک ماه (پلکان 5 روزه) - سال 1404",
+   "run_count": 29,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 859,
+   "name": "سود ناخالص فروش(نسخه بهینه شده)",
+   "run_count": 11,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 860,
+   "name": "زمانبندی انجام کار جاب ها - 1404",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 861,
+   "name": "Remainded Product Serial By Stock",
+   "run_count": 258,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 862,
+   "name": "گزارش TAT گارانتی به تفکیک ماه (پلکان 3 روزه) - سال 1404",
+   "run_count": 13,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 863,
+   "name": "پندینگ جاب ها - تفکیک پلکان 3 روزه",
+   "run_count": 471,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 864,
+   "name": "گزارش BOM از طریق ویژگی کالا",
+   "run_count": 69,
+   "disabled": false,
+   "description": "با کمک بات فوق، با فیلتر ویژگی های کالا گزارشی از bom کالا بدست میاوریم",
+   "project_bot": false
+  },
+  {
+   "id": 865,
+   "name": "مهلت هر مرحله تست بر اساس واحد",
+   "run_count": 68,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 866,
+   "name": "مهلت هر مرحله تست بر اساس واحد ورژن ۲",
+   "run_count": 44,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 867,
+   "name": "مهلت هر مرحله تست بر اساس واحد ورژن ۳",
+   "run_count": 51,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 868,
+   "name": "تاریخچه ماشین ساعت زنی",
+   "run_count": 0,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 869,
+   "name": "Create Poll For Service By Event",
+   "run_count": 15917,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 870,
+   "name": "Create Poll For Service By After Time",
+   "run_count": 1,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 871,
+   "name": "Create Poll For Guranty By After Time",
+   "run_count": 2,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 872,
+   "name": "مهلت هر مرحله بر اساس واحد ورژن 4",
+   "run_count": 12,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 873,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5 (نسخه کامل)",
+   "run_count": 65,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 874,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5  (مارکتینگ)",
+   "run_count": 1010,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 875,
+   "name": "QC test",
+   "run_count": 13,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 876,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5  (گیمینگ)",
+   "run_count": 120,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 877,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5  (مدیر سازمانی)",
+   "run_count": 6,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 878,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5  (رییس سازمانی)",
+   "run_count": 8,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 879,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5  (کامپیوتری)",
+   "run_count": 2,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 880,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5  (مدیر مالی)",
+   "run_count": 13,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 881,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5   (بازرگانی)",
+   "run_count": 76,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 882,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5 (CRM)",
+   "run_count": 1583,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 883,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5 (R&D)",
+   "run_count": 3,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 884,
+   "name": "گزارش بررسی اقدامات پرسنل( بر پایه اقدام و جریان کاری)",
+   "run_count": 44,
+   "disabled": false,
+   "description": "در توضیح فیلد وزن مرحله : مجموع وزن مراحلی که هر شخص در هر جریان کاری (به تفکیک اقدام) مسئول بوده و مرحله خود را کامل کرده است محاسبه و نمایش داده می شود.مراحلی که ماژول آنها اقدام نیست و وزن ندارند از طریق فیلد مهلت بررسی می شوند.",
+   "project_bot": false
+  },
+  {
+   "id": 885,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5 (خرید داخلی)",
+   "run_count": 6,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 886,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5 (واحد گارانتی)",
+   "run_count": 6,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 887,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5 (نسخه کامل)",
+   "run_count": 13,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 888,
+   "name": "گزارش بررسی عملکرد افراد بر اساس مهلت مرحله ورژن 5 (واحد تامین)",
+   "run_count": 5,
+   "disabled": false,
+   "description": "پروژه  1.1.1",
+   "project_bot": false
+  },
+  {
+   "id": 892,
+   "name": "استعلام گارانتی کالا",
+   "run_count": 41,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 893,
+   "name": "eg",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 894,
+   "name": "Company Randeman [chart]",
+   "run_count": 87,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 895,
+   "name": "جیسون قبض پذیرش برای نظرسنجی",
+   "run_count": 479,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 896,
+   "name": "جیسون قبض پذیرش برای نظرسنجی",
+   "run_count": 11,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 897,
+   "name": "[report] مانده تعدادی ریالی به تفکیک انبار",
+   "run_count": 29,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 899,
+   "name": "جیسون قبض پذیرش برای نظرسنجی",
+   "run_count": 26,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 901,
+   "name": "جیسون برای نکسوز | فرم های کنترل کیفیت تماس های خدمات",
+   "run_count": 28,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 902,
+   "name": "گزارش | مرکز تماس | دسترسی کامل",
+   "run_count": 304,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 904,
+   "name": "فرم بدست آوردن تاریخ برای کوئری",
+   "run_count": 49,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 908,
+   "name": "Randeman Monthly [chart]",
+   "run_count": 20,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 909,
+   "name": "Randeman For lines Column [chart]",
+   "run_count": 10,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 910,
+   "name": "گزارش مانده موجودی مواد اولیه به تفکیک شماره قرارداد تست",
+   "run_count": 47,
+   "disabled": true,
+   "description": "در کوئری تاریخ عملیات ها از آخر 1404 الی آخر 1405 ست شده است",
+   "project_bot": false
+  },
+  {
+   "id": 911,
+   "name": "گزارش مانده موجودی مواد اولیه به تفکیک شماره قرارداد ورژن ۲",
+   "run_count": 67,
+   "disabled": false,
+   "description": "در کوئری تاریخ عملیات ها از آخر 1404 الی آخر 1405 ست شده است",
+   "project_bot": false
+  },
+  {
+   "id": 912,
+   "name": "گزارش دیتای کالاهای فعال همراه با ویژگی ها",
+   "run_count": 40,
+   "disabled": false,
+   "description": "در کوئری تاریخ عملیات ها از آخر 1404 الی آخر 1405 ست شده است",
+   "project_bot": false
+  },
+  {
+   "id": 913,
+   "name": "گزارش | مرکز تماس | نرگس کریمی",
+   "run_count": 64,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 914,
+   "name": "گزارش | مرکز تماس | مرجان کرمی",
+   "run_count": 119,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 915,
+   "name": "گزارش | مرکز تماس | غنچه ذاکری",
+   "run_count": 43,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 916,
+   "name": "گزارش | مرکز تماس | تینا شیرخانی",
+   "run_count": 204,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 917,
+   "name": "گزارش کیفیت با جزئیات",
+   "run_count": 120,
+   "disabled": false,
+   "description": "این باتی در حال حاضر فقط در صفحه نمایش نتایج کار میکند .",
+   "project_bot": false
+  },
+  {
+   "id": 918,
+   "name": "گزارش کیفیت با جزئیات",
+   "run_count": 17,
+   "disabled": true,
+   "description": "این باتی در حال حاضر فقط در صفحه نمایش نتایج کار میکند .",
+   "project_bot": false
+  },
+  {
+   "id": 919,
+   "name": "گزارش | مرکز تماس | دسترسی کامل",
+   "run_count": 27,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 920,
+   "name": "گزارش | برنامه ریزی تولید | مانده درخواست خرید",
+   "run_count": 101,
+   "disabled": false,
+   "description": "انبارهای 2 , 104 , 133 , 21",
+   "project_bot": false
+  },
+  {
+   "id": 921,
+   "name": "گزارش | ماتریس فروش | ورژن ۲",
+   "run_count": 72,
+   "disabled": false,
+   "description": "انبارهای 2 , 104 , 133 , 21",
+   "project_bot": false
+  },
+  {
+   "id": 922,
+   "name": "گزارش | ماتریس فروش",
+   "run_count": 3,
+   "disabled": true,
+   "description": "انبارهای 2 , 104 , 133 , 21",
+   "project_bot": false
+  },
+  {
+   "id": 923,
+   "name": "گزارش | ماتریس فروش",
+   "run_count": 9,
+   "disabled": true,
+   "description": "انبارهای 2 , 104 , 133 , 21",
+   "project_bot": false
+  },
+  {
+   "id": 924,
+   "name": "گزارش | ماتریس فروش | ورژن ۵",
+   "run_count": 30,
+   "disabled": false,
+   "description": "انبارهای 2 , 104 , 133 , 21",
+   "project_bot": false
+  },
+  {
+   "id": 925,
+   "name": "تست api",
+   "run_count": 49,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 926,
+   "name": "گزارش | ماتریس فروش | ورژن ۸",
+   "run_count": 43,
+   "disabled": false,
+   "description": "انبارهای 2 , 104 , 133 , 21",
+   "project_bot": false
+  },
+  {
+   "id": 927,
+   "name": "خلاصه اقدام با آی دی",
+   "run_count": 22,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 928,
+   "name": "آنالیز مراحل اقدام های باز",
+   "run_count": 3,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 929,
+   "name": "گزارش | ماتریس فروش | ورژن نهایی",
+   "run_count": 15,
+   "disabled": true,
+   "description": "انبارهای 2 , 104 , 133 , 21",
+   "project_bot": false
+  },
+  {
+   "id": 930,
+   "name": "DBSchema",
+   "run_count": 5,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 931,
+   "name": "گزارش | برنامه ریزی تولید | مانده درخواست خرید ورژن 5",
+   "run_count": 39,
+   "disabled": false,
+   "description": "در کوئری تاریخ عملیات ها از آخر 1404 الی آخر 1405 ست شده است",
+   "project_bot": false
+  },
+  {
+   "id": 932,
+   "name": "گزارش | ماتریس فروش | ورژن نهایی",
+   "run_count": 14,
+   "disabled": true,
+   "description": "انبارهای 2 , 104 , 133 , 21",
+   "project_bot": false
+  },
+  {
+   "id": 933,
+   "name": "بات ها",
+   "run_count": 6,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 934,
+   "name": "آنالیزور بات",
+   "run_count": 28,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 935,
+   "name": "کالاهای تعویضی خدمات پس از فروش",
+   "run_count": 105,
+   "disabled": false,
+   "description": "Deployed from service_replaced_products_json_bot.lua",
+   "project_bot": true
+  },
+  {
+   "id": 936,
+   "name": "جزئیات گفتگو",
+   "run_count": 4,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 937,
+   "name": "گزارش هزینه ها",
+   "run_count": 32,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 939,
+   "name": "TEST_CLAUDE_API_DELETE_M",
+   "run_count": 0,
+   "disabled": false,
+   "description": "تست خودکار API - لطفا حذف شود",
+   "project_bot": false
+  },
+  {
+   "id": 940,
+   "name": "TEST_CLAUDE_API_2_DELETE_ME",
+   "run_count": 0,
+   "disabled": false,
+   "description": "تست دوم برای گرفتن payload دقیق - حذف شود",
+   "project_bot": false
+  },
+  {
+   "id": 941,
+   "name": "bot created by curl",
+   "run_count": 9,
+   "disabled": false,
+   "description": "created via curl",
+   "project_bot": false
+  },
+  {
+   "id": 942,
+   "name": "هزینه رسید خدمات",
+   "run_count": 7,
+   "disabled": false,
+   "description": "ریز قطعات مصرفی، تعویض و عودت وجه",
+   "project_bot": false
+  },
+  {
+   "id": 943,
+   "name": "گزارش تجمیعی هزینه رسیدها",
+   "run_count": 29,
+   "disabled": false,
+   "description": "Deployed from service_receipt_cost_period_json_bot.lua",
+   "project_bot": false
+  },
+  {
+   "id": 944,
+   "name": "ارزیابی عملکرد فروش اکسسوری موبایل",
+   "run_count": 6,
+   "disabled": false,
+   "description": "ارزیابی عملکرد واحد فروش اکسسوری موبایل بر اساس حجم فروش تعدادی",
+   "project_bot": false
+  },
+  {
+   "id": 945,
+   "name": "عناوین تکراری فاکتور فروش",
+   "run_count": 14,
+   "disabled": false,
+   "description": "عناوین تکراری فاکتور فروش در بازه سال مالی جاری",
+   "project_bot": false
+  },
+  {
+   "id": 946,
+   "name": "گزارش | ماتریس فروش | ورژن نهایی همراه با کش",
+   "run_count": 6,
+   "disabled": true,
+   "description": "انبارهای 2 , 104 , 133 , 21",
+   "project_bot": false
+  },
+  {
+   "id": 948,
+   "name": "فعالیت کاربر",
+   "run_count": 8,
+   "disabled": false,
+   "description": "آمار فعالیت کاربر - سال مالی جاری",
+   "project_bot": true
+  },
+  {
+   "id": 949,
+   "name": "داشبورد خلاصه پذیرش خدمات",
+   "run_count": 89,
+   "disabled": false,
+   "description": "Deployed from service_receipt_summary_report_bot.lua",
+   "project_bot": true
+  },
+  {
+   "id": 950,
+   "name": "داشبورد ماهانه KPI پذیرش خدمات",
+   "run_count": 36,
+   "disabled": false,
+   "description": "Deployed from service_receipt_monthly_kpis_report_bot.lua",
+   "project_bot": true
+  },
+  {
+   "id": 955,
+   "name": "دیباگ موقت",
+   "run_count": 15,
+   "disabled": false,
+   "description": "Deployed from product_sales_debug_json_bot.lua",
+   "project_bot": true
+  },
+  {
+   "id": 962,
+   "name": "گزارش | ماتریس فروش | ورژن نهایی همراه با کش",
+   "run_count": 3,
+   "disabled": true,
+   "description": "گزارش کامل ماتریس فروش با ACL گروه محصول و مرکز فروش؛ شناسه 998116 دارای دسترسی کامل است و کش مشترک غیرفعال است.",
+   "project_bot": false
+  },
+  {
+   "id": 963,
+   "name": "گزارش | ماتریس فروش | ورژن نهایی همراه با cash",
+   "run_count": 23,
+   "disabled": true,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 964,
+   "name": "گزارش | ماتریس فروش | ورژن نهایی همراه با کش",
+   "run_count": 21,
+   "disabled": false,
+   "description": "",
+   "project_bot": false
+  },
+  {
+   "id": 965,
+   "name": "فهرست لیست‌های قیمت فروش",
+   "run_count": 36,
+   "disabled": false,
+   "description": "Deployed from sales_price_list_report_bot.lua",
+   "project_bot": true
+  },
+  {
+   "id": 966,
+   "name": "کاوش ساختار جدول",
+   "run_count": 105,
+   "disabled": false,
+   "description": "Deployed from schema_probe_json_bot.lua",
+   "project_bot": true
+  }
+ ]
+}

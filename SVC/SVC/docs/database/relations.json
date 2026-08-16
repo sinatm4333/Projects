@@ -1,0 +1,33 @@
+
+is the single source of truth for database relationships.
+
+Never:
+
+- Guess relationships.
+- Create navigation properties without verification.
+- Assume foreign keys.
+- Create incorrect JOIN conditions.
+
+---
+
+# Relationship Analysis Rules
+
+Before creating relationships verify:
+
+- Parent table
+- Child table
+- Primary key
+- Foreign key
+- Relationship type
+- Nullable behavior
+- Delete behavior
+
+---
+
+# Relationship Types
+
+Support:
+
+## One-to-One
+
+Example:

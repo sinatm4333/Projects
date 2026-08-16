@@ -1,0 +1,133 @@
+{
+  "params" : {
+    "org_id" : "شناسه سازمان",
+    "day_befor" : "تعداد روز قبل از امروز برای بازه فاکتورها",
+    "kind" : "نوع تسویه",
+    "account_code" : "کد حساب",
+    "client_code" : "کد طرف حساب",
+    "float_code" : "کد شناور",
+    "center_code" : "کد مرکز",
+    "project_code" : "کد پروژه"
+  },
+  "inputs" : {
+    "rep_id" : {"type" : "string", "default" : null},
+    "page" : {"type" : "string", "default" : 1},
+    "excel_file_name" : {"type" : "string", "default" : "sales_settlement_group_auto"},
+    "excel_from_page" : {"type" : "string", "default" : 1},
+    "excel_to_page" : {"type" : "string", "default" : 1},
+    "excel_per_page" : {"type" : "string", "default" : 100},
+    "invoice_id" : {"type" : "string", "default" : 0},
+    "invoice_ids" : {"type" : "string", "default" : null},
+
+    "org_id" : {
+      "aclId": 1,
+      "type": "table",
+      "default": 0,
+      "tableKeyTitle": "concat(id,' - ',name)",
+      "tableName": "org_info"
+    },
+    "from_date" : {"type" : "number", "default" : 0},
+    "to_date" : {"type" : "number", "default" : 0},
+    "filter_invoice_id" : {"type" : "string", "default" : 0},
+    "filter_title" : {"type" : "string", "default" : ""},
+    "filter_client" : {
+      "aclId": 2,
+      "type": "table",
+      "default": null,
+      "tableRelated": ["org_id"],
+      "tableKeyTitle": "concat(code,' - ',name)",
+      "tableName": "pa_client",
+      "tableWhere": "deleted = 0"
+    },
+    "filter_warehouse" : {
+      "aclId": 3,
+      "type": "table",
+      "default": null,
+      "tableRelated": ["org_id"],
+      "tableKeyTitle": "concat(code,' - ',name)",
+      "tableName": "wh_stock",
+        "tableWhere":"VOUCHER_ALLOW = 1"
+    },
+    "filter_product" : {
+      "aclId": 4,
+      "type": "table",
+      "default": null,
+      "tableRelated": ["org_id"],
+      "tableKeyTitle": "concat(code,' - ',name)",
+      "tableName": "wh_product",
+      "tableWhere":"VOUCHER_ALLOW = 1"
+    },
+    "filter_status" : {
+      "aclId": 5,
+      "type": "table",
+      "default": null,
+      "acls": [
+        {"id": 0, "name": "invoice_status_0"},
+        {"id": 1, "name": "invoice_status_1"},
+        {"id": 2, "name": "invoice_status_2"},
+        {"id": 3, "name": "invoice_status_3"}
+      ]
+    },
+    "filter_client_type" : {
+      "aclId": 6,
+      "type": "table",
+      "default": null,
+      "acls": [
+        {"id": 1, "name": "client_type_1"},
+        {"id": 2, "name": "client_type_2"},
+        {"id": 3, "name": "client_type_3"}
+      ]
+    }
+  },
+  "tools" : {
+    "excel": true,
+    "print" : true,
+    "developer" : true
+  },
+  "developer" : {
+    "name" : "Cascade",
+    "version" : "1.1",
+    "date" : "1405/05/19",
+    "description" : "کپی بات «تسویه گروهی» (id=569) با نام «تسویه اتوماتیک گروهی» — گزارش و تسویه گروهی فاکتورهای فروش با فیلترهای پیشرفته"
+  },
+  "languages" : {
+    "fa": {
+      "_report_name" : "تسویه اتوماتیک گروهی",
+      "_btn_search_report" : "اجرا",
+      "_table_report_col_checkbox" : "انتخاب",
+      "_table_report_col_invoice_id" : "شماره فاکتور",
+      "_table_report_col_run_date" : "تاریخ",
+      "_table_report_col_amount" : "مبلغ",
+      "_table_report_col_symbol" : "ارز",
+      "_table_report_col_client" : "کد طرف حساب",
+      "_table_report_col_settle" : "تسویه",
+
+      "_filter_org" : "شعبه",
+      "_filter_from_date" : "تاریخ فاکتور - از",
+      "_filter_to_date" : "تاریخ فاکتور - تا",
+      "_filter_invoice_id" : "شناسه فاکتور",
+      "_filter_title" : "برچسب",
+      "_filter_client" : "مشتری",
+      "_filter_warehouse" : "انبار",
+      "_filter_product" : "کالا",
+      "_filter_status" : "وضعیت",
+      "_filter_client_type" : "نوع مشتری",
+
+      "invoice_status_0" : "پیش فاکتور",
+      "invoice_status_1" : "بررسی",
+      "invoice_status_2" : "اجرا",
+      "invoice_status_3" : "کامل",
+
+      "client_type_1" : "مشتری",
+      "client_type_2" : "تأمین‌کننده",
+      "client_type_3" : "مشتری و تأمین‌کننده",
+	  "client_name":"مشتری",
+      "_msg_invalid_config" : "پیکربندی بات کامل نیست.",
+      "_msg_invalid_request" : "درخواست نامعتبر است.",
+      "_msg_no_selection" : "هیچ فاکتوری انتخاب نشده است.",
+      "_msg_success_settle" : "تسویه با موفقیت ثبت شد.",
+      "_msg_backend_error" : "خطا در ثبت تسویه."
+    },
+    "en": {}
+  }
+}

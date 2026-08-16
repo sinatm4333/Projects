@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>آمار فعالیت کاربر</title>
+<style>
+@font-face {
+  font-family: "YekanBakhReport";
+  src: local("Yekan Bakh"), local("YekanBakh");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+html, body, body *, button, input, select, textarea, table, th, td {
+  font-family: "YekanBakhReport", "Yekan Bakh", "IRANSans", "Tahoma", "Arial", sans-serif !important;
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #eef1f6;
+  color: #23262d;
+  font-size: 14px;
+  font-weight: 400;
+}
+.page { padding: 18px; }
+.shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #dbe1ea;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .06);
+  overflow: hidden;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 20px 22px;
+  border-bottom: 1px solid #e6ebf2;
+  background: linear-gradient(135deg, #f7f9fc, #eef5ff);
+}
+.header .title h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+.header .title p {
+  margin: 0;
+  color: #5b6472;
+  font-size: 14px;
+  font-weight: 700;
+}
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  border: 1px solid #cfd8e6;
+  background: #fff;
+  color: #23262d;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.btn.primary {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 16px 22px;
+  border-bottom: 1px solid #e6ebf2;
+  background: #fbfcfe;
+}
+.kpi {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  min-height: 78px;
+}
+.kpi .l {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.kpi .v {
+  color: #101828;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.kpi .s {
+  margin-top: 6px;
+  color: #98a2b3;
+  font-size: 12px;
+  font-weight: 700;
+}
+.tools {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 22px;
+  border-bottom: 1px solid #e6ebf2;
+}
+.badge {
+  display: inline-block;
+  background: #f2f4f7;
+  border: 1px solid #e4e7ec;
+  border-radius: 999px;
+  padding: 6px 12px;
+  margin-left: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #344054;
+}
+.badge b { color: #1d4ed8; }
+.table-wrap { padding: 0 0 8px; overflow: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 14px 22px;
+  border-bottom: 1px solid #eef2f6;
+  text-align: right;
+  font-size: 14px;
+}
+th {
+  width: 62%;
+  color: #475467;
+  font-weight: 800;
+  background: #fafbfc;
+}
+td {
+  width: 38%;
+  color: #101828;
+  font-weight: 800;
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+tr:last-child th, tr:last-child td { border-bottom: none; }
+.footer {
+  padding: 14px 22px 18px;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+  border-top: 1px solid #e6ebf2;
+  background: #fbfcfe;
+}
+.warn-box {
+  margin: 18px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 800;
+}
+.muted { color: #667085; font-weight: 700; }
+.candidates { margin: 0 22px 22px; padding: 0 18px; }
+.candidates li { margin: 8px 0; font-weight: 700; }
+.filters {
+  padding: 16px 22px;
+  border-bottom: 1px solid #e6ebf2;
+  background: #fbfcfe;
+}
+.filters .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.fi > label {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.55;
+  color: #23262d;
+  margin: 0 0 5px;
+}
+.fi .box {
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: center;
+  font-weight: 800;
+  color: #101828;
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="shell">
+    <header class="header">
+      <div class="title">
+        <h1>آمار فعالیت کاربر</h1>
+        <p>خلاصه گفتگو، اقدام، انبار، فروش و اسناد مالی برای مهدی جهانی پور سگزآبادی</p>
+      </div>
+      <div class="actions">
+<span class="badge">خروجی HTML</span><button class="btn primary" type="button" onclick='window.print()'>چاپ</button>      </div>
+    </header>
+<section class="filters">
+  <div class="grid">
+    <div class="fi"><label>نام کاربر</label><div class="box">مهدی جهانی پور سگزآبادی</div></div>
+    <div class="fi"><label>شناسه کاربر</label><div class="box">28653</div></div>
+    <div class="fi"><label>رسید/حواله و اقلام</label><div class="box">966 سند / 2765 قلم</div></div>
+    <div class="fi"><label>مراحل تکمیل‌شده</label><div class="box">5270</div></div>
+  </div>
+</section>
+
+<section class="kpis">
+  <div class="kpi"><div class="l">گفتگوهای کل</div><div class="v">1631</div></div>
+  <div class="kpi"><div class="l">گفتگوهای ایجادشده</div><div class="v">1030</div></div>
+  <div class="kpi"><div class="l">مخاطب بدون پاسخ</div><div class="v">440</div></div>
+  <div class="kpi"><div class="l">اقدامات باز</div><div class="v">24</div></div>
+  <div class="kpi"><div class="l">میانگین زمان مرحله (ساعت)</div><div class="v">16.35</div><div class="s">از 5270 مرحله تکمیل‌شده</div></div>
+  <div class="kpi"><div class="l">رسید / حواله</div><div class="v">966</div><div class="s">2765 قلم</div></div>
+  <div class="kpi"><div class="l">فاکتور فروش</div><div class="v">343</div></div>
+  <div class="kpi"><div class="l">اسناد مالی</div><div class="v">490</div><div class="s">1268 ردیف</div></div>
+</section>
+
+<section class="tools">
+  <div>
+    <span class="badge">کاربر: <b>مهدی جهانی پور سگزآبادی</b></span>
+    <span class="badge">شناسه: <b>28653</b></span>
+    <span class="badge">ردیف‌های سند مالی: <b>1268</b></span>
+  </div>
+</section>
+
+<div class="table-wrap">
+  <table>
+    <tr><th>تعداد کل گفتگوها (ایجادکننده یا مخاطب)</th><td>1631</td></tr>
+    <tr><th>تعداد گفتگوهای ایجادشده توسط کاربر</th><td>1030</td></tr>
+    <tr><th>تعداد گفتگوهای مخاطب بدون هیچ پاسخ از کاربر</th><td>440</td></tr>
+    <tr><th>تعداد اقدامات باز در مرحله کاربر</th><td>24</td></tr>
+    <tr><th>میانگین زمان تکمیل مرحله (ساعت)</th><td>16.35 <span class="muted">از 5270 مرحله</span></td></tr>
+    <tr><th>رسید/حواله ثبت‌شده و مجموع اقلام</th><td>966 سند / 2765 قلم</td></tr>
+    <tr><th>تعداد فاکتورهای ثبت‌شده</th><td>343</td></tr>
+    <tr><th>تعداد اسناد مالی ثبت‌شده</th><td>490</td></tr>
+    <tr><th>مجموع ردیف‌های اسناد مالی</th><td>1268</td></tr>
+  </table>
+</div>
+    <footer class="footer">
+      گفتگو، اقدام، رسید/حواله، فاکتور فروش و اسناد مالی - بر اساس نام کاربر
+    </footer>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+
+is the single source of truth for HR database structure.
+
+Never:
+
+- Invent tables
+- Invent columns
+- Assume relationships
+- Rename database objects without migration approval
+
+---
+
+# Table Analysis Rules
+
+Before using any HR table, verify:
+
+- Table name
+- Primary key
+- Foreign keys
+- Column data types
+- Nullable fields
+- Default values
+- Constraints
+- Indexes
+
+---
+
+# Entity Generation Rules
+
+When generating HR entities:
+
+- Match table names exactly.
+- Match column names exactly.
+- Preserve database data types.
+- Preserve nullable definitions.
+- Create navigation properties from relationships.
+- Add validation based on schema constraints.
+
+Example:
+
+Database:

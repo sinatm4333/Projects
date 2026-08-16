@@ -1,0 +1,309 @@
+---
+description: C# Coding Standards
+globs:
+  - "**/*.cs"
+alwaysApply: true
+---
+
+# Project Stack
+
+This project uses:
+
+- .NET 9
+- C# 13
+- Blazor Server
+- MudBlazor
+- EF Core
+- Clean Architecture
+- Repository Pattern
+- MediatR
+- FluentValidation
+
+Always generate production-ready code.
+
+---
+
+# General Principles
+
+Follow:
+
+- SOLID
+- DRY
+- KISS
+- YAGNI
+- Clean Code
+
+Avoid hacks.
+
+Avoid duplicated logic.
+
+Prefer readability over clever code.
+
+---
+
+# Language Features
+
+Use modern C# features whenever appropriate:
+
+- Primary Constructors
+- Collection Expressions
+- File Scoped Namespace
+- Global Using
+- Target Typed new()
+- Pattern Matching
+- Required properties
+- init setters
+- nameof()
+- string interpolation
+- switch expressions
+
+Do not generate outdated C# syntax.
+
+---
+
+# Naming
+
+Classes:
+PascalCase
+
+Methods:
+PascalCase
+
+Properties:
+PascalCase
+
+Fields:
+_privateField
+
+Interfaces:
+IRepository
+
+Constants:
+PascalCase
+
+Enums:
+PascalCase
+
+Enum members:
+PascalCase
+
+Private readonly fields start with "_".
+
+Never use abbreviations unless they are domain terms.
+
+---
+
+# Nullable
+
+Nullable Reference Types are enabled.
+
+Never use null when avoidable.
+
+Validate inputs.
+
+Prefer ArgumentNullException.ThrowIfNull().
+
+---
+
+# Async
+
+Prefer async/await.
+
+Never block using:
+
+.Result
+
+.Wait()
+
+Support CancellationToken whenever possible.
+
+Method names must end with Async.
+
+---
+
+# Dependency Injection
+
+Use constructor injection.
+
+Never use Service Locator.
+
+Never instantiate services manually.
+
+---
+
+# Exceptions
+
+Throw meaningful exceptions.
+
+Never swallow exceptions.
+
+Never catch Exception unless required.
+
+Log unexpected exceptions.
+
+---
+
+# Methods
+
+Methods should:
+
+- Have a single responsibility.
+- Stay under 40 lines when possible.
+- Avoid deep nesting.
+- Prefer early return.
+
+Extract complex logic into private methods.
+
+---
+
+# Classes
+
+Classes should have one responsibility.
+
+Avoid God Objects.
+
+Avoid static helper classes unless truly stateless.
+
+---
+
+# Collections
+
+Prefer:
+
+IReadOnlyList<T>
+
+IEnumerable<T>
+
+Only use List<T> when mutation is required.
+
+---
+
+# LINQ
+
+Prefer readable LINQ.
+
+Avoid multiple enumerations.
+
+Avoid LINQ inside loops.
+
+Avoid complex nested LINQ.
+
+---
+
+# Strings
+
+Use string interpolation.
+
+Avoid string concatenation.
+
+Use StringBuilder for large text generation.
+
+---
+
+# Magic Values
+
+Never use magic numbers.
+
+Never use magic strings.
+
+Use constants.
+
+Use enums.
+
+---
+
+# DTO
+
+Never expose EF entities.
+
+Always return DTOs.
+
+Separate:
+
+Entity
+
+DTO
+
+ViewModel
+
+Request
+
+Response
+
+---
+
+# Validation
+
+Use FluentValidation.
+
+Do not duplicate validation.
+
+Validate as early as possible.
+
+---
+
+# Logging
+
+Use ILogger<T>.
+
+Do not log sensitive information.
+
+Log meaningful context.
+
+---
+
+# Comments
+
+Write self-explanatory code.
+
+Avoid obvious comments.
+
+Comment only:
+
+- business rules
+- algorithms
+- non-obvious decisions
+
+---
+
+# Performance
+
+Avoid unnecessary allocations.
+
+Avoid boxing.
+
+Prefer Span<T> only when performance critical.
+
+Avoid premature optimization.
+
+---
+
+# Formatting
+
+Use expression-bodied members only when readable.
+
+Keep one blank line between methods.
+
+Use var only when type is obvious.
+
+Otherwise use explicit types.
+
+---
+
+# Output Quality
+
+Generated code must be:
+
+- Production Ready
+- Readable
+- Maintainable
+- Testable
+- Extensible
+
+Never generate placeholder implementations.
+
+Never leave TODO comments unless explicitly requested.
+
+Never omit error handling.
+
+Never generate sample/demo code unless requested.

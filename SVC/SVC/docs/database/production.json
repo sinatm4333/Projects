@@ -1,0 +1,18 @@
+
+Always read and consider this schema before:
+
+- Creating entities
+- Writing SQL queries
+- Creating LINQ queries
+- Creating repositories
+- Creating services
+- Creating API endpoints
+- Creating reports
+- Modifying database models
+- Creating migrations
+
+---
+
+# Source of Truth
+
+The file:

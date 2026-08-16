@@ -1,0 +1,47 @@
+ with DecimalDigits as( 
+ select po.ORG_ID,ps.DECIMAL_COUNT DecimalCount, (CASE WHEN COALESCE(ps.FEE_DECIMAL,0) = 0 THEN COALESCE(ps.DECIMAL_COUNT,0) ELSE COALESCE(ps.FEE_DECIMAL,0) END )DigitFee
+ from pa_organizations po join pa_symbols ps on(po.BASE_CURRENCY = ps.ID and po.ORG_ID = ps.ORG_ID)
+ ),
+  data as(
+ select i.ID invoice_number,i.INVOICE_ID,i.run_date
+ ,(select name from pa_client where id=i.CLIENT_ID limit 1) client_name
+  ,(select REFFERE_ID from pa_client where id=i.CLIENT_ID limit 1) Client_ID
+ ,(select count(PRODUCT_ID) from sales_invoice_product where INVOICE_ID = i.ID) tedad_kala
+ 
+ ,(case coalesce(i.TYPE,0) when 3 then -1*coalesce(sum(((ip.QUANTITY_CONFIRMED) / POW(10,sc.DECIMAL_NUM)) * ((ip.FEE)/POWER(10,COALESCE(dd.DigitFee,0)))),0) else 
+ coalesce(sum((ip.QUANTITY_CONFIRMED) / POW(10,sc.DECIMAL_NUM) * (ip.FEE)/POWER(10,COALESCE(dd.DigitFee,0))),0) end) Amount_before_discount
+ 
+ ,(case coalesce(i.TYPE,0) when 3 then -1*coalesce(sum(ip.DISCOUNT),0) else coalesce(sum(ip.DISCOUNT),0) end) DISCOUNT
+ 
+ ,(case coalesce(i.TYPE,0) when 3 then -1*coalesce((sum((ip.QUANTITY_CONFIRMED)/ POW(10,sc.DECIMAL_NUM) * (ip.FEE)/POWER(10,COALESCE(dd.DigitFee,0))) - 
+ sum(ip.DISCOUNT)),0) else coalesce((sum((ip.QUANTITY_CONFIRMED)/ POW(10,sc.DECIMAL_NUM) * (ip.FEE)/POWER(10,COALESCE(dd.DigitFee,0))) - sum(ip.DISCOUNT)),0) end) Amount_after_discount
+ 
+ ,sum(case coalesce(i.TYPE,0) when 3 then -1*coalesce((ip.VALUE_ADDED),0) else coalesce((ip.VALUE_ADDED),0) end) ValueAdd
+ 
+ ,sum(coalesce((case coalesce(i.TYPE,0)  when 3 then coalesce((-1 *(coalesce(((ip.fee)/POWER(10,COALESCE(dd.DigitFee,0)) * (ip.QUANTITY) / POW(10,sc.DECIMAL_NUM)),0)-coalesce((ip.DISCOUNT),0)
+ +coalesce((ip.VALUE_ADDED),0)+coalesce((ip.tax)/POWER(10,COALESCE(dd.DigitFee,0)),0)+coalesce((ip.toll)/POWER(10,COALESCE(dd.DigitFee,0)),0))),0)
+ else coalesce((coalesce(((ip.fee)/POWER(10,COALESCE(dd.DigitFee,0))*(ip.QUANTITY) / POW(10,sc.DECIMAL_NUM)),0)-coalesce((ip.DISCOUNT),0)
+ +coalesce((ip.VALUE_ADDED),0)+coalesce((ip.tax)/POWER(10,COALESCE(dd.DigitFee,0)),0)+coalesce((ip.toll)/POWER(10,COALESCE(dd.DigitFee,0)),0)),0) end),0)) AMOUNT
+ 
+ ,(case (i.moadian_status) when 0 then 'NOTSENT' else 'SENT' end) vaziat_moadian 
+ ,i.note
+ ,(case (coalesce(pui.USER_TYPE,0))when 3 then coalesce(pn.NATIONAL_CODE,0) when 4 then coalesce(ci.TIN,0) end) Tin_or_NATIONAL_CODE
+ ,(case (i.bill_type) when 0 then 'None' when 1 then 'Type_1' when 2 then 'Type_2' when 3 then 'Type_3' end) bill_type,(case (pui.USER_TYPE) when 3 then 'filter_natural' when 4 then 'filter_legal' end ) user_type
+ ,pf.NAME floatName
+ ,(select NAME from pa_center where id=i.SALES_CENTER and VOUCHER_ALLOW = 1 limit 1) CenterName,pp.NAME ProjectName
+ from sales_invoice i  inner join sales_invoice_product ip on ip.INVOICE_ID=i.id 
+ left join  pa_client  pc on(i.CLIENT_ID = pc.ID)
+ left join profile_nationalcode  pn   on(pn.USER_ID = pc.REFFERE_ID)
+ left join profile_user_info pui   on(pui.ID =pc.REFFERE_ID)
+ left join crm_info ci  on(ci.ID = pc.REFFERE_ID)
+ left join pa_floating   pf  on(i.FLOATING_ID = pf.ID and pf.ORG_ID = i.ORG_ID)
+ left join pa_project   pp   on(i.project_id = pp.ID and pp.ORG_ID = i.ORG_ID)
+ left join  wh_product   wp  on(wp.id=ip.PRODUCT_ID)
+ left join wh_stock_capacity        sc         on wp.CAPACITY_ID = sc.ID   
+ left join DecimalDigits  dd on(i.ORG_ID = dd.ORG_ID)
+  {{where_condition}}
+  group by i.ID,pn.NATIONAL_CODE,pui.USER_TYPE,ci.TIN
+
+) 
+ select  {{select}} from data
+ {{slicePageNumber}}

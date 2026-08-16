@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(split -b 6000 -d fixed_bot.txt chunk_)",
+      "Bash(rm -f chunk_*)",
+      "Bash(base64 -w0 fixed_bot.txt)",
+      "Bash(split -b 6000 -d fixed_bot_b64.txt chunk_)",
+      "Bash(powershell -Command ' *)",
+      "Bash(grep -o '\"total_open_actions\":[0-9]*' \"/c/Users/M.Jahani/.claude/projects/D--Projects-TeamyarBots-SVC/1cc459c2-4b1e-4027-a5b7-66ab4f7b3efd/tool-results/bkgkeuy5n.txt\" | head -1)",
+      "PowerShell(\\(Get-Item \"$env:TEMP\\\\bot927_test.html\"\\).FullName)",
+      "Bash(python3 -c ' *)",
+      "Bash(curl --silent --show-error --location --ssl-no-revoke --write-out '\\\\n%{http_code}' --output - 'https://erp.bimehland.com/bot/command/update?cat_id=69&id=968' --header 'Cookie: SID=28653|I2D95A626013634680B518F53CD0FF9A1' --header 'Origin: https://erp.bimehland.com' --header 'Referer: https://erp.bimehland.com/?page=/bot/command&cat_id=69&id=968' --header 'X-Requested-With: XMLHttpRequest' --form status=0 --form 'name=تجزیه اقدام‌های باز \\(غیرفعال - تکراری با 928\\)' --form subsystem_value= --form subsystem= --form run_path=open_actions_analysis --form not_showing_in_iframe=0 --form icon= --form color= --form db_prefix= --form async_run=0 --form async_deadline_run=0 --form max_execute_time=100 --form cache_time_status=0 --form cache_time=0 --form show_in_portal_menu=0 --form public_access=0 --form show_in_widget=0 --form open_source=0 --form categories=69_1 --form deleted_details= --form 'bot_customform={\"layout\":{\"width_title\":3,\"col\":\"COL-2\",\"seperator\":\"\"},\"info\":[],\"schema\":{},\"default_value\":{}}' --form attachments_deleted= --form 'bot_config={\"layout\":{\"width_title\":3,\"col\":\"COL-2\",\"seperator\":\"\"},\"info\":[],\"schema\":{},\"default_value\":{}}' --form ver=0 --form active_version= --form new_version=0 --form result_type=1 --form 'description=DISABLED - duplicate of bot 928' --form 'command=<src/open_actions_analysis_bot.lua' --form temp_folder_id=0 --form document_content= --form temp_folder_id_2=0 --form help_content=)",
+      "Bash(xxd)",
+      "Bash(xxd \"/d/Projects/TeamyarBots/SVC/src/EghdamPerId_bot.lua\")",
+      "PowerShell(if \\($env:TEAMYAR_SID\\) { \"SID is set, length=$\\($env:TEAMYAR_SID.Length\\)\" } else { \"SID not set in this shell\" })",
+      "PowerShell(& \"D:\\\\Projects\\\\TeamyarBots\\\\SVC\\\\scripts\\\\run_teamyar_bot.ps1\" -BotId 927 -FormInputJson '{\"task_id\":\"\"}')",
+      "Bash(grep -o \"task_id\\\\|<tbody>.\\\\{0,300\\\\}\" \"C:\\\\Users\\\\M.Jahani\\\\.claude\\\\projects\\\\D--Projects-TeamyarBots-SVC\\\\f184dc5b-9615-492b-85d4-5d8942d39751\\\\tool-results\\\\b6m4qaqzk.txt\")",
+      "Bash(grep -o '<div class=\"error-card\">.\\\\{0,100\\\\}' \"C:\\\\Users\\\\M.Jahani\\\\.claude\\\\projects\\\\D--Projects-TeamyarBots-SVC\\\\f184dc5b-9615-492b-85d4-5d8942d39751\\\\tool-results\\\\b6m4qaqzk.txt\")",
+      "Bash(grep -o '<div class=\"error-card\">.\\\\{0,120\\\\}' 'C:\\\\Users\\\\M.Jahani\\\\.claude\\\\projects\\\\D--Projects-TeamyarBots-SVC\\\\f184dc5b-9615-492b-85d4-5d8942d39751\\\\tool-results\\\\bd4g23i0i.txt')",
+      "Bash(grep -c '<tr>' 'C:\\\\Users\\\\M.Jahani\\\\.claude\\\\projects\\\\D--Projects-TeamyarBots-SVC\\\\f184dc5b-9615-492b-85d4-5d8942d39751\\\\tool-results\\\\bd4g23i0i.txt')",
+      "Bash(grep -o 'تعداد کل اقدام باز</div><div class=\"s-value\">[0-9]*' 'C:\\\\Users\\\\M.Jahani\\\\.claude\\\\projects\\\\D--Projects-TeamyarBots-SVC\\\\f184dc5b-9615-492b-85d4-5d8942d39751\\\\tool-results\\\\bd4g23i0i.txt')",
+      "PowerShell(node \"C:\\\\Users\\\\M.Jahani\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Projects-TeamyarBots-SVC\\\\f184dc5b-9615-492b-85d4-5d8942d39751\\\\scratchpad\\\\parse_bot_view.js\" \"$env:TEMP\\\\bot928_view.json\")",
+      "PowerShell(node \"C:\\\\Users\\\\M.Jahani\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Projects-TeamyarBots-SVC\\\\f184dc5b-9615-492b-85d4-5d8942d39751\\\\scratchpad\\\\extract_command.js\" \"$env:TEMP\\\\bot928_view.json\" \"C:\\\\Users\\\\M.Jahani\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Projects-TeamyarBots-SVC\\\\f184dc5b-9615-492b-85d4-5d8942d39751\\\\scratchpad\\\\bot928_live_command.lua\")",
+      "Bash(node /c/Users/M.Jahani/AppData/Local/Temp/claude/D--Projects-TeamyarBots-SVC/f184dc5b-9615-492b-85d4-5d8942d39751/scratchpad/lua_check.js /c/Users/M.Jahani/AppData/Local/Temp/claude/D--Projects-TeamyarBots-SVC/f184dc5b-9615-492b-85d4-5d8942d39751/scratchpad/bot928_live_command.lua)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(grep -oE '#[0-9a-fA-F]{3,6}' src/EghdamBazAnalyze_bot.lua)",
+      "Bash(rm -f \"/c/Users/M.Jahani/AppData/Local/Temp/bot928_sla.html\" \"/c/Users/M.Jahani/AppData/Local/Temp/claude/D--Projects-TeamyarBots-SVC/1cc459c2-4b1e-4027-a5b7-66ab4f7b3efd/scratchpad/bot928_preview.html\" 2>/dev/null; echo cleaned)"
+    ]
+  }
+}

@@ -1,0 +1,380 @@
+{
+    "tools" : {
+      "excel": true ,
+      "print" : true ,
+      "developer" : true
+    },
+  
+    "developer" : {
+      "name" : "Mozhgan RajabAli" ,
+      "version" : "1.0" ,
+      "date" : "1403/09/25" ,
+      "description" : ""
+    },
+  
+  "params" : {
+  
+    },
+  
+    "inputs" : {
+          
+       "org_id" : {
+           "searcher_id" : 1,
+           "searcher_type" : "acl_single",
+           "searcher_title" : "_filter_org",
+  
+           "type": "table" ,
+           "default" : null ,
+  
+           "tableKeyTitle": "concat(id,' - ',name)",
+           "tableName" : "org_info" ,
+  
+           "whereName" : "org_id" ,
+           "whereType" : "in"
+        } ,
+
+        "customer" : {
+           "searcher_id" : 2,
+           "searcher_type" : "acl_multi",
+           "searcher_title" : "_filter_customer",
+  
+           "type": "table" ,
+           "default" : null ,
+            "tableRelated" : ["org_id"],
+           "tableKeyTitle": "concat(id,' - ',name)",
+           "tableName" : "pa_client" 
+  
+        } ,
+        "customerCategory" : {
+           "searcher_id" : 3,
+           "searcher_type" : "acl_single",
+           "searcher_title" : "_filter_customer_category",
+  
+           "type": "table" ,
+           "default" : null ,
+          
+          "query" : "select distinct REFERE_ID,concat(REFERE_ID,' - ',FULLNAME) from crm_cross
+                     join profile_main on profile_main.ID = crm_cross.REFERE_ID  {{whereAcl}}",
+          "tableKeyTitle" : "concat(REFERE_ID,' - ',FULLNAME)"
+          
+        } ,
+      
+          "from_date" : {
+
+  
+               "type": "number" ,
+               "default" : null
+          },
+    
+        "to_date" : {
+  
+              "type": "number" ,
+              "default" : null
+      },
+
+        "salesCenter" : {
+           "searcher_id" : 6,
+           "searcher_type" : "acl_multi",
+           "searcher_title" : "_filter_customer",
+  
+           "type": "table" ,
+           "default" : null ,
+             "tableRelated" : ["org_id"],
+           "tableKeyTitle": "concat(ID,' - ',Name)",
+           "tableName" : "pa_center" 
+  
+        },
+        "salesAgent" : {
+           "searcher_id" : 7,
+           "searcher_type" : "acl_multi",
+           "searcher_title" : "_filter_sales_agent",
+  
+           "type": "table" ,
+           "default" : null ,
+            
+          "query" : "select distinct SALES_AGENT,NAME from sales_invoice
+                     join pa_client on sales_invoice.SALES_AGENT = pa_client.ID and 
+                     sales_invoice.ORG_ID = pa_client.ORG_ID {{whereAcl}}",
+          "tableKeyTitle" : "concat(SALES_AGENT,' - ',NAME)"
+          
+        },
+          "stock" : {
+           "searcher_id" : 8,
+           "searcher_type" : "acl_multi",
+           "searcher_title" : "_filter_stock",
+  
+           "type": "table" ,
+           "default" : null ,
+             "tableRelated" : ["org_id"],
+           "tableKeyTitle": "concat(ID,' - ',Name)",
+           "tableName" : "wh_stock" 
+          
+        },
+  
+        "invoiceType" : {
+           "searcher_id" : 9,
+           "searcher_type" : "acl_multi",
+           "searcher_title" : "_filter_invoice_type",
+  
+           "type": "table" ,
+           "default" : null ,
+
+          "query" : "select distinct TYPE,
+                    (Case Coalesce(TYPE,0) WHEN 1 THEN 'فاکتور فروش' WHEN 2 THEN 'پیش فاکتور فروش' 
+                    WHEN 3 THEN 'برگشت از فروش' WHEN 5 THEN 'سفارش فروش' WHEN 6 THEN 'حواله فروش' 
+                    WHEN 7 THEN 'قرارداد فروش' ELSE 'نامشخص' END )InvoiceType
+                    from sales_invoice {{whereAcl}}",
+          "tableKeyTitle" : "concat(TYPE,' - ',InvoiceType)"
+          
+        },
+          "invoiceStatus" : {
+           "searcher_id" : 10,
+           "searcher_type" : "acl_multi",
+           "searcher_title" : "_filter_invoice_status",
+  
+           "type": "table" ,
+           "default" : null ,
+           
+           "acls" : [
+            {"id": 0 , "name" :  "_invoice_0" },
+            {"id": 1 , "name" :  "_invoice_1" },
+            {"id": 2 , "name" :  "_invoice_2" },
+            {"id": 3 , "name" :  "_invoice_3" }
+           ]
+          
+        },
+          "product" : {
+           "searcher_id" : 11,
+           "searcher_type" : "acl_multi",
+           "searcher_title" : "_filter_product",
+  
+           "type": "table" ,
+           "default" : null ,
+            "tableRelated" : ["org_id"],
+           "tableKeyTitle": "concat(ID,' - ',Name)",
+           "tableName" : "wh_product" 
+          
+        },
+        "country" : {
+           "searcher_id" : 12,
+           "searcher_type" : "acl_multi",
+           "searcher_title" : "_filter_country",
+  
+           "type": "table" ,
+           "default" : null ,
+ 
+           "tableKeyTitle": "concat(ID,' - ',Name_P)",
+           "tableName" : "report_country" 
+          
+        },
+        "state" : {
+           "searcher_id" : 13,
+           "searcher_type" : "acl_single",
+           "searcher_title" : "_filter_state",
+  
+           "type": "table" ,
+           "default" : null 
+          
+        },
+          "city" :{"type": "table" ,"aclId":14, "default" : {}},
+        "group_product" : {
+           "searcher_id" : 15,
+           "searcher_type" : "acl_multi",
+           "searcher_title" : "_filter_gruop_product",
+  
+           "type": "table" ,
+           "default" : null ,
+           "query"  : "  with res as (
+           SELECT ID,NAME FROM  wh_setting_product_info where type=1 and PRODUCT_ID=0 
+          and MODULE_ID = 23 
+           )
+           select ID,NAME from res {{whereAcl}} ",
+           "tableKeyTitle" : "concat(ID,' - ',NAME)"
+          
+        },
+        
+        "invoiceNumber" :{   
+        
+        "searcher_id" : 16,
+           "searcher_type" : "acl_single",
+           "searcher_title" : "_filter_state",
+  
+           "type": "table" ,
+           "default" : null 
+           },
+         "del_status" : {
+              "aclId": 17,
+              "type": "table" ,
+              "default" : null ,
+              "acls": [
+                  {"id": 0 , "name" :  "deleted_false" },
+                  {"id": 1 , "name" :  "deleted_true" }
+              ]
+              }
+
+    } ,
+  
+    "languages" : {
+      "fa": {
+        "_report_name" : "گزارش جامع فروش" ,
+        "_btn_search_report" : "اجرا کردن",
+        "_filter_org" : "شعبه" ,
+        "_filter_customer" : "مشتری",
+        "_filter_customer_category" : "طبقه بندی مشتری",
+       
+        "_filter_product" : "نام کالا",
+        "_filter_date_from" : "از تاریخ",
+        "_filter_date_to" : "تا تاریخ",
+        "_filter_sales_center" : "مرکز فروش",
+        "_filter_sales_agent" : "عامل فروش",
+        "_filter_stock" : " انبار",
+        "_filter_invoice_type" : "نوع فاکتور",
+        "_filter_invoice_status" : "وضعیت فاکتور",
+        "_invoice_0" : "پیش نویس",
+        "_invoice_1" : "بررسی",
+        "_invoice_2" : "اجرا",
+        "_invoice_3" : "کامل",
+        "_filter_stock_status" : "وضعیت انبار",
+        "_filter_product" : "کالا",
+        "_filter_country" : "کشور",
+        "_filter_state" : "استان",
+        "_filter_city" : "شهر",
+        "_filter_invoice_number" : "شماره فاکتور",
+        "id" : "شناسه فاکتور",
+        "invoice_number" : "شماره فاکتور",
+        "run_date" : "تاریخ فاکتور",
+        "FloatName" : "شناور",
+        "CenterName" : "مرکز فروش",
+        "AgentName" : "عامل فروش",
+        "InvoiceType" : "نوع فاکتور",
+        "CODE" : "شناسه حساب",
+        "client_name" : "نام مشتری",
+        "full_code" : "کد کالا",
+        "product_name" : "نام کالا",
+        "stock_name" : "نام انبار",
+        "GroupProduct" : "گروه کالا",
+        "unit_name" : "واحد",
+        "QUANTITY" : "مقدار",
+        "QUANTITY_SEC" :"مقدار(بر اساس واحد اصلی)",
+        "fee" : "فی",
+        "amountt" : "مبلغ",
+        "discount" : "تخفیف",
+        "ValueAdd" : "ارزش افزوده",
+        "Tax" : "مالیات",
+        "Toll" : "عوارض",
+        "AMOUNT" : "مبلغ کل",
+        "NEWCOUNTRY" : "کشور",
+        "NEWCITY" : "شهر",
+        "NEWSTATE" : "استان",
+        "Month" : "ماه",
+        "Year" : "سال",
+        "clientID" : "شناسه(مشتری)",
+        "REFFERE_ID" : "شناسه کاربر",
+        "note" : "توضیحات",
+        "_filter_gruop_product" : "گروه کالا",
+        "tin" : "کد اقتصادی",
+        "EXPIRE_SETTLEMENT_DATE" : "مهلت تسویه",
+        "NATIONAL_CODE" : "کد ملی",
+        "ADDRESS" : "آدرس",
+        "POSTAL_CODE" : "کد پستی",
+        "MOBILE" :"موبایل",
+        "deleted_false":"باطل نشده",
+        "deleted_true":"باطل شده",
+        "_filter_del_status":"وضعیت ابطال",
+        "_filter_chart_stock" : "جمع فروش به تفکیک انبار",
+        "_filter_stock" : "نام انبار",
+        "Rial" : "ریال",
+        "_filter_sale" : "فروش",
+        "_filter_type" : "نوع فروش",
+        "_filter_sale_center" : "مرکز فروش",
+        "_filter_total" : "فروش کل",
+        "_filter_dis" : "فروش با کسر تخفیف",
+        "_filter_net" : "فروش خالص",
+        "Season_Spring" : "بهار",
+        "Season_Summer" : "تابستان",
+        "Season_Autumn" : "پاییز",
+        "Season_Winter" : "زمستان",
+        "returned" : "برگشت از فروش"
+     
+      },
+      "en": {
+        "_report_name": "ComprehensiveSales",
+        "_btn_search_report": "execute",
+        "_filter_org" : "Org",
+        "_filter_customer" : "Customer",
+        "_filter_customer_category" : "CustomerCategory" ,
+        "_filter_date_from" : "FromDate",
+        "_filter_sales_center" : "SalesCenter",
+        "_filter_date_to" : "ToDate",
+        "_filter_sales_agent" : "SalesAgent",
+        "_filter_stock" : "StockName",
+        "_filter_invoice_type" : "InvoiceType",
+        "_filter_invoice_status" : "InvoiceStatus",
+         "_filter_invoice_number" : "InvoiceNumber",
+        "_invoice_0" : "Draft",
+        "_invoice_1" : "Check",
+        "_invoice_2" : "execution",
+        "_invoice_3" : "Complete",
+        "_filter_stock_status" : "StockStatus",
+        "_filter_product" : "Product",
+        "_filter_country" : "Country",
+        "_filter_state" : "State",
+        "_filter_city" : "City",
+        "id" : "ID",
+        "invoice_number" : "InvoiceID",
+        "run_date" : "InvoiceDate",
+        "FloatName" : "FloatName",
+        "CenterName" : "CenterName",
+        "AgentName" : "AgentName",
+        "InvoiceType" : "InvoiceType",
+        "CODE" : "Code",
+        "client_name" : "ClientName",
+        "full_code" : "FullCode",
+        "product_name" : "ProductName",
+        "stock_name" : "StockName",
+        "GroupProduct" : "GroupProduct",
+        "unit_name" : "UnitName",
+        "QUANTITY" : "Quantity",
+        "QUANTITY_SEC":"QuantityMain",
+        "fee" : "Amount",
+         "amountt" : "AmountBase",
+        "discount" : "Discount",
+        "ValueAdd" : "ValueAdd",
+        "Tax" : "Tax",
+        "Toll" : "Toll",
+        "AMOUNT" : "Amount",
+        "NEWCOUNTRY" : "Country",
+        "NEWCITY" : "City",
+        "NEWSTATE" : "State",
+        "Month" : "Month",
+        "Year" : "Year",
+        "clientID" : "ClientID",
+        "REFFERE_ID" : "ReffereID",
+        "note" : "Note",
+        "_filter_gruop_product" : "GruopProduct",
+         "tin" : "Tin",
+        "EXPIRE_SETTLEMENT_DATE" : "ExpireSettlementDate",
+        "NATIONAL_CODE" : "NationalCode",
+        "ADDRESS" : "Address",
+        "POSTAL_CODE" : "PostalCode",
+        "MOBILE" :"Mobile",
+        "deleted_false":"Not Deleted",
+        "deleted_true":"Deleted",
+        "_filter_del_status":"Deleted Status",
+        "_filter_chart_stock" : "TotalSalesByWarehouse",
+       "_filter_stock" : "StockName",
+       "Rial": "Rial",
+        "_filter_sale" : "Sales",
+       "_filter_type" : "SaleType",
+       "_filter_sale_center" : "SalesCenter",
+       "_filter_total" : "TotalSale",
+       "_filter_dis" : "SaleWithDiscount",
+       "_filter_net" : "NetSales",
+        "Season_Spring" : "Spring",
+        "Season_Summer" : "Summer",
+         "Season_Autumn" : "Autumn",
+          "Season_Winter" : "Winter",
+          "returned" : "Back from shopping"
+      }
+    }
+  }

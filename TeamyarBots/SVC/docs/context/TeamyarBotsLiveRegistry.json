@@ -1,0 +1,198 @@
+﻿{
+    "bots":  [
+                 {
+                     "id":  933,
+                     "cat_id":  69,
+                     "name":  "بات ها",
+                     "description":  "فهرست همه بات‌های Teamyar از bot_command",
+                     "run_path":  "258/getallbots",
+                     "run_id":  "258",
+                     "run_slug":  "getallbots",
+                     "run_url":  "https://team.tsco.ir/bot/run/258/getallbots?ver=0",
+                     "view_url":  "https://team.tsco.ir/?page=/bot/command/view\u0026id=933\u0026cat_id=69\u0026tab=0",
+                     "result_type":  0,
+                     "run_count":  4,
+                     "categories":  "TAT",
+                     "local_src":  "src/bot_commands_json_bot.lua",
+                     "pattern":  "simple JSON list + JOIN",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  1148,
+                     "synced_at":  "2026-07-15"
+                 },
+                 {
+                     "id":  942,
+                     "cat_id":  100,
+                     "name":  "هزینه رسید خدمات",
+                     "description":  "ریز قطعات مصرفی، تعویض و عودت وجه بر اساس شماره رسید",
+                     "run_path":  "258/service_receipt_cost",
+                     "run_id":  "258",
+                     "run_slug":  "service_receipt_cost",
+                     "run_url":  "https://team.tsco.ir/bot/run/258/service_receipt_cost?ver=0",
+                     "view_url":  "https://team.tsco.ir/?page=/bot/command/view\u0026id=942\u0026cat_id=100\u0026tab=0",
+                     "result_type":  0,
+                     "run_count":  2,
+                     "categories":  "Service",
+                     "local_src":  "src/service_receipt_cost_json_bot.lua",
+                     "pattern":  "single receipt JSON + COGS sections",
+                     "input_fields":  [
+                                          "receipt_no"
+                                      ],
+                     "default_input":  {
+                                           "receipt_no":  "250250"
+                                       },
+                     "command_bytes":  16813,
+                     "synced_at":  "2026-07-15"
+                 },
+                 {
+                     "id":  943,
+                     "cat_id":  100,
+                     "name":  "گزارش تجمیعی هزینه رسیدها",
+                     "description":  "تجمیع هزینه رسیدها در بازه تاریخ با منطق بات 942",
+                     "run_path":  "258/service_receipt_cost_period",
+                     "run_id":  "258",
+                     "run_slug":  "service_receipt_cost_period",
+                     "run_url":  "https://team.tsco.ir/bot/run/258/service_receipt_cost_period?ver=0",
+                     "view_url":  "https://team.tsco.ir/?page=/bot/command/view\u0026id=943\u0026cat_id=100\u0026tab=0",
+                     "result_type":  0,
+                     "run_count":  1,
+                     "categories":  "Service",
+                     "local_src":  "src/service_receipt_cost_period_json_bot.lua",
+                     "pattern":  "period HTML matrix + optional format=json (like replaced products bot)",
+                     "input_fields":  [
+                                          "startDate",
+                                          "end_date",
+                                          "org_id"
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  23063,
+                     "synced_at":  "2026-07-15"
+                 },
+                 {
+                     "id":  944,
+                     "cat_id":  100,
+                     "name":  "ارزیابی عملکرد فروش اکسسوری موبایل",
+                     "description":  "ارزیابی عملکرد واحد فروش اکسسوری موبایل بر اساس حجم فروش تعدادی",
+                     "run_path":  "258/sales_accessory_volume_performance",
+                     "run_id":  "258",
+                     "run_slug":  "sales_accessory_volume_performance",
+                     "run_url":  "https://team.tsco.ir/bot/run/258/sales_accessory_volume_performance?ver=0",
+                     "view_url":  "https://team.tsco.ir/?page=/bot/command/view\u0026id=944\u0026cat_id=100\u0026tab=0",
+                     "result_type":  0,
+                     "run_count":  1,
+                     "categories":  "Service",
+                     "local_src":  "src/sales_accessory_volume_performance_report_bot.lua",
+                     "pattern":  "sales volume performance HTML by month/product for org_id",
+                     "input_fields":  [
+                                          "startDate",
+                                          "end_date",
+                                          "org_id"
+                                      ],
+                     "default_input":  {
+                                           "org_id":  "2"
+                                       },
+                     "command_bytes":  29408,
+                     "synced_at":  "2026-07-15"
+                 },
+                 {
+                     "id":  945,
+                     "cat_id":  100,
+                     "name":  "عناوین تکراری فاکتور فروش",
+                     "description":  "گروهبندی TITLE فاکتور فروش با count بیشتر از 1 بدون deleted و خالی",
+                     "run_path":  "258/sales_invoice_title_duplicates",
+                     "run_id":  "258",
+                     "run_slug":  "sales_invoice_title_duplicates",
+                     "run_url":  "https://team.tsco.ir/bot/run/258/sales_invoice_title_duplicates?ver=0",
+                     "view_url":  "https://team.tsco.ir/?page=/bot/command/view\u0026id=945\u0026cat_id=100\u0026tab=0",
+                     "result_type":  0,
+                     "run_count":  1,
+                     "categories":  "Service",
+                     "local_src":  "src/sales_invoice_title_duplicates_report_bot.lua",
+                     "pattern":  "HTML table GROUP BY TITLE HAVING count\u003e1",
+                     "input_fields":  [
+                                          "startDate",
+                                          "end_date"
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  8949,
+                     "synced_at":  "2026-07-15"
+                 },
+                 {
+                     "id":  948,
+                     "cat_id":  100,
+                     "name":  "┘ü╪╣╪º┘ä█î╪¬ ┌⌐╪º╪▒╪¿╪▒",
+                     "description":  "╪ó┘à╪º╪▒ ┘ü╪╣╪º┘ä█î╪¬ ┌⌐╪º╪▒╪¿╪▒ ╪¿╪º ╪º╪│╪¬╪º█î┘ä ┌»╪▓╪º╪▒╪┤ ┘à╪º╪¬╪▒█î╪│",
+                     "run_path":  "258/user_activity_stats_report_bot",
+                     "run_id":  "258",
+                     "run_slug":  "user_activity_stats_report_bot",
+                     "run_url":  "https://team.tsco.ir/bot/run/258/user_activity_stats_report_bot?ver=0",
+                     "view_url":  "https://team.tsco.ir/?page=/bot/command/view\u0026id=948\u0026cat_id=100\u0026tab=0",
+                     "result_type":  0,
+                     "run_count":  2,
+                     "categories":  "Service",
+                     "local_src":  "src/user_activity_stats_report_bot_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  21349,
+                     "synced_at":  "2026-07-16 14:35:24"
+                 },
+                 {
+                     "id":  949,
+                     "cat_id":  69,
+                     "name":  "داشبورد خلاصه پذیرش خدمات",
+                     "description":  "Deployed from service_receipt_summary_report_bot.lua",
+                     "run_path":  "258/service_receipt_summary_report",
+                     "run_id":  "258",
+                     "run_slug":  "service_receipt_summary_report",
+                     "run_url":  "https://team.tsco.ir/bot/run/258/service_receipt_summary_report?ver=0",
+                     "view_url":  "https://team.tsco.ir/?page=/bot/command/view\u0026id=949\u0026cat_id=69\u0026tab=0",
+                     "result_type":  0,
+                     "run_count":  0,
+                     "categories":  "TAT",
+                     "local_src":  "src/service_receipt_summary_report_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  27084,
+                     "synced_at":  "2026-07-17 17:23:09"
+                 },
+                 {
+                     "id":  950,
+                     "cat_id":  69,
+                     "name":  "داشبورد ماهانه KPI پذیرش خدمات",
+                     "description":  "Deployed from service_receipt_monthly_kpis_report_bot.lua",
+                     "run_path":  "258/service_receipt_monthly_kpis_report",
+                     "run_id":  "258",
+                     "run_slug":  "service_receipt_monthly_kpis_report",
+                     "run_url":  "https://team.tsco.ir/bot/run/258/service_receipt_monthly_kpis_report?ver=0",
+                     "view_url":  "https://team.tsco.ir/?page=/bot/command/view\u0026id=950\u0026cat_id=69\u0026tab=0",
+                     "result_type":  0,
+                     "run_count":  0,
+                     "categories":  "TAT",
+                     "local_src":  "src/service_receipt_monthly_kpis_report_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  12096,
+                     "synced_at":  "2026-07-18 10:13:17"
+                 }
+             ]
+}
