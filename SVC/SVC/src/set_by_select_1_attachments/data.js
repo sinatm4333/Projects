@@ -296,3 +296,89 @@ report[reportPath].sendSettleRequest = function (typeQuery, data) {
         observer.observe(root, { childList: true, subtree: true });
     }
 })();
+
+// -------------------------------------------------------------------------
+// مرتب‌سازی (کلیک روی سرستون) + فیلتر متنی جدول نتایج (افزودهٔ این ریپو — چیزی از
+// تسویه تکی/گروهی، صف انتخاب بین‌صفحه‌ای یا سایر منطق بات حذف/تغییر نکرده، فقط بعد
+// از رندر شدن جدول در DOM روی همان جدول رندرشده کار می‌کند). جدول واقعی توسط ویجت
+// هسته‌ای پلتفرم $.Teamyar.table() رندر می‌شود که نه سورسش در دسترس ماست و نه
+// مرتب‌سازی/فیلتر دارد — این یک لایهٔ کلاینت‌ساید مستقل روی خروجی رندرشده است.
+// چون جدول با هر صفحه‌بندی از نو در DOM رندر می‌شود (مثل صف تسویهٔ بالا)، کلیک
+// مرتب‌سازی با event delegation روی ریشهٔ بات پیاده شده — نیازی به bind دوباره نیست.
+// -------------------------------------------------------------------------
+(function () {
+    var BOT_NAME = "set_by_select_1";
+    var ROOT_SELECTOR = 'section[data-name="' + BOT_NAME + '"]';
+    var FILTER_INPUT_ID = "settle-filter-input";
+
+    function getCellSortValue(cell) {
+        var text = cell ? cell.textContent.trim() : "";
+        var n = text.replace(/[,٪%]/g, "").trim();
+        if (n !== "" && /^-?\d+(\.\d+)?$/.test(n)) return parseFloat(n);
+        return text;
+    }
+
+    function sortTableByColumn(table, colIndex, dir) {
+        var tbody = table.querySelector("tbody");
+        if (!tbody) return;
+        var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+        rows.sort(function (ra, rb) {
+            var a = getCellSortValue(ra.children[colIndex]);
+            var b = getCellSortValue(rb.children[colIndex]);
+            var cmp;
+            if (typeof a === "number" && typeof b === "number") cmp = a - b;
+            else cmp = String(a).localeCompare(String(b), "fa");
+            return dir === "asc" ? cmp : -cmp;
+        });
+        rows.forEach(function (row) { tbody.appendChild(row); });
+    }
+
+    document.addEventListener("click", function (e) {
+        var th = e.target.closest ? e.target.closest(ROOT_SELECTOR + " table thead th") : null;
+        if (!th || !th.textContent.trim()) return; // ستون بدون عنوان (چک‌باکس انتخاب/دکمهٔ تسویه) قابل مرتب‌سازی نیست
+        var table = th.closest("table");
+        if (!table) return;
+        var headers = Array.prototype.slice.call(table.querySelectorAll("thead th"));
+        var colIndex = headers.indexOf(th);
+        if (colIndex === -1) return;
+        var dir = th.classList.contains("sort-asc") ? "desc" : "asc";
+        headers.forEach(function (h) { h.classList.remove("sort-asc", "sort-desc"); });
+        th.classList.add(dir === "asc" ? "sort-asc" : "sort-desc");
+        sortTableByColumn(table, colIndex, dir);
+    });
+
+    function applyRowFilter() {
+        var input = document.getElementById(FILTER_INPUT_ID);
+        var table = document.querySelector(ROOT_SELECTOR + " table");
+        if (!input || !table) return;
+        var q = input.value.trim().toLowerCase();
+        var tbody = table.querySelector("tbody");
+        if (!tbody) return;
+        Array.prototype.forEach.call(tbody.querySelectorAll("tr"), function (row) {
+            var text = row.textContent.toLowerCase();
+            row.style.display = q === "" || text.indexOf(q) !== -1 ? "" : "none";
+        });
+    }
+
+    function injectFilterInput() {
+        var toolbar = document.querySelector(ROOT_SELECTOR + " .core_navbar");
+        if (!toolbar || document.getElementById(FILTER_INPUT_ID)) return;
+        var input = document.createElement("input");
+        input.type = "text";
+        input.id = FILTER_INPUT_ID;
+        input.className = "settle-filter-input";
+        input.placeholder = "جستجو در نتایج...";
+        input.addEventListener("input", applyRowFilter);
+        toolbar.appendChild(input);
+    }
+
+    var root = document.querySelector(ROOT_SELECTOR);
+    if (root) {
+        injectFilterInput();
+        var tableObserver = new MutationObserver(function () {
+            injectFilterInput();
+            applyRowFilter(); // بعد از رندر مجدد جدول (صفحه‌بندی)، فیلتر جاری دوباره اعمال شود
+        });
+        tableObserver.observe(root, { childList: true, subtree: true });
+    }
+})();

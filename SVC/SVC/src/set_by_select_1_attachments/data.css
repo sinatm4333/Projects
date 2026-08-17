@@ -163,4 +163,31 @@ section[data-name="set_by_select_1"] .core_icongroup_holder_filter select:focus 
 .settle-help-modal-body ul {
     padding-right: 20px;
 }
+
+/* مرتب‌سازی ستون‌ها با کلیک (data.js اضافه می‌کند) — جدول نتایج توسط ویجت هسته‌ای
+   $.Teamyar.table() رندر می‌شود؛ خود ویجت مرتب‌سازی ندارد، این فقط ظاهر پیکان‌های
+   مرتب‌سازی روی ستون‌هایی است که data.js رویشان کلیک‌پذیر می‌کند. */
+section[data-name="set_by_select_1"] table thead th {
+    cursor: pointer;
+    user-select: none;
+}
+section[data-name="set_by_select_1"] table thead th.sort-asc::after { content: ' \25B2'; }
+section[data-name="set_by_select_1"] table thead th.sort-desc::after { content: ' \25BC'; }
+
+/* جعبهٔ جستجو/فیلتر نتایج (data.js اضافه می‌کند) — سمت کلاینت، روی صفحهٔ جاری جدول */
+.settle-filter-input {
+    font-size: 14px !important;
+    font-family: "PeydaReport", "Peyda", "IRANSans", "Tahoma", "Arial", sans-serif !important;
+    border: 1px solid #666;
+    border-radius: 4px;
+    padding: 4px 10px;
+    float: left;
+    margin: 4px;
+    min-width: 200px;
+}
+.settle-filter-input:focus {
+    border-color: #16509D;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(22, 80, 157, 0.2);
+}
 </style>
