@@ -1608,11 +1608,17 @@ section[data-name="{{_bot_name}}"] .core_navbar span[class*="tyf"] {
     color: #16509D !important;
 }
 
-/* جدول نتایج — سرستون آبی/سفید + پیکان مرتب‌سازی، بدنه سفید/خاکستری زبرا */
-section[data-name="{{_bot_name}}"] table thead th,
-section[data-name="{{_bot_name}}"] table thead td,
-section[data-name="{{_bot_name}}"] .table-warning,
-section[data-name="{{_bot_name}}"] .table-primary {
+/* جدول نتایج — سرستون آبی/سفید + پیکان مرتب‌سازی، بدنه سفید/خاکستری زبرا.
+   عمداً به #result-report محدود شده (نه کل section[data-name]) — فرم فیلتر بالای
+   گزارش هم می‌تواند widgetهایی داشته باشد که داخلشان از <table> استفاده می‌کنند
+   (مثلاً تقویم $.Teamyar.DateTimePicker)؛ بدون این محدودسازی، همین قوانین رنگ/فونت
+   روی آن‌ها هم اعمال می‌شد و انتخاب‌گر جدول در اسکریپت پایین همین فایل هم می‌توانست
+   به‌جای جدول نتایج، اولین <table> دیگری که در DOM زودتر می‌آید (مثلاً همان تقویم
+   مخفی) را بگیرد — که باعث می‌شد هم سورت هم فیلتر عملاً هیچ کاری نکنند (۱۴۰۵/۰۵/۲۶). */
+section[data-name="{{_bot_name}}"] #result-report table thead th,
+section[data-name="{{_bot_name}}"] #result-report table thead td,
+section[data-name="{{_bot_name}}"] #result-report .table-warning,
+section[data-name="{{_bot_name}}"] #result-report .table-primary {
     background-color: #16509D !important;
     color: #fff !important;
     font-weight: bold !important;
@@ -1621,16 +1627,16 @@ section[data-name="{{_bot_name}}"] .table-primary {
     cursor: pointer;
     user-select: none;
 }
-section[data-name="{{_bot_name}}"] table thead th.res-sort-asc::after,
-section[data-name="{{_bot_name}}"] table thead td.res-sort-asc::after { content: ' \25B2'; }
-section[data-name="{{_bot_name}}"] table thead th.res-sort-desc::after,
-section[data-name="{{_bot_name}}"] table thead td.res-sort-desc::after { content: ' \25BC'; }
-section[data-name="{{_bot_name}}"] table tbody td,
-section[data-name="{{_bot_name}}"] table tbody th {
+section[data-name="{{_bot_name}}"] #result-report table thead th.res-sort-asc::after,
+section[data-name="{{_bot_name}}"] #result-report table thead td.res-sort-asc::after { content: ' \25B2'; }
+section[data-name="{{_bot_name}}"] #result-report table thead th.res-sort-desc::after,
+section[data-name="{{_bot_name}}"] #result-report table thead td.res-sort-desc::after { content: ' \25BC'; }
+section[data-name="{{_bot_name}}"] #result-report table tbody td,
+section[data-name="{{_bot_name}}"] #result-report table tbody th {
     border-color: #666 !important;
     font-size: 14px !important;
 }
-section[data-name="{{_bot_name}}"] table tbody tr:nth-child(even) {
+section[data-name="{{_bot_name}}"] #result-report table tbody tr:nth-child(even) {
     background-color: #f5f5f5 !important;
 }
 
@@ -1733,11 +1739,17 @@ section[data-name="{{_bot_name}}"] .core_icongroup_holder_filter select:focus {
     }
 
     // روی کل document یک‌بار bind می‌شود (نه هر section) تا اگر چند بات RES
-    // هم‌زمان روی یک صفحه باشند (ویجت/داشبورد) هم درست کار کند و دوباره bind نشود
+    // هم‌زمان روی یک صفحه باشند (ویجت/داشبورد) هم درست کار کند و دوباره bind نشود.
+    // عمداً به «#result-report table» محدود شده، نه هر <table> زیر section[data-name] —
+    // فرم فیلتر بالای گزارش می‌تواند widgetهایی داشته باشد که خودشان از <table>
+    // استفاده می‌کنند (مثلاً تقویم $.Teamyar.DateTimePicker، حتی وقتی مخفی/بسته است)؛
+    // بدون این محدودسازی th.closest("table") می‌توانست به‌جای جدول نتایج، به اولین
+    // <table> دیگری که زودتر در DOM می‌آید برسد و کلیک روی سرستون واقعی هیچ اثری
+    // نداشته باشد (باگ گزارش‌شدهٔ ۱۴۰۵/۰۵/۲۶: هم سورت هم فیلتر همین‌جوری بی‌اثر بودند).
     if (!window.__resGuideline140SortBound) {
         window.__resGuideline140SortBound = true;
         document.addEventListener("click", function (e) {
-            var th = e.target.closest ? e.target.closest('section[data-name] table thead th, section[data-name] table thead td') : null;
+            var th = e.target.closest ? e.target.closest('section[data-name] #result-report table thead th, section[data-name] #result-report table thead td') : null;
             if (!th || !th.textContent.trim()) return; // ستون بدون عنوان (چک‌باکس/دکمه) قابل مرتب‌سازی نیست
             var table = th.closest("table");
             if (!table) return;
@@ -1753,7 +1765,8 @@ section[data-name="{{_bot_name}}"] .core_icongroup_holder_filter select:focus {
 
     function applyRowFilter() {
         var input = document.getElementById(FILTER_INPUT_ID);
-        var table = document.querySelector(ROOT_SELECTOR + " table");
+        // همون محدودسازی بالا — فقط جدول واقعی نتایج، نه هر <table> دیگری زیر همین بات
+        var table = document.querySelector(ROOT_SELECTOR + " #result-report table");
         if (!input || !table) return;
         var q = input.value.trim().toLowerCase();
         var tbody = table.querySelector("tbody");
