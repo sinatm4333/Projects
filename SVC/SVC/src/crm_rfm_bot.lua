@@ -1,7 +1,23 @@
-﻿-- botName = Sum Workdays And Sales Params
+﻿-- تحلیل و ایجاد توسط سینا مقدم 09121011778
+-- Last Edit = 1405/05/27 01:21
+
+-- botName = Sum Workdays And Sales Params
 -- creator = zmo
 -- date = 02/25/2025
--- version= 1.0
+-- version= 1.1 (اصلاح باگ‌های getData: وزن F/M در محاسبهٔ سگمنت + پیش‌فرض تاریخ)
+--
+-- تغییرات این نسخه (طبق درخواست کاربر، فقط ۳ باگ زیر؛ بقیهٔ کد عیناً بات ۵۰۱ باقی مانده):
+--   ۱و۳) ستون‌های R/F/M و فرمول سگمنت: f_nummber/m_nummber هر دو به‌اشتباه از cdata.rnumber
+--        خوانده می‌شدند (کپی/پیست) — یعنی وزن ورودی F و M همیشه نادیده گرفته می‌شد و fd/md/rfm/segment
+--        همه فقط با وزن R محاسبه می‌شدند، نه با اعدادی که واقعاً برای F و M وارد شده بود. اصلاح شد:
+--        هرکدام از فیلد پیکربندی خودش (cdata.fnumber / cdata.mnumber) می‌خواند.
+--   ۲) Monetary/Frequency/Days فیلتر تاریخ را نادیده می‌گرفتند: چون data.txt نوع datef/datet را
+--      "number" declare کرده، مقدار ست‌نشده را خود فریم‌ورک بی‌صدا به 0 تبدیل می‌کند (نه nil) —
+--      چک قبلی فقط "== nil" بود که هرگز true نمی‌شد، پس {{datef}}/{{datet}} با 0 (معادل تاریخ
+--      سال ۱۶۰۱ میلادی/شروع FILETIME) جایگزین می‌شد و بازهٔ "between 0 and {{datet}}" عملاً کل
+--      تاریخچهٔ فاکتورها را می‌گرفت. اصلاح شد: "<= 0" هم چک می‌شود و پیش‌فرض به «امروز» تغییر کرد
+--      (بدون فیلتر انتخابی، بازهٔ خالی/تقریباً خالی نشان می‌دهد که سیگنال واضحی است، نه کل تاریخچه
+--      به‌شکل گمراه‌کننده). همین اصلاح روی بات ۶۰۰ تأیید شده است.
 
 --
 --------------------------------------------
@@ -67,9 +83,11 @@ function getData(queryType , pageFrom , perPage , pageTo )
   if config ~= nil then 
     cdata = config.data
 
+    -- باگ اصلاح‌شده: قبلاً f_nummber/m_nummber هم از cdata.rnumber می‌خواندند (کپی/پیست) —
+    -- ستون‌های F/M و فرمول سگمنت واقعاً از اعداد ورودی F/M استفاده نمی‌کردند.
     r_nummber = cdata.rnumber
-    f_nummber = cdata.rnumber
-    m_nummber = cdata.rnumber
+    f_nummber = cdata.fnumber
+    m_nummber = cdata.mnumber
 
   end
  -- teamyar.write_log(c_box_id.."uuuuu")
@@ -115,11 +133,15 @@ function getData(queryType , pageFrom , perPage , pageTo )
   if org ~= nil and org[1] ~= nil then 
     where_org = where_org.. [[ and s.org_id=]]..org[1].id..[[ and p.org_id=]]..org[1].id
   end 
-  if tonumber(datet) == nil then 
-    datet=0
+  -- باگ اصلاح‌شده: data.txt نوع datef/datet را "number" declare کرده، پس مقدار نامعتبر/خالی را
+  -- خود فریم‌ورک بی‌صدا به 0 تبدیل می‌کند نه nil — چک تنها "== nil" هرگز true نمی‌شد، در نتیجه
+  -- "between 0 and {{datet}}" عملاً کل تاریخچهٔ فاکتورها را برمی‌گرداند (نه فقط بازهٔ انتخابی).
+  -- با "<= 0" هم مقدار nil‌شده و هم صفرشده گرفته می‌شود؛ پیش‌فرض به «امروز» تغییر کرد.
+  if tonumber(datet) == nil or tonumber(datet) <= 0 then
+    datet = currentdate
   end
-  if tonumber(datef) == nil then 
-    datef=0
+  if tonumber(datef) == nil or tonumber(datef) <= 0 then
+    datef = currentdate
   end
   dataQuery.query = string.gsub(dataQuery.query,"{{datet}}",datet);
   dataQuery.query = string.gsub(dataQuery.query,"{{datef}}",datef);

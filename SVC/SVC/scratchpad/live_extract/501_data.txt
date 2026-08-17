@@ -1,0 +1,86 @@
+{
+"tools" : {
+"excel": true ,
+"print" : true ,
+"developer" : true
+},
+"developer" : {
+"name" : "zmo",
+"version" : "1.0" ,
+"date" : "1403/12/07" ,
+"description" : ""
+},
+"params" : {
+},
+"inputs" : {
+  "datef" : {"type": "number" , "default" : null},
+  "datet" : {"type": "number" , "default" : null},
+  "page" : {"type": "number" , "default" : null},
+    "txt" : {"type": "text" , "default" : null},
+      "box_id" : {"type": "number" , "default" : null},
+              "org_id" : {
+              "aclId": 7,
+              "type": "table" ,
+              "default" : null
+              },
+              
+              "ctype" : {
+              "aclId": 8 ,
+              "type": "table" ,
+              "default" : null
+              },  
+              "cat" : {
+              "aclId": 9 ,
+              "type": "table" ,
+              "default" : null
+              }  
+
+} ,
+
+
+
+
+"languages" : {
+"fa": {
+          "_report_name" : "مشتریان و رابط ها" ,          
+          "_filter_org":"شعبه",
+          "CRM":"مشتری",
+          "BOX_ID":"شناسه صندوق پستی",
+          "_btn_search_report": "اجرا",
+          "_btn_search_report" : "اجرا کردن",
+          "_table_TITLE" : " عنوان" ,
+          "_table_NOTE" : " توضیحات" ,
+          "sex":"جنسیت",
+          "BIRTHDAY":"تاریخ تولد",
+          "nationality":"ملیت",
+          "USER_TYPE":"نوع مشتری",
+          "market_expert":"مشتری",
+          "STATE":"استان",
+          "ADDRESS":"آدرس",
+          "ORG":"سازمان",
+          "JOB":"شغل",
+          "CREATE_DATE":"تاریخ ایجاد", 
+          "ctype":"نوع مشتری",
+          "DATE_TO":"تاریخ ایجاد تا",
+          "CAT":"رده مشتری",
+          "DATE_FROM":"تاریخ ایجاد از",
+          "mobile":"تلفن همراه",
+          "email":"ایمیل",
+          "co":"رابطین",
+          "txt":"متن ایمیل / پیامک 	ماکرو های زیر برای متن پیامک و ایمیل در نظر گرفته شده است {{name}}: نام و نام خانوادگی مشتری , {{date}}: تاریخ جاری سیستم ,{{gender}}: آقای/ خانم",
+          "NATIONAL_CODE":"کد ملی",
+          "id":"شناسه",
+          "COMPANY":"شرکت",
+          "RUN_DATE":"تاریخ ",
+          "POSTAL_CODE":"کد پستی",
+          "LastRunDate":"Last Run Date",
+          "factor_link":"Last Factor Link",
+          "LEGAL":"حقوقی",
+          "REAL":"حقیقی",
+          "ORG_ID":"شعبه"
+},
+      "en": {
+
+      }
+	}
+}

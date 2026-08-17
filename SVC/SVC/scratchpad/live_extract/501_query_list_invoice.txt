@@ -1,0 +1,56 @@
+ with 
+ DecimalDigits as( 
+ select po.ORG_ID,ps.DECIMAL_COUNT DecimalCount, (CASE WHEN COALESCE(ps.FEE_DECIMAL,0) = 0 THEN COALESCE(ps.DECIMAL_COUNT,0) ELSE COALESCE(ps.FEE_DECIMAL,0) END )DigitFee,ps.SHORT_NAME
+ from pa_organizations po join pa_symbols ps on(po.BASE_CURRENCY = ps.ID and po.ORG_ID = ps.ORG_ID)
+ ),
+ crm_factor as (
+    SELECT distinct  
+       p.REFFERE_ID AS crm_id, group_concat(distinct mo.MOBILE) mobile , concat('<a target="_blank" href="/?page=/sales/invoice/view_invoice/',max(s.id),'">','#',max(s.id),'</a>') factor_link,
+       0 share,0 final_score ,
+        p.NAME Customer ,
+        round(({{current_date}}- MAX(s.RUN_DATE))/(60*60*24*10000000)) Days,
+        MAX(s.RUN_DATE) AS LastRunDate,
+        COUNT(distinct s.ID) AS Frequency,
+       sum((((pi.FEE/POWER(10,COALESCE(dd.DigitFee,0)))* (pi.QUANTITY/ POW(10,sc.DECIMAL_NUM))) -  pi.DISCOUNT )+ (pi.TAX+pi.TOLL+pi.VALUE_ADDED)) AS Monetary,
+       0 segment
+    FROM sales_invoice s
+    inner join sales_invoice_product pi on pi.invoice_id=s.id
+      inner join wh_product pr on pr.id=pi.product_id 
+    INNER JOIN pa_client p ON p.ID = s.CLIENT_ID and p.org_id=s.org_id
+    left  join DecimalDigits dd on dd.org_id= s.org_id 
+     left join wh_stock_capacity    sc   on pr.CAPACITY_ID = sc.ID  
+     left join profile_mobile mo on mo.user_id= p.REFFERE_ID
+    WHERE s.DELETED = 0
+      AND s.CANCELED = 0
+
+      AND s.RUN_DATE > 0
+ 
+             and s.RUN_DATE between {{datef}} and {{datet}}
+             {{where_crm}}
+            {{where_ctype}}
+            {{where_org}}
+            {{where_cat}}
+            GROUP BY p.REFFERE_ID, p.NAME,s.client_id      
+    ),rfm_data as( select crm_id,mobile,Customer,factor_link,Days,LastRunDate,Frequency,Monetary,
+
+ ntile(5)over(order by days desc)r ,ntile(5)over(order by Frequency )f,ntile(5)over(order by monetary )m from crm_factor),
+    data as(
+   select crm_id,mobile,concat('<a target="_blank" href="/?page=/crm/client/edit/',crm_id,'">',Customer,'</a>')  Customer,factor_link,Days,LastRunDate,Frequency,Monetary,
+
+round(((r*{{r_number}})/100),1)rd,round(((f*{{f_number}})/100),1)fd,round(((m*{{m_number}})/100),1)md,round(((r*{{r_number}})/100),1)+round(((f*{{f_number}})/100),1)+round(((m*{{m_number}})/100),1)rfm,
+(case
+ when (round(((r*{{r_number}})/100),1)+round(((f*{{f_number}})/100),1)+round(((m*{{m_number}})/100),1)) >= 4.2 then concat("<div><span style='color:green !important;font-weight:bold;'>","Champion1","</span></div>")
+ when (round(((r*{{r_number}})/100),1)+round(((f*{{f_number}})/100),1)+round(((m*{{m_number}})/100),1)) between  3.5 and 4.2 then concat("<div><span style='color:blue !important;font-weight:bold;'>","Loyal","</span></div>")
+   when (round(((r*{{r_number}})/100),1)+round(((f*{{f_number}})/100),1)+round(((m*{{m_number}})/100),1)) between  2.5 and 3.6 then concat("<div><span style='color:black !important;font-weight:bold;'>","Potential","</span></div>")  
+    when (round(((r*{{r_number}})/100),1)+round(((f*{{f_number}})/100),1)+round(((m*{{m_number}})/100),1)) between  1.8 and 2.6 then concat("<div><span style='color:gray !important;font-weight:bold;'>","None","</span></div>") 
+    when (round(((r*{{r_number}})/100),1)+round(((f*{{f_number}})/100),1)+round(((m*{{m_number}})/100),1)) <= 1.8 then  concat("<div><span style='color:red !important;font-weight:bold;'>","At Risk","</span></div>") 
+end )segment
+
+ from rfm_data 
+
+    )
+select {{select}}
+from data
+{{whereInvoice}}
+order by rfm desc
+{{slicePageNumber}}
