@@ -1,9 +1,14 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/24 15:40
+-- Last Edit = 1405/05/26 22:53
 
 -- Bot: CRM + Sales Geographic Dashboard
 -- botName = crm_geo_sales_dashboard
 -- version = v02
+-- رفع باگ 1405/05/26: fetch_state_aggregation و fetch_city_aggregation یک پارامتر date_from_key
+-- اضافه (تکراری) به params می‌فرستادند در حالی که Query فقط یک placeholder «?» برای آن دارد
+-- (سایر placeholder ها مربوط به فیلتر state/city/user_type هستند) — همان باگی که Dashboard اصلی
+-- (بخش‌های نمودار/جدول استان/شهر، بخش‌های ۲ تا ۵) را با خطای عدم تطابق تعداد پارامتر SQL می‌شکست.
+-- تعداد پارامترهای ورودی به 1 (date_from_key) به‌علاوهٔ پارامترهای فیلتر اختیاری اصلاح شد.
 -- تغییرات v02 (طبق بازخورد کاربر روی v01 — هنوز دیپلوی نشده، هر دو دور بازخورد در همین v02 جمع شد):
 --   ۱) لوگو ۱۴۰ (نسخه White) به هدر اضافه شد.
 --   ۲) برچسب نوع مشتری «حقیقی»/«حقوقی» شد (تأییدشده از بات‌های ۴۳۳/۴۴۰).
@@ -357,7 +362,7 @@ end
 
 local function fetch_state_aggregation(date_from_key, filters)
     local extra, extra_params = build_sales_filter_clause(filters)
-    local params = { date_from_key, date_from_key }
+    local params = { date_from_key }
     for _, p in ipairs(extra_params) do table.insert(params, p) end
 
     local rows, err = fetch_rows([[
@@ -402,7 +407,7 @@ end
 
 local function fetch_city_aggregation(date_from_key, filters)
     local extra, extra_params = build_sales_filter_clause(filters)
-    local params = { date_from_key, date_from_key }
+    local params = { date_from_key }
     for _, p in ipairs(extra_params) do table.insert(params, p) end
 
     local rows, err = fetch_rows([[
