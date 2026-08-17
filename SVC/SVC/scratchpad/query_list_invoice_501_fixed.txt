@@ -31,6 +31,7 @@
             {{where_ctype}}
             {{where_org}}
             {{where_cat}}
+            {{where_center}}
             GROUP BY p.REFFERE_ID, p.NAME,s.client_id
             HAVING 1=1 {{where_monetary}}
     ),rfm_data as( select crm_id,mobile,Customer,factor_link,Days,LastRunDate,Frequency,Monetary,

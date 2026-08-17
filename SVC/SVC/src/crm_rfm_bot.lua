@@ -1,10 +1,10 @@
 ﻿-- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/27 01:47
+-- Last Edit = 1405/05/27 01:58
 
 -- botName = Sum Workdays And Sales Params
 -- creator = zmo
 -- date = 02/25/2025
--- version= 1.4 (فیلتر سازمان + alias/joinهای مرده + مرتب‌سازی کل دیتاست + فیلتر بازهٔ درآمد)
+-- version= 1.5 (فیلتر سازمان + alias/joinهای مرده + مرتب‌سازی کل دیتاست + بازهٔ درآمد + مرکز درآمد)
 --
 -- تغییرات این نسخه (طبق درخواست کاربر، فقط ۳ باگ زیر؛ بقیهٔ کد عیناً بات ۵۰۱ باقی مانده):
 --   ۱و۳) ستون‌های R/F/M و فرمول سگمنت: f_nummber/m_nummber هر دو به‌اشتباه از cdata.rnumber
@@ -53,6 +53,19 @@
 --      CTE بعدی اعمال می‌شود، مثل بقیهٔ فیلترها (سازمان/رده/...) رتبه‌ها هم فقط نسبت به همان
 --      زیرمجموعهٔ فیلترشده حساب می‌شوند — نه فیلتر پس از رتبه‌بندی روی کل مشتریان. مقادیر با
 --      tonumber() اعتبارسنجی می‌شوند و هرکدام که خالی/نامعتبر باشد نادیده گرفته می‌شود (نه خطا).
+--
+-- تغییرات این نسخه (۱۴۰۵/۰۵/۲۷ — دور چهارم، اصلاح تفاهم: منظور کاربر «مرکز درآمد» فاکتور بود نه بازهٔ درآمد):
+--   ۹) فیلتر «مرکز درآمد» اضافه شد — برای جدا کردن مشتریان «همکار» از «مصرف‌کننده» بر اساس مرکزی
+--      که هنگام ثبت فاکتور رویش انتخاب شده. فیلد واقعی: sales_invoice.SALES_CENTER (join به
+--      pa_center) — همان چیزی که در بات‌های دیگر همین پروژه (مثلاً
+--      sales_settlement_group_auto، بات ۴۳۳) «مرکز فروش» نام دارد؛ این پروژه از قبل همین جدول را
+--      برای همین منظور استفاده می‌کند. چون یک ستون خام سطح فاکتور است (نه aggregate مثل Monetary)،
+--      WHERE سادهٔ s.SALES_CENTER=... در سطح crm_factor کافی بود (قبل از GROUP BY، مثل
+--      org/cat/ctype). ویجت فیلتر (`center`) عیناً با همان الگوی $.Teamyar.acl + GetDataACL که
+--      org/crm/cat/ctype از قبل استفاده می‌کنند اضافه شد (نه سازوکار عمومی searcher_* در
+--      data.txt — چون data.js این بات یک getFilters() اختصاصی دارد که کلاً آن مسیر عمومی را
+--      نادیده می‌گیرد؛ برای همین ادامهٔ همان الگوی موجود درست‌ترین راه بود)، با type=12 جدید در
+--      dispatch و تابع centerAcl(data) که pa_center را کوئری می‌کند.
 
 --
 --------------------------------------------
@@ -152,6 +165,7 @@ function getData(queryType , pageFrom , perPage , pageTo )
   local cat = getInput("cat");
   local crm = getInput("crm");
   local org = getInput("org");
+  local center = getInput("center");
   local datef = getInput("datef");
   local datet = getInput("datet");
   local sort_key = getInput("sort_key");
@@ -177,6 +191,7 @@ function getData(queryType , pageFrom , perPage , pageTo )
   local where_ctype= ""
   local where_crm= ""
   local where_org = ""
+  local where_center = ""
   -- باگ اصلاح‌شده: فیلتر "cat" به alias نامعتبر c.id ارجاع می‌داد — در FROM پیوست SQL فقط
   -- alias «p» برای pa_client وجود دارد (c.id هیچ‌جا تعریف نشده، کد مرده/همیشه با خطا می‌شکست).
   -- + مقدار id قبل از concat با tonumber() اعتبارسنجی می‌شود (اگر عددی نبود، فیلتر نادیده گرفته
@@ -198,6 +213,13 @@ function getData(queryType , pageFrom , perPage , pageTo )
     -- "org_id" را declare کرده بود -> getInput("org") همیشه خالی برمی‌گشت. کلید data.txt به
     -- "org" تغییر کرد (پیوست جدا). کد Lua از قبل روی "org" درست بود، دست‌نخورده ماند.
     where_org = where_org.. [[ and s.org_id=]]..tonumber(org[1].id)..[[ and p.org_id=]]..tonumber(org[1].id)
+  end
+  ---- فیلتر «مرکز درآمد» (sales_invoice.SALES_CENTER -> pa_center، همان چیزی که در بات‌های دیگر
+  ---- این پروژه «مرکز فروش» نامیده می‌شود، مثلاً sales_settlement_group_auto). برای جدا کردن
+  ---- فاکتورهای مشتریان «همکار» از «مصرف‌کننده» بر اساس مرکز درآمدی که روی فاکتور ثبت شده. ستون
+  ---- خام سطح فاکتور است (نه تجمیعی)، پس WHERE ساده در سطح crm_factor کافی است (نه HAVING).
+  if center ~= nil and center[1] ~= nil and tonumber(center[1].id) ~= nil then
+    where_center = where_center.. [[ and s.SALES_CENTER=]]..tonumber(center[1].id)
   end
   ---- فیلتر «بازهٔ درآمد» (Monetary min/max): چون Monetary یک sum() تجمیعی به‌ازای هر مشتری است
   ---- (نه ستون خام هر فاکتور)، فیلترش باید با HAVING روی همان CTE crm_factor باشد نه WHERE — در
@@ -232,6 +254,7 @@ function getData(queryType , pageFrom , perPage , pageTo )
   dataQuery.query = string.gsub(dataQuery.query,"{{where_crm}}",where_crm);
   dataQuery.query = string.gsub(dataQuery.query,"{{where_ctype}}",where_ctype);
   dataQuery.query = string.gsub(dataQuery.query,"{{where_org}}",where_org);
+  dataQuery.query = string.gsub(dataQuery.query,"{{where_center}}",where_center);
   dataQuery.query = string.gsub(dataQuery.query,"{{where_monetary}}",where_monetary);
   dataQuery.query = string.gsub(dataQuery.query,"{{r_number}}",r_nummber);
     dataQuery.query = string.gsub(dataQuery.query,"{{f_number}}",f_nummber);
@@ -451,7 +474,19 @@ function ctypeAcl(data)
 
   }
   teamyar.write_result(json.encode(table));
-end 
+end
+
+----------------------
+-- فیلتر «مرکز درآمد»: جست‌وجوی ACL روی pa_center (همان جدولی که sales_invoice.SALES_CENTER به
+-- آن ارجاع می‌دهد؛ در بات‌های دیگر این پروژه «مرکز فروش» نامیده می‌شود).
+function centerAcl(data)
+  local query_param = [[ select id,name from pa_center ]]
+  if data.search ~= nil and #data.search > 0 then
+    query_param = query_param..[[  where name like N'%]]..data.search..[[%'  or  id like N'%]]..data.search..[[%'  ]]
+  end
+  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);
+  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));
+end
 
 --------------------------------------------
 --- Report
@@ -590,6 +625,8 @@ elseif type ~= nil and type == 7 then
   crmAcl(teamyar.get_input().data)
 elseif type ~= nil and type == 6 then
   getAclOrg(teamyar.get_input().data)
+elseif type ~= nil and type == 12 then
+  centerAcl(teamyar.get_input().data)
 elseif type ~= nil and type == 10 then
   local input = teamyar.get_input()
   local res_str = sendSms(input.data.crm_id,input.data.segment,input.data.box_id, input.data.txt)

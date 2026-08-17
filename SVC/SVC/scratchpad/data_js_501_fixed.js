@@ -75,6 +75,20 @@ report[reportPath].getFilters = function () {
         ongetdata: ['GetDataACL',8],
       }
     }),
+    $.Teamyar.acl({
+      id: "center",
+      multiedit: false,
+      shownone:'true',
+      value: report[reportPath].getCash("center" , true),
+      name: "center",
+      typevalue: 'object',
+      title: report[reportPath].translateWord ("CENTER")+" : ",
+      format: "input",
+      url:"/",
+      events: {
+        ongetdata: ['GetDataACL',12],
+      }
+    }),
     $.Teamyar.input.text({
       id: "sort_key",
       name: "sort_key",
