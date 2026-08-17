@@ -1,15 +1,22 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/26 22:53
+-- Last Edit = 1405/05/26 23:14
 
 -- Bot: CRM + Sales Geographic Dashboard
 -- botName = crm_geo_sales_dashboard
--- version = v02
--- رفع باگ 1405/05/26: fetch_state_aggregation و fetch_city_aggregation یک پارامتر date_from_key
--- اضافه (تکراری) به params می‌فرستادند در حالی که Query فقط یک placeholder «?» برای آن دارد
--- (سایر placeholder ها مربوط به فیلتر state/city/user_type هستند) — همان باگی که Dashboard اصلی
--- (بخش‌های نمودار/جدول استان/شهر، بخش‌های ۲ تا ۵) را با خطای عدم تطابق تعداد پارامتر SQL می‌شکست.
--- تعداد پارامترهای ورودی به 1 (date_from_key) به‌علاوهٔ پارامترهای فیلتر اختیاری اصلاح شد.
--- تغییرات v02 (طبق بازخورد کاربر روی v01 — هنوز دیپلوی نشده، هر دو دور بازخورد در همین v02 جمع شد):
+-- version = v03
+-- تغییرات v03 (طبق بازخورد کاربر روی نسخهٔ دیپلوی‌شده — اسکرین‌شات خطای فیلتر):
+--   ۱) باگ اصلی: fetch_state_aggregation و fetch_city_aggregation یک پارامتر date_from_key اضافه
+--      (تکراری) به params می‌فرستادند در حالی که Query فقط یک placeholder «?» برای آن داشت — دقیقاً
+--      همین باگ Dashboard اصلی (بخش‌های نمودار/جدول استان/شهر) را با خطای SQL می‌شکست و چون هنگام
+--      اعمال فیلتر (format=json) هر خطا به‌صورت HTML کامل برمی‌گشت، سمت کلاینت با
+--      «Unexpected token '<' ... is not valid JSON» می‌شکست (رفع در بند ۳ هم).
+--   ۲) فیلتر تاریخ «از» به «از/تا» تبدیل شد (date_to، پیش‌فرض = امروز، طبق درخواست کاربر) — از KPI/نمودار/
+--      جدول‌های Dashboard اصلی تا همهٔ Drill-down های Lazy را پوشش می‌دهد (DATE_RANGE_SQL مشترک).
+--   ۳) write_dashboard_error اضافه شد: وقتی input["format"]=="json" (فیلتر AJAX)، خطاها هم به‌صورت JSON
+--      برمی‌گردند نه HTML — تا از شکستن پارس JSON سمت کلاینت (مورد بند ۱) در آینده هم جلوگیری شود.
+--   ۴) رفع اسکرول در حالت تمام‌صفحه: #reportRoot:fullscreen بدون overflow-y صریح، محتوای بلندتر از
+--      Viewport را غیرقابل‌اسکرول می‌کرد (رفتار پیش‌فرض Fullscreen API روی یک المان دلخواه، نه کل صفحه).
+-- تغییرات v02 (طبق بازخورد کاربر روی v01):
 --   ۱) لوگو ۱۴۰ (نسخه White) به هدر اضافه شد.
 --   ۲) برچسب نوع مشتری «حقیقی»/«حقوقی» شد (تأییدشده از بات‌های ۴۳۳/۴۴۰).
 --   ۳) فرمول مبلغ فاکتور به فرمول واقعی Production تغییر کرد (ر.ک. INVOICE_AMOUNT_JOIN و
@@ -197,6 +204,16 @@ local function resolve_date_from_text(text)
     return rows[1][1]
 end
 
+-- DATEKEY/JNDATE امروز (پیش‌فرض «تاریخ تا» وقتی کاربر چیزی وارد نکرده) — همان الگوی resolve_fiscal_year_start
+local function resolve_today_key(now_raw)
+    if now_raw == nil then return nil, nil end
+    local rows = fetch_rows(
+        "SELECT DATEKEY, JNDATE FROM report_dimdate WHERE DATEKEY = (? - MOD(?, " .. CONFIG.DAY_TICKS .. ")) LIMIT 1",
+        { now_raw, now_raw })
+    if rows == nil or #rows == 0 then return nil, nil end
+    return rows[1][1], rows[1][2]
+end
+
 -- تعیین بازهٔ تاریخ فعال (مشترک بین Dashboard اصلی و همهٔ Drill-down های Lazy) — طبق درخواست کاربر
 -- (مشابه الگوی بات ۶۰۰: محاسبهٔ «مبلغ فروش هر مشتری» همیشه باید با همان فیلتر تاریخ باشد، نه کل تاریخچه).
 -- اگر ورودی date_from معتبر نباشد/نیامده باشد، بدون خطا به ابتدای سال مالی جاری برمی‌گردد (نه hardcode).
@@ -213,6 +230,21 @@ local function resolve_active_date_from_key(input)
     return fy_key, fy_jndate
 end
 
+-- تعیین «تاریخ تا»ی فعال — اگر ورودی date_to معتبر نباشد/نیامده باشد، بدون خطا به امروز برمی‌گردد
+-- (طبق درخواست کاربر برای افزودن بازهٔ «از/تا»؛ پیش‌فرض قبلی یعنی «تا امروز» همچنان حفظ می‌شود).
+local function resolve_active_date_to_key(input)
+    local date_to_text = input["date_to"]
+    if date_to_text == "" then date_to_text = nil end
+    local date_to_key = nil
+    if date_to_text ~= nil then
+        date_to_key = resolve_date_from_text(date_to_text)
+    end
+    if date_to_key ~= nil then return date_to_key, date_to_text end
+    local now_raw = fetch_now_raw()
+    local today_key, today_jndate = resolve_today_key(now_raw)
+    return today_key, today_jndate
+end
+
 -- ============================================================
 -- INPUT / FILTER PARSING
 -- ============================================================
@@ -226,11 +258,14 @@ local function parse_filters(input)
     local user_type = tonumber(input["user_type"])
     local date_from_text = input["date_from"]
     if date_from_text == "" then date_from_text = nil end
+    local date_to_text = input["date_to"]
+    if date_to_text == "" then date_to_text = nil end
     return {
         state = state,
         city = city,
         user_type = user_type,
         date_from_text = date_from_text,
+        date_to_text = date_to_text,
     }
 end
 
@@ -274,6 +309,11 @@ LEFT JOIN (
     GROUP BY ip.INVOICE_ID
 ) ia ON ia.invoice_id = si.ID
 ]]
+
+-- شرط بازهٔ تاریخ فاکتور «از/تا» (طبق درخواست کاربر — قبل از این فقط «از» بود، بدون سقف بالا).
+-- هر دو انتها با DATEKEY (شروع روز، FILETIME) کار می‌کنند؛ برای شمول کامل روز «تا»، سقف = آن روز + یک روز.
+-- دو placeholder می‌گیرد، به همین ترتیب: date_from_key سپس date_to_key.
+local DATE_RANGE_SQL = "si.RUN_DATE >= ? AND si.RUN_DATE < (? + " .. CONFIG.DAY_TICKS .. ")"
 
 -- ============================================================
 -- EXECUTIVE KPI QUERIES
@@ -321,9 +361,9 @@ local function build_sales_filter_clause(filters)
     return extra, params
 end
 
-local function fetch_sales_kpi(date_from_key, filters)
+local function fetch_sales_kpi(date_from_key, date_to_key, filters)
     local extra, extra_params = build_sales_filter_clause(filters)
-    local params = { date_from_key }
+    local params = { date_from_key, date_to_key }
     for _, p in ipairs(extra_params) do table.insert(params, p) end
 
     local rows, err = fetch_rows([[
@@ -342,7 +382,7 @@ LEFT JOIN profile_user_address addr ON addr.USER_ID = pc.REFFERE_ID AND addr.TYP
 LEFT JOIN profile_user_info ui ON ui.ID = pc.REFFERE_ID
 ]] .. INVOICE_AMOUNT_JOIN .. [[
 WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-  AND si.RUN_DATE >= ?]] .. extra .. [[
+  AND ]] .. DATE_RANGE_SQL .. extra .. [[
 ]], params)
     if rows == nil or #rows == 0 then return nil, err end
     local r = rows[1]
@@ -360,9 +400,9 @@ end
 -- STATE / CITY AGGREGATION
 -- ============================================================
 
-local function fetch_state_aggregation(date_from_key, filters)
+local function fetch_state_aggregation(date_from_key, date_to_key, filters)
     local extra, extra_params = build_sales_filter_clause(filters)
-    local params = { date_from_key }
+    local params = { date_from_key, date_to_key }
     for _, p in ipairs(extra_params) do table.insert(params, p) end
 
     local rows, err = fetch_rows([[
@@ -381,7 +421,8 @@ LEFT JOIN profile_user_info ui ON ui.ID = ci.ID
 LEFT JOIN pa_client pc ON pc.REFFERE_ID = ci.ID
 LEFT JOIN sales_invoice si
        ON si.CLIENT_ID = pc.ID AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-      AND si.RUN_DATE >= ?
+      AND ]] .. DATE_RANGE_SQL .. [[
+
 ]] .. INVOICE_AMOUNT_JOIN .. [[
 WHERE addr.STATE IS NOT NULL AND addr.STATE <> ''
 ]] .. extra .. [[
@@ -405,9 +446,9 @@ ORDER BY total_sales_amount DESC
     return list
 end
 
-local function fetch_city_aggregation(date_from_key, filters)
+local function fetch_city_aggregation(date_from_key, date_to_key, filters)
     local extra, extra_params = build_sales_filter_clause(filters)
-    local params = { date_from_key }
+    local params = { date_from_key, date_to_key }
     for _, p in ipairs(extra_params) do table.insert(params, p) end
 
     local rows, err = fetch_rows([[
@@ -425,7 +466,8 @@ LEFT JOIN profile_user_info ui ON ui.ID = ci.ID
 LEFT JOIN pa_client pc ON pc.REFFERE_ID = ci.ID
 LEFT JOIN sales_invoice si
        ON si.CLIENT_ID = pc.ID AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-      AND si.RUN_DATE >= ?
+      AND ]] .. DATE_RANGE_SQL .. [[
+
 ]] .. INVOICE_AMOUNT_JOIN .. [[
 WHERE addr.STATE IS NOT NULL AND addr.STATE <> '' AND addr.CITY IS NOT NULL AND addr.CITY <> ''
 ]] .. extra .. [[
@@ -473,9 +515,9 @@ end
 
 -- توجه (طبق درخواست کاربر): مبلغ/تعداد فاکتور هر مشتری اینجا باید با همان بازهٔ تاریخ فعال Dashboard
 -- (پیش‌فرض سال مالی جاری، مشابه محاسبهٔ Monetary در بات ۶۰۰) محاسبه شود، نه کل تاریخچه.
-local function fetch_customers(state, city, filters, date_from_key, limit, offset)
+local function fetch_customers(state, city, filters, date_from_key, date_to_key, limit, offset)
     local extra = ""
-    local params = { date_from_key, state, city }
+    local params = { date_from_key, date_to_key, state, city }
     if filters.user_type ~= nil then
         extra = " AND ui.USER_TYPE = ?"
         table.insert(params, filters.user_type)
@@ -505,7 +547,8 @@ FROM (
     LEFT JOIN pa_client pc ON pc.REFFERE_ID = ci.ID
     LEFT JOIN sales_invoice si
            ON si.CLIENT_ID = pc.ID AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-          AND si.RUN_DATE >= ?
+          AND ]] .. DATE_RANGE_SQL .. [[
+
     ]] .. INVOICE_AMOUNT_JOIN .. [[
     WHERE addr.STATE = ? AND addr.CITY = ?]] .. extra .. [[
 
@@ -534,7 +577,7 @@ end
 
 -- توجه: همان بازهٔ تاریخ فعال (fetch_customers) اینجا هم اعمال می‌شود تا جمع این فهرست دقیقاً با
 -- «مبلغ کل خرید» نمایش‌داده‌شده در ردیف مشتری (که با همین فیلتر محاسبه شده) یکی باشد.
-local function fetch_invoices(crm_id, date_from_key)
+local function fetch_invoices(crm_id, date_from_key, date_to_key)
     local rows, err = fetch_rows([[
 SELECT
     si.ID AS invoice_id,
@@ -547,9 +590,10 @@ LEFT JOIN report_dimdate rd ON rd.DATEKEY = (si.RUN_DATE - MOD(si.RUN_DATE, ]] .
 ]] .. INVOICE_AMOUNT_JOIN .. [[
 WHERE pc.REFFERE_ID = ?
   AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-  AND si.RUN_DATE >= ?
+  AND ]] .. DATE_RANGE_SQL .. [[
+
 ORDER BY si.RUN_DATE DESC
-]], { crm_id, date_from_key })
+]], { crm_id, date_from_key, date_to_key })
     if rows == nil then return nil, err end
     local list = {}
     for _, r in ipairs(rows) do
@@ -617,7 +661,7 @@ end
 
 -- توجه: با همان بازهٔ تاریخ فعال فیلتر می‌شود تا مجموع این فهرست دقیقاً با KPI «فاکتورهای بدون
 -- نگاشت جغرافیایی» (که خودش با همین date_from_key محاسبه می‌شود) یکی باشد.
-local function fetch_invoices_missing_geo_count(date_from_key)
+local function fetch_invoices_missing_geo_count(date_from_key, date_to_key)
     local rows, err = fetch_rows([[
 SELECT COUNT(si.ID)
 FROM sales_invoice si
@@ -625,14 +669,15 @@ INNER JOIN pa_client pc ON pc.ID = si.CLIENT_ID
 LEFT JOIN profile_user_address addr ON addr.USER_ID = pc.REFFERE_ID AND addr.TYPE = ]] .. CONFIG.ADDRESS_TYPE_PRIMARY .. [[
 
 WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-  AND si.RUN_DATE >= ?
+  AND ]] .. DATE_RANGE_SQL .. [[
+
   AND (addr.USER_ID IS NULL OR addr.STATE IS NULL OR addr.STATE = '' OR addr.CITY IS NULL OR addr.CITY = '')
-]], { date_from_key })
+]], { date_from_key, date_to_key })
     if rows == nil or #rows == 0 then return 0, err end
     return tonumber(rows[1][1]) or 0
 end
 
-local function fetch_invoices_missing_geo(date_from_key, limit, offset)
+local function fetch_invoices_missing_geo(date_from_key, date_to_key, limit, offset)
     local rows, err = fetch_rows([[
 SELECT si.ID, si.INVOICE_CODE, rd.JNDATE, COALESCE(ia.amount, 0), pm.FULLNAME, ci.ID
 FROM sales_invoice si
@@ -644,11 +689,12 @@ LEFT JOIN profile_user_address addr ON addr.USER_ID = pc.REFFERE_ID AND addr.TYP
 LEFT JOIN report_dimdate rd ON rd.DATEKEY = (si.RUN_DATE - MOD(si.RUN_DATE, ]] .. CONFIG.DAY_TICKS .. [[))
 ]] .. INVOICE_AMOUNT_JOIN .. [[
 WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-  AND si.RUN_DATE >= ?
+  AND ]] .. DATE_RANGE_SQL .. [[
+
   AND (addr.USER_ID IS NULL OR addr.STATE IS NULL OR addr.STATE = '' OR addr.CITY IS NULL OR addr.CITY = '')
 ORDER BY si.RUN_DATE DESC
 LIMIT ? OFFSET ?
-]], { date_from_key, limit, offset })
+]], { date_from_key, date_to_key, limit, offset })
     if rows == nil then return nil, err end
     local list = {}
     for _, r in ipairs(rows) do
@@ -763,6 +809,10 @@ local REPORT_CSS = [[
 }
 html,body{ margin:0; padding:0; background:var(--bg); color:#000; font-size:14px; direction:rtl; }
 #reportRoot{ max-width:1400px; margin:0 auto; padding:18px; }
+/* رفع باگ (طبق بازخورد کاربر): در حالت «تمام صفحه» (Fullscreen API روی #reportRoot)، مرورگر این
+   المان را در Top Layer با اندازهٔ Viewport قرار می‌دهد؛ بدون overflow-y صریح روی خود المان Fullscreen،
+   محتوای بلندتر از صفحه هیچ اسکرول‌باری ندارد و اسکرول (چرخ ماوس/لمسی) اثری نمی‌کند. */
+#reportRoot:fullscreen, #reportRoot:-webkit-full-screen{ overflow-y:auto; height:100%; background:var(--bg); }
 .toolbar{ display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
 .btn-toolbar{ background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 18px; font-size:14px; font-weight:bold; cursor:pointer; }
 .btn-toolbar:hover{ filter:brightness(0.9); }
@@ -965,11 +1015,13 @@ end
 -- RENDER: FILTER BAR
 -- ============================================================
 
-local function render_filter_bar(filters, default_date_from, state_options, user_type_options)
+local function render_filter_bar(filters, default_date_from, default_date_to, state_options, user_type_options)
     local html = {}
     table.insert(html, '<form id="filterForm" class="filter-bar">')
     table.insert(html, '<div class="filter-field"><label>تاریخ از (شمسی)</label><input type="text" name="date_from" id="dateFromInput" placeholder="1405/01/01" value="' ..
         escape_html(filters.date_from_text or default_date_from) .. '"></div>')
+    table.insert(html, '<div class="filter-field"><label>تاریخ تا (شمسی)</label><input type="text" name="date_to" id="dateToInput" placeholder="1405/01/01" value="' ..
+        escape_html(filters.date_to_text or default_date_to) .. '"></div>')
     table.insert(html, '<div class="filter-field"><label>استان</label><select name="state" id="stateFilterInput"><option value="">همه استان‌ها</option>')
     for _, st in ipairs(state_options) do
         local sel = (filters.state == st) and ' selected' or ''
@@ -1007,6 +1059,18 @@ local function render_error_html(message)
         '</div>\n</body>\n</html>'
 end
 
+-- باگ رفع‌شده (طبق بازخورد کاربر — اسکرین‌شات «Unexpected token '<' ... is not valid JSON»): وقتی
+-- فیلتر بالای صفحه با fetch (format=json) درخواست می‌داد و سمت سرور خطا می‌خورد، همیشه HTML کامل
+-- (render_error_html) برمی‌گشت؛ چون سمت کلاینت با res.json() پارس می‌کند، این HTML باعث همان خطای
+-- JSON نامعتبر می‌شد. این تابع مسیر خطا را بر اساس input["format"] بین JSON و HTML انتخاب می‌کند.
+local function write_dashboard_error(input, message)
+    if input["format"] == "json" then
+        teamyar.write_result(json.encode({ ok = false, error = message }))
+    else
+        teamyar.write_result(render_error_html(message))
+    end
+end
+
 -- ============================================================
 -- JS
 -- ============================================================
@@ -1031,6 +1095,11 @@ function getActiveDateFrom(){
   var el = document.getElementById('dateFromInput');
   var v = el && el.value ? el.value.trim() : '';
   return v || (DASH && DASH.default_date_from) || '';
+}
+function getActiveDateTo(){
+  var el = document.getElementById('dateToInput');
+  var v = el && el.value ? el.value.trim() : '';
+  return v || (DASH && DASH.default_date_to) || '';
 }
 function escapeHtml(v){
   if (v === null || v === undefined) return '';
@@ -1271,6 +1340,7 @@ function openDataQualityInvoices(offset){
   var fd = new FormData();
   fd.append('action', 'dq_invoices');
   fd.append('date_from', getActiveDateFrom());
+  fd.append('date_to', getActiveDateTo());
   fd.append('offset', String(offset || 0));
   fetch(window.location.href, { method: 'POST', body: fd })
     .then(function(res){ return res.json(); })
@@ -1381,6 +1451,7 @@ function openCustomerDrill(stateName, cityName, offset){
   fd.append('state', stateName);
   fd.append('city', cityName);
   fd.append('date_from', getActiveDateFrom());
+  fd.append('date_to', getActiveDateTo());
   fd.append('offset', String(custDrillState.offset));
   var utSel = document.querySelector('select[name="user_type"]');
   if (utSel && utSel.value) fd.append('user_type', utSel.value);
@@ -1431,6 +1502,7 @@ function openInvoiceDrill(crmId){
   fd.append('action', 'invoices');
   fd.append('crm_id', String(crmId));
   fd.append('date_from', getActiveDateFrom());
+  fd.append('date_to', getActiveDateTo());
   fetch(window.location.href, { method: 'POST', body: fd })
     .then(function(res){ return res.json(); })
     .then(function(payload){
@@ -1515,6 +1587,7 @@ if (filterFormEl) {
 }
 function resetFilters(){
   document.getElementById('dateFromInput').value = DASH.default_date_from;
+  document.getElementById('dateToInput').value = DASH.default_date_to;
   document.querySelector('select[name="state"]').value = '';
   document.querySelector('input[name="city"]').value = '';
   document.querySelector('select[name="user_type"]').value = '';
@@ -1530,6 +1603,8 @@ function applyDashboardUpdate(payload){
   document.getElementById('stateTbody').innerHTML = payload.state_rows_html;
   document.getElementById('topCityTbody').innerHTML = payload.top_city_rows_html;
   document.getElementById('footerText').textContent = payload.footer_text;
+  var rangeEl = document.getElementById('dateRangeLabel');
+  if (rangeEl) rangeEl.textContent = 'بازه: از ' + (payload.date_from_label || '') + ' تا ' + (payload.date_to_label || '');
   document.getElementById('fullCityListBox').style.display = 'none';
   document.getElementById('fullCityListBox').removeAttribute('data-rendered');
   document.getElementById('toggleCityListBtn').textContent = 'نمایش تمام شهرها';
@@ -1560,12 +1635,13 @@ initSortableTables();
 -- DASH DATA BUILDER
 -- ============================================================
 
-local function build_dash_data(states, cities, default_date_from)
+local function build_dash_data(states, cities, default_date_from, default_date_to)
     return {
         states = states,
         cities = cities,
         pie_slices = build_pie_slices(states),
         default_date_from = default_date_from,
+        default_date_to = default_date_to,
     }
 end
 
@@ -1591,7 +1667,7 @@ local function render_html(args)
     table.insert(html, '<header class="hero"><img class="brand140-logo" alt="140" ' ..
         'src="data:image/png;base64,' .. CONFIG.LOGO140_WHITE_B64 .. '">' ..
         '<h1>داشبورد مدیریتی توزیع جغرافیایی مشتریان و فروش</h1>' ..
-        '<p class="sub">بازه: از ' .. escape_html(args.date_from_label) .. ' تا امروز — تولید در ' ..
+        '<p class="sub" id="dateRangeLabel">بازه: از ' .. escape_html(args.date_from_label) .. ' تا ' .. escape_html(args.date_to_label) .. ' — تولید در ' ..
         escape_html(args.generated_jdate) .. '</p></header>\n')
 
     table.insert(html, args.filter_bar_html)
@@ -1661,7 +1737,7 @@ local function render_html(args)
     </ul>
     <h4>تعامل‌ها</h4>
     <ul>
-      <li>فیلترهای بالای صفحه (تاریخ از، استان، شهر، نوع مشتری) کل داشبورد را بر اساس فاکتورهای همان بازه/محدوده فیلتر می‌کنند.</li>
+      <li>فیلترهای بالای صفحه (تاریخ از، تاریخ تا، استان، شهر، نوع مشتری) کل داشبورد را بر اساس فاکتورهای همان بازه/محدوده فیلتر می‌کنند.</li>
       <li>روی هر ردیف نمودار میله‌ای یا جدول استان‌ها کلیک کنید تا پنل جزئیات همان استان باز شود.</li>
       <li>در پنل استان، روی هر شهر کلیک کنید تا فهرست مشتریان همان شهر (با صفحه‌بندی) بارگذاری شود.</li>
       <li>روی هر مشتری کلیک کنید تا فهرست فاکتورهای او در یک پنجره باز شود؛ لینک «مشاهده CRM» صفحهٔ مشتری را در تب جدید Teamyar باز می‌کند.</li>
@@ -1709,7 +1785,8 @@ local function main()
             return
         end
         local date_from_key = resolve_active_date_from_key(input)
-        if date_from_key == nil then
+        local date_to_key = resolve_active_date_to_key(input)
+        if date_from_key == nil or date_to_key == nil then
             teamyar.write_result(json.encode({ ok = false, error = "تعیین بازهٔ زمانی گزارش ممکن نشد" }))
             return
         end
@@ -1718,7 +1795,7 @@ local function main()
         if offset < 0 then offset = 0 end
         local limit = CONFIG.CUSTOMER_PAGE_SIZE
         local total, cnt_err = fetch_customers_count(state, city, filters)
-        local rows, err = fetch_customers(state, city, filters, date_from_key, limit, offset)
+        local rows, err = fetch_customers(state, city, filters, date_from_key, date_to_key, limit, offset)
         if rows == nil then
             teamyar.write_result(json.encode({ ok = false, error = "خطا در دریافت فهرست مشتریان: " .. tostring(err or cnt_err) }))
             return
@@ -1735,12 +1812,13 @@ local function main()
             return
         end
         local date_from_key = resolve_active_date_from_key(input)
-        if date_from_key == nil then
+        local date_to_key = resolve_active_date_to_key(input)
+        if date_from_key == nil or date_to_key == nil then
             teamyar.write_result(json.encode({ ok = false, error = "تعیین بازهٔ زمانی گزارش ممکن نشد" }))
             return
         end
         local customer = fetch_customer_header(crm_id)
-        local rows, err = fetch_invoices(crm_id, date_from_key)
+        local rows, err = fetch_invoices(crm_id, date_from_key, date_to_key)
         if rows == nil then
             teamyar.write_result(json.encode({ ok = false, error = "خطا در دریافت فاکتورها: " .. tostring(err) }))
             return
@@ -1770,15 +1848,16 @@ local function main()
     -- طبق درخواست کاربر: با همان بازهٔ تاریخ فعال محاسبه می‌شود تا با KPI بالای صفحه یکی باشد.
     if input["action"] == "dq_invoices" then
         local date_from_key = resolve_active_date_from_key(input)
-        if date_from_key == nil then
+        local date_to_key = resolve_active_date_to_key(input)
+        if date_from_key == nil or date_to_key == nil then
             teamyar.write_result(json.encode({ ok = false, error = "تعیین بازهٔ زمانی گزارش ممکن نشد" }))
             return
         end
         local offset = tonumber(input["offset"]) or 0
         if offset < 0 then offset = 0 end
         local limit = CONFIG.CUSTOMER_PAGE_SIZE
-        local total, cnt_err = fetch_invoices_missing_geo_count(date_from_key)
-        local rows, err = fetch_invoices_missing_geo(date_from_key, limit, offset)
+        local total, cnt_err = fetch_invoices_missing_geo_count(date_from_key, date_to_key)
+        local rows, err = fetch_invoices_missing_geo(date_from_key, date_to_key, limit, offset)
         if rows == nil then
             teamyar.write_result(json.encode({ ok = false, error = "خطا در دریافت فهرست: " .. tostring(err or cnt_err) }))
             return
@@ -1792,6 +1871,7 @@ local function main()
 
     local now_raw, now_err = fetch_now_raw()
     local fy_key, fy_jndate = resolve_fiscal_year_start(now_raw)
+    local today_key, today_jndate = resolve_today_key(now_raw)
 
     local date_from_key = nil
     local date_from_label = filters.date_from_text
@@ -1806,31 +1886,47 @@ local function main()
         date_from_key = fy_key
         date_from_label = fy_jndate
     end
-    if date_from_key == nil then
-        teamyar.write_result(render_error_html("امکان تعیین بازهٔ زمانی گزارش وجود ندارد (خطا در report_dimdate): " .. tostring(now_err)))
+
+    -- «تاریخ تا» — طبق درخواست کاربر (بازهٔ از/تا)؛ پیش‌فرض (بدون ورودی/نامعتبر) = امروز
+    local date_to_key = nil
+    local date_to_label = filters.date_to_text
+    if filters.date_to_text ~= nil then
+        date_to_key = resolve_date_from_text(filters.date_to_text)
+    end
+    if date_to_key == nil then
+        if filters.date_to_text ~= nil then
+            local to_warning = "تاریخ «تا» واردشده («" .. filters.date_to_text .. "») در تقویم سیستم یافت نشد؛ به امروز بازگردانده شد."
+            date_warning = date_warning and (date_warning .. " " .. to_warning) or to_warning
+        end
+        date_to_key = today_key
+        date_to_label = today_jndate
+    end
+
+    if date_from_key == nil or date_to_key == nil then
+        write_dashboard_error(input, "امکان تعیین بازهٔ زمانی گزارش وجود ندارد (خطا در report_dimdate): " .. tostring(now_err))
         return
     end
 
     local crm_kpi, crm_err = fetch_crm_kpi()
     if crm_kpi == nil then
-        teamyar.write_result(render_error_html("خطا در محاسبهٔ KPI مشتریان: " .. tostring(crm_err)))
+        write_dashboard_error(input, "خطا در محاسبهٔ KPI مشتریان: " .. tostring(crm_err))
         return
     end
 
-    local sales_kpi, sales_err = fetch_sales_kpi(date_from_key, filters)
+    local sales_kpi, sales_err = fetch_sales_kpi(date_from_key, date_to_key, filters)
     if sales_kpi == nil then
-        teamyar.write_result(render_error_html("خطا در محاسبهٔ KPI فروش: " .. tostring(sales_err)))
+        write_dashboard_error(input, "خطا در محاسبهٔ KPI فروش: " .. tostring(sales_err))
         return
     end
 
-    local states, states_err = fetch_state_aggregation(date_from_key, filters)
+    local states, states_err = fetch_state_aggregation(date_from_key, date_to_key, filters)
     if states == nil then
-        teamyar.write_result(render_error_html("خطا در تجمیع استان‌ها: " .. tostring(states_err)))
+        write_dashboard_error(input, "خطا در تجمیع استان‌ها: " .. tostring(states_err))
         return
     end
-    local cities, cities_err = fetch_city_aggregation(date_from_key, filters)
+    local cities, cities_err = fetch_city_aggregation(date_from_key, date_to_key, filters)
     if cities == nil then
-        teamyar.write_result(render_error_html("خطا در تجمیع شهرها: " .. tostring(cities_err)))
+        write_dashboard_error(input, "خطا در تجمیع شهرها: " .. tostring(cities_err))
         return
     end
 
@@ -1846,8 +1942,8 @@ local function main()
         pct = fmt_pct(sales_kpi.cities_with_sales, CONFIG.TOTAL_CITIES_IRAN),
     }
 
-    local dash_data = build_dash_data(states, cities, date_from_label)
-    local generated_jdate = fy_jndate -- برچسب مرجع؛ برای «امروز» دقیق کافی نیست، صرفاً نمایشی است
+    local dash_data = build_dash_data(states, cities, date_from_label, date_to_label)
+    local generated_jdate = today_jndate or fy_jndate -- برچسب مرجع نمایشی «تولید در ...»
 
     local state_options = {}
     for _, s in ipairs(states) do table.insert(state_options, s.state_name) end
@@ -1871,15 +1967,18 @@ local function main()
             state_rows_html = state_rows_html,
             top_city_rows_html = top_city_rows_html,
             footer_text = footer_text,
+            date_from_label = date_from_label,
+            date_to_label = date_to_label,
         }))
         return
     end
 
-    local filter_bar_html = render_filter_bar(filters, date_from_label, state_options, user_type_options)
+    local filter_bar_html = render_filter_bar(filters, date_from_label, date_to_label, state_options, user_type_options)
 
     local html = render_html({
         dash_data = dash_data,
         date_from_label = date_from_label,
+        date_to_label = date_to_label,
         generated_jdate = generated_jdate,
         filter_bar_html = filter_bar_html,
         kpi_cards_html = kpi_cards_html,
@@ -1894,6 +1993,15 @@ end
 
 local ok, err = pcall(main)
 if not ok then
-    teamyar.write_result(render_error_html(tostring(err)))
+    -- همان منطق write_dashboard_error برای خطاهای پیش‌بینی‌نشدهٔ Lua (خارج از main) — طبق بازخورد کاربر
+    -- (اسکرین‌شات «Unexpected token '<' ... is not valid JSON»): اگر درخواست format=json بوده (فیلتر AJAX)،
+    -- پاسخ باید JSON بماند، نه HTML کامل، وگرنه res.json() سمت کلاینت با همان خطا می‌شکند.
+    local input_ok, input_for_error = pcall(function() return teamyar.get_input() end)
+    local fmt = input_ok and input_for_error and input_for_error["format"] or nil
+    if fmt == "json" then
+        teamyar.write_result(json.encode({ ok = false, error = tostring(err) }))
+    else
+        teamyar.write_result(render_error_html(tostring(err)))
+    end
 end
 
