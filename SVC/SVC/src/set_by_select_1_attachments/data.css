@@ -163,4 +163,58 @@ section[data-name="set_by_select_1"] .core_icongroup_holder_filter select:focus 
 .settle-help-modal-body ul {
     padding-right: 20px;
 }
+
+/* دکمه‌ی «تسویه گروهی» حین اجرای صف تسویه (data.js: setSettleButtonsEnabled) */
+section[data-name="set_by_select_1"] .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* گزارش پاپ‌آپ پایان صف تسویه گروهی (data.js: showSettleReport) — همان مودال راهنما،
+   با یک محدودیت عرض کوچک‌تر و بخش خلاصه‌ی آماری */
+.settle-report-modal {
+    max-width: 480px;
+}
+.settle-report-summary {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+.settle-report-stat {
+    flex: 1;
+    text-align: center;
+    background-color: #f5f5f5;
+    border-radius: 6px;
+    padding: 12px 8px;
+}
+.settle-report-num {
+    display: block;
+    font-size: 22px !important;
+    font-weight: bold;
+    color: #16509D;
+}
+.settle-report-num.settle-report-fail {
+    color: #666;
+}
+.settle-report-label {
+    display: block;
+    font-size: 14px !important;
+    color: #000;
+    margin-top: 4px;
+}
+.settle-report-failed-title {
+    margin-bottom: 4px;
+}
+.settle-report-failed-list {
+    background-color: #f5f5f5;
+    border: 1px solid #666;
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 14px !important;
+    line-height: 1.9;
+    max-height: 120px;
+    overflow-y: auto;
+    word-break: break-word;
+}
 </style>
