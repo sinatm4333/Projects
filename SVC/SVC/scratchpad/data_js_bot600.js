@@ -305,14 +305,23 @@ report[reportPath].responseReportMain =  function (dataResponse){
         toolbar.appendChild(img);
     }
 
-    var root = document.querySelector('section[data-name="' + BOT_NAME + '"]');
-    if (root) {
+    // یک MutationObserver با subtree:true روی کل section بات (قبلاً اینجا بود) هر تغییر DOM
+    // زیر بات را — از جمله رفرش کامل جدول گزارش موقع «اجرا» — قلاب می‌کرد؛ روی بات ۵۷۴ که همین
+    // الگو از این فایل کپی شده بود باعث شد اجرای گزارش گیر کند/لودینگ بماند (1405/05/27). به‌جاش
+    // یک پول کوتاه و خودخاتمه‌ده: چند بار (حداکثر ~۲۰ ثانیه) تلاش می‌کند دکمه/لوگو را بگذارد، بعد
+    // از موفقیت یا اتمام تلاش‌ها خودش متوقف می‌شود — دیگر هیچ mutation آینده‌ای (رفرش جدول/فیلتر)
+    // را نمی‌بیند، پس هزینه‌ای روی اجرای گزارش نمی‌گذارد.
+    var injectAttempts = 0;
+    var INJECT_MAX_ATTEMPTS = 40;
+    var injectPollId = setInterval(function () {
+        injectAttempts++;
         injectHelpButton();
         injectLogo140();
-        var observer = new MutationObserver(function () {
-            injectHelpButton();
-            injectLogo140();
-        });
-        observer.observe(root, { childList: true, subtree: true });
-    }
+        var done = document.getElementById("rfm-help-btn") && document.getElementById("rfm-logo140");
+        if (done || injectAttempts >= INJECT_MAX_ATTEMPTS) {
+            clearInterval(injectPollId);
+        }
+    }, 500);
+    injectHelpButton();
+    injectLogo140();
 })();
