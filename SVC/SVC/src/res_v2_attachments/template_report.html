@@ -1,9 +1,1558 @@
-/* data.css — پیوست اختصاصی این بات (کپی بات ۵۶۹ برای برند ۱۴۰)، نه res_v2/res_v3.
-   template_report.html این فایل را خودکار با <link href="{{_bot_path}}/data.css"> لود می‌کند —
-   یعنی این CSS فقط وقتی این بات رندر می‌شود اعمال می‌شود، هیچ بات دیگری که از همان
-   res_v2 استفاده می‌کند تحت تأثیر قرار نمی‌گیرد.
-   Scope: همه‌چیز زیر section[data-name="set_by_select_1"] (از run_path استخراج می‌شود). */
+<style>
 
+    #widget-report-{{rep_id}} {
+       direction: {{templateDirection}}
+    }
+
+
+    .num_sum{
+        line-height: 35px;
+    }
+
+    /*label {
+        float: right;
+    }*/
+
+    #div-form-report{
+        margin: 0;
+    }
+
+
+    .body_filter_group{
+        width: calc(100% - 50px);
+        background-color: #c5cad10d;
+        border-radius: 5px;
+        box-shadow: #c4cbd4 0 0 3px;
+        margin-bottom: 5px;
+        padding: 5px;
+    }
+</style>
+
+
+
+<link href="{{_bot_path}}/data.css" rel="stylesheet" />
+
+
+
+<section id="widget-report-{{rep_id}}" data-name="{{_bot_name}}" >
+
+    <section id="div-header-report" class="d-block m-0" ></section>
+
+    <section id="div-form-report_parent" class="m-0" ></section>
+
+    <section id="div-msg-report-parent" class="mt-1" ></section>
+
+    <h4 id="header_text_report" class="pb-0 px-2 mb-1 mt-3 border-bottom">{{_report_name}}</h4>
+
+    <section id="result-report" class=""></section>
+
+    <section id="extra" class=""></section>
+
+    <section id="div-footer-report" class="d-block m-0" ></section>
+
+</section>
+
+
+
+
+{{_script_config}}
+<script src="{{_bot_path}}/data.js"></script>
+
+
+<!--init header-->
+<script>
+    report["{{_bot_name}}"].elementHeader = $('#widget-report-{{rep_id}}').find("#div-header-report");
+    report["{{_bot_name}}"].header = "";
+    if (extras.hasOwnProperty("header")){
+        report["{{_bot_name}}"].header += extras.header
+    }
+    report["{{_bot_name}}"].elementHeader.html(report["{{_bot_name}}"].header)
+</script>
+
+<!--init footer-->
+<script>
+    report["{{_bot_name}}"].elementFooter = $('#widget-report-{{rep_id}}').find("#div-footer-report");
+    report["{{_bot_name}}"].footer = "";
+    if (extras.hasOwnProperty("header")){
+        report["{{_bot_name}}"].footer += extras.footer
+    }
+    report["{{_bot_name}}"].elementFooter.html(report["{{_bot_name}}"].footer)
+</script>
+
+
+
+
+
+<!--init msg-->
+<script>
+    report["{{_bot_name}}"].elementMessages = $('#widget-report-{{rep_id}}').find("#div-msg-report-parent");
+    report["{{_bot_name}}"].messages = "";
+    if (extras.hasOwnProperty("warnings")){
+        report["{{_bot_name}}"].messages += "<div class=\"element-warning alert alert-info text-direction\" role=\"alert\">"+extras.warnings+"</div>"
+    }
+    if (extras.hasOwnProperty("messages")){
+        report["{{_bot_name}}"].messages += "<div class=\"element-dangers alert alert-info text-direction\" role=\"alert\">"+extras.messages+"</div>"
+    }
+    if (extras.hasOwnProperty("errors")){
+        report["{{_bot_name}}"].messages += "<div class=\"element-info alert alert-info text-direction\" role=\"alert\">"+extras.errors+"</div>"
+    }
+    report["{{_bot_name}}"].elementMessages.html(report["{{_bot_name}}"].messages)
+</script>
+
+
+
+
+
+<!--columns selected-->
+<script>
+    report["{{_bot_name}}"].setInputSelectColumns = function (selectColumns) {
+        const selectColumnsStr = JSON.stringify(selectColumns);
+        const selectColumnsStrEncode = btoa(unescape(encodeURIComponent(selectColumnsStr))); // decodeURIComponent(escape(atob(selectColumnsStr))) //btoa(selectColumnsStr);
+        $(report["{{_bot_name}}"].getBotWidgetId() + " #div-form-report_parent #form-report input[name=select_columns_active]").val(selectColumnsStrEncode);
+    }
+    report["{{_bot_name}}"].getInputSelectColumns = function () {
+        try {
+            let selectColumnsStr =  $(report["{{_bot_name}}"].getBotWidgetId() + " #div-form-report_parent #form-report input[name=select_columns_active]").val();
+
+            selectColumnsStr = atob(selectColumnsStr);
+            selectColumnsStr = new Uint8Array([...selectColumnsStr].map(char => char.charCodeAt(0)));
+
+            const decoder = new TextDecoder('utf-8');
+            selectColumnsStr =  decoder.decode(selectColumnsStr);
+
+            selectColumnsStr = JSON.parse(selectColumnsStr);
+
+            return selectColumnsStr;
+        }
+        catch (error) {
+            console.error("Error decoding Base64: ", error);
+        }
+
+        return null;
+    }
+</script>
+
+
+
+
+<!--page-->
+<script>
+    report["{{_bot_name}}"].setInputReportName = function (reportName) {
+        $(report["{{_bot_name}}"].getBotWidgetId() + " #div-form-report_parent #form-report input[name=reportName]").val(reportName);
+    }
+    report["{{_bot_name}}"].setInputPage = function (pageNum) {
+        $(report["{{_bot_name}}"].getBotWidgetId() + " #div-form-report_parent #form-report input[name=page]").val(pageNum);
+    }
+    report["{{_bot_name}}"].getInputPage = function () {
+        return $(report["{{_bot_name}}"].getBotWidgetId() + " #div-form-report_parent #form-report input[name=page]").val();
+    }
+</script>
+
+
+
+
+
+<!--select Item Report-->
+<script>
+    report["{{_bot_name}}"].getParentViewReport = function (){
+        return 'items-report-'+report["{{_bot_name}}"].getBotReportId();
+    }
+
+    report["{{_bot_name}}"].getItemViewReport = function (itemId){
+        return 'item-report-'+report["{{_bot_name}}"].getBotReportId()+'-'+itemId;
+    }
+
+    report["{{_bot_name}}"].changeItemReport = function (element , setFetch=true){
+        const reportName = $(element).val();
+        const reports =  report["{{_bot_name}}"].reportNames;
+        if (reports != null){
+            Object.keys(reports).forEach(key=>{
+                if (reportName == key){
+                    const param = reports[key];
+                    report["{{_bot_name}}"].setInputReportName(reportName)
+
+                    $("#"+report["{{_bot_name}}"].getParentViewReport()).children().addClass("d-none");
+                    $("#"+ report["{{_bot_name}}"].getItemViewReport(reportName)).removeClass("d-none");
+                    report["{{_bot_name}}"].renderItemReport(param , setFetch);
+                }
+                return;
+            })
+        }
+    }
+</script>
+
+
+
+
+<!--submit Report-->
+<script>
+
+    report["{{_bot_name}}"].getFormData = function (){
+        const formId =  report["{{_bot_name}}"].getBotWidgetId() +" > #div-form-report_parent #form-report";
+        let formData = $(formId).serializeArray();
+        let data = {};
+        for (let i=0; i< formData.length; i++){
+            const itemData = formData[i];
+            if (itemData.hasOwnProperty("name") && itemData.hasOwnProperty("value")){
+                data[itemData.name] = itemData.value;
+            }
+        }
+        let url = $(formId).attr('action');
+        let method = $(formId).attr('method');
+
+        data["select_columns_active"] = report["{{_bot_name}}"].getInputSelectColumns();
+        if (typeof report["{{_bot_name}}"].setBotSelectColumnsValue !== "undefined"){
+            report["{{_bot_name}}"].setBotSelectColumnsValue(data["select_columns_active"]);
+        }
+
+        return {data , url , method};
+    }
+
+
+    report["{{_bot_name}}"].onclickFormSubmit = function (){
+        report["{{_bot_name}}"].getGetResponseReport(false);
+    }
+
+    report["{{_bot_name}}"].getGetResponseReport = function (setPageFirst=false , extraParams={} , callbackResponse=null){
+        if (setPageFirst){
+            report["{{_bot_name}}"].setInputPage(0);
+        }
+
+        const form = report["{{_bot_name}}"].getFormData();
+        form.data["page_search_first"] = setPageFirst;
+
+        let parans = form.data;
+        if (parans!= null && extraParams != null && typeof extraParams == "object"){
+            Object.keys(extraParams).forEach(key=>{
+                parans[key]= extraParams[key];
+            })
+        }
+
+        $.Teamyar.ajax({
+            block_holder: "#widget-report-{{rep_id}}" ,
+            options: {
+                url: form.url,
+                type: form.method,
+                dataType: 'json',
+                async: true,
+                can_cancel: true,
+                data: parans
+            },
+            events: {
+                success: function (reponse) {
+                    const formResult = report["{{_bot_name}}"].getBotWidgetId()+" > #result-report";
+                    $(formResult).removeClass("d-none");
+
+                    let repId = report["{{_bot_name}}"].getBotReportId();
+
+                    if (typeof report["{{_bot_name}}"].callBackReport !== "undefined"){
+                        report["{{_bot_name}}"].callBackReport(reponse , repId);
+                    }
+
+                    report["{{_bot_name}}"].renderResponse(formResult , reponse , repId , parans);
+
+                    /*if (callbackResponse != null && typeof callbackResponse == "function"){
+                        callbackResponse(reponse)
+                    }*/
+                },
+                errors: function (er){
+                    console.log(er)
+                    document.getElementById("core_loading").remove();
+                }
+            }
+        });
+    }
+
+    report["{{_bot_name}}"].renderResponse = function (formResult , response , repId , parans ,  callbackResponse=null){
+        let template =
+            '<div id="form-response">' +
+            '<div class="row">';
+
+        const reportNameSelected = parans?.reportName ?? null;
+
+        if (response != null && response.length > 1){
+            template =  '<div class="row border-bottom m-0">' +
+                '<div class="col-12 col-lg-6">' +
+                '<select id="chagne-type-report-name-{{_bot_name}}" class="form-select px-2 mx-2 mt-2 mb-2 "  onchange="report[\'{{_bot_name}}\'].changeItemReport(this)" aria-label="Default select example">';
+
+            for (let i=0; i< response.length ; i++ ){
+                const itemResponse = response[i];
+                if (itemResponse.hasOwnProperty("name") && itemResponse.hasOwnProperty("title")){
+                    const reportTitle = itemResponse.title;
+                    const reportName = itemResponse.name;
+                    const reportResult = itemResponse.report;
+                    const elementId = report["{{_bot_name}}"].getItemViewReport(reportName);
+                    /*const data = {
+                        title: reportTitle,
+                        name: reportName,
+                        report: reportResult,
+                        elementId, repId
+                    }*/
+
+                    template += `<option value="${reportName}" ${reportNameSelected == reportName ? "selected" : ""}>${reportTitle}</option>`;
+                }
+            }
+
+            template +=
+                '</select>' +
+                '</div>' +
+                '</div>';
+
+        }
+
+
+        template += '</div>' +
+            '<div id="'+report["{{_bot_name}}"].getParentViewReport()+'" class="col-12 p-2">'
+
+
+        report["{{_bot_name}}"].reportNames = {}
+        //let dataTemplateResponse = [];
+        if (response != null){
+            for (let i=0; i< response.length ; i++ ){
+                const itemResponse = response[i];
+                if (itemResponse.hasOwnProperty("name") && itemResponse.hasOwnProperty("title") &&  itemResponse.hasOwnProperty("report")){
+                    const reportTitle = itemResponse.title;
+                    const reportName = itemResponse.name;
+                    const reportResult = itemResponse.report;
+                    const elementId = report["{{_bot_name}}"].getItemViewReport(reportName);
+
+                    template += '<div id="'+elementId+'" class="'+( (((reportNameSelected == null || reportNameSelected == "") &&  i==0 ) || (reportNameSelected != null &&  reportNameSelected == reportName) ) ? "" : (response.length > 1 ? "d-none" : ""))+'"></div>';
+                    /* dataTemplateResponse.push({
+                         title: reportTitle,
+                         name: reportName,
+                         report: reportResult,
+                         elementId,
+                         repId
+                     })*/
+                    report["{{_bot_name}}"].reportNames[reportName] = {
+                        title: reportTitle,
+                        name: reportName,
+                        report: reportResult,
+                        elementId,
+                        repId
+                    }
+
+
+                }
+            }
+        }
+
+
+        template +=
+            '</div>'+
+            '</div>'+
+            '</div>';
+
+        $(formResult).html(template);
+
+
+
+        if (response != null){
+            if (response.length > 1){
+                for (let i=0; i< response.length ; i++ ){
+                    const itemResponse = response[i];
+                    if (itemResponse.hasOwnProperty("name") && itemResponse.hasOwnProperty("title") &&  itemResponse.hasOwnProperty("report")){
+                        const reportTitle = itemResponse.title;
+                        const reportName = itemResponse.name;
+                        const reportResult = itemResponse.report;
+                        const elementId = report["{{_bot_name}}"].getItemViewReport(reportName);
+
+                        let dataSelected = null;
+                        if (reportNameSelected != null && reportNameSelected != "" ){
+                            if (reportName == reportNameSelected){
+                                dataSelected = {
+                                    title: reportTitle,
+                                    name: reportName,
+                                    report: reportResult,
+                                    elementId,
+                                    repId
+                                };
+                            }
+                        }
+                        else{
+                            if (i==0){
+                                dataSelected = {
+                                    title: reportTitle,
+                                    name: reportName,
+                                    report: reportResult,
+                                    elementId,
+                                    repId
+                                };
+                            }
+                        }
+                        if (dataSelected != null){
+                            report["{{_bot_name}}"].renderItemReport(dataSelected, false);
+
+                            break;
+                        }
+                    }
+                }
+
+                //report['{{_bot_name}}'].changeItemReport($("#chagne-type-report-name-{{_bot_name}}") , false)
+            }
+            else{
+                const itemResponse = response[0];
+                const reportTitle = itemResponse.title;
+                const reportName = itemResponse.name;
+                const reportResult = itemResponse.report;
+                const elementId = report["{{_bot_name}}"].getItemViewReport(reportName);
+
+                report["{{_bot_name}}"].renderItemReport({
+                    title: reportTitle,
+                    name: reportName,
+                    report: reportResult,
+                    elementId,
+                    repId
+                } , false);
+            }
+        }
+
+
+       /* for (let i=0; i< dataTemplateResponse.length ; i++ ){
+            const itemDataResponse = dataTemplateResponse[i];
+            report["{{_bot_name}}"].renderItemReport(itemDataResponse);
+        }*/
+    }
+
+</script>
+
+
+
+
+
+<!--init view-->
+<script>
+    (function () {
+        
+        let toolsEnables ={
+            excel: {{_tools_excel}},
+            print: {{_tools_print}} ,
+            developer: {{_tools_developer}} ,
+        }
+
+        let listFilters = [];
+        let listFiltersGroup = [];
+        let filterExist = false;
+        if (typeof report["{{_bot_name}}"].getFilters !== "undefined" ) {
+            filterExist = true;
+            listFilters = report["{{_bot_name}}"].getFilters(report["{{_bot_name}}"].getBotPath() , {{_config_filters}})
+        }
+        else if (typeof report["{{_bot_name}}"].getFiltersGroups !== "undefined" ) {
+            filterExist = true;
+            listFiltersGroup = report["{{_bot_name}}"].getFiltersGroups(report["{{_bot_name}}"].getBotPath() , {{_config_filters}})
+        }
+        else if ( (typeof reportbotSearchers !== "undefined" && Array.isArray(reportbotSearchers) && reportbotSearchers.length > 0) ||
+            toolsEnables.excel || toolsEnables.print || toolsEnables.developer){
+            filterExist = true;
+            listFilters = reportbotSearchers;
+        }
+
+
+        let filtersColsNumber = 4;
+        if (typeof report["{{_bot_name}}"].getFiltersColsNumber !== "undefined" ) {
+            filtersColsNumber = report["{{_bot_name}}"].getFiltersColsNumber()
+        }
+
+
+        let formController = [
+            '<input type="hidden" name="select_columns_active" value=""/>' ,
+            "<input type='hidden' name='page' value='0'/>" ,
+            "<input type='hidden' name='reportName' value=''/>" ,
+            "<input type='hidden' name='rep_id' value='{{rep_id}}'/>" ,
+        ];
+        if (extras.hasOwnProperty("inputs")){
+            formController.push(extras.inputs);
+        }
+
+        let elementTopControllers = null;
+        if (filterExist  ||
+            typeof report["{{_bot_name}}"].setToolsEnables !== "undefined" ||
+            typeof report["{{_bot_name}}"].addRecords !== "undefined" ||
+            extras.hasOwnProperty("tools") ){
+
+            let toolsTopControllers = "";
+
+            if (listFilters.length > 0 || listFiltersGroup.length > 0){
+                toolsTopControllers +=
+                    "<div style=\"width: 25px;padding: 7px 5px 0px;text-align: -webkit-center;float:left;\"  class='mx-1 mt-1'>\n" +
+                    "    <span title=\""+report["{{_bot_name}}"].translateWord("_btn_filters")+"\" style=\"padding-right:5px; cursor:pointer;\" class=\" tyf tyf-filter-c tyf-1x \" onclick='report[\"{{_bot_name}}\"].showFilters()'></span>\n" +
+                    "</div>";
+            }
+
+
+            if (extras.hasOwnProperty("tools")){
+                toolsTopControllers += "<section style='float: right'>"+extras.tools+"</section>";
+            }
+
+
+
+            if (typeof report["{{_bot_name}}"].setToolsEnables !== "undefined" ){
+                const toolsStatus = report["{{_bot_name}}"].setToolsEnables();
+                if (toolsStatus.hasOwnProperty("excel")){
+                    toolsEnables.excel = toolsStatus.excel;
+                }
+                if (toolsStatus.hasOwnProperty("print")){
+                    toolsEnables.print = toolsStatus.print;
+                }
+                if (toolsStatus.hasOwnProperty("developer")){
+                    toolsEnables.developer = toolsStatus.developer;
+                }
+            }
+
+
+            if (toolsEnables.developer){
+                toolsTopControllers +=
+                    "<div style=\"width: 25px;padding: 7px 5px 0px;text-align: -webkit-center;float:left;\" class='mx-1 mt-1'>\n" +
+                    "    <span title=\""+report["{{_bot_name}}"].translateWord("_btn_developer")+"\" style=\"padding-right:5px; cursor:pointer;\" class='tyf tyf-info tyf-1x' onclick='report[\"{{_bot_name}}\"].windowDeveloper()'></span>" +
+                    "</div>";
+            }
+
+            if (toolsEnables.print){
+                toolsTopControllers +=
+                    "<div style=\"width: 25px;padding: 7px 5px 0px;text-align: -webkit-center;float:left;\"  class='mx-1 mt-1'>\n" +
+                    "    <span title=\""+report["{{_bot_name}}"].translateWord("_btn_print")+"\" style=\"padding-right:5px; cursor:pointer;\" class=\"tyf tyf-print tyf-1x\" onclick='report[\"{{_bot_name}}\"].printRecords()'></span>\n" +
+                    "</div>";
+            }
+
+            if (toolsEnables.excel){
+                toolsTopControllers +=
+                    "<div style=\"width: 25px;padding: 7px 5px 0px;text-align: -webkit-center;float:left;\" class='mx-1 mt-1'>\n" +
+                    "    <span title=\""+report["{{_bot_name}}"].translateWord("_btn_excel")+"\" style=\"padding-right:5px; cursor:pointer;\" class='tyf tyf-file-excel tyf-1x' onclick='report[\"{{_bot_name}}\"].excelRecords()'></span>" +
+                    "</div>";
+            }
+
+            if (typeof report["{{_bot_name}}"].addRecords !== "undefined" ){
+                toolsTopControllers +=
+                    "<button class=' btn  core_navbar_btn_icon undefined ' onclick='report[\"{{_bot_name}}\"].addRecords()'> {{_btn_add}} </button>";
+            }
+
+            elementTopControllers = $.Teamyar.layout({
+                type: 'COL-1',
+                class_name: 'px-2 pb-1 border-bottom core_navbar',
+                controls: [toolsTopControllers]
+            });
+        }
+
+        let formClass = "d-none";
+        if (listFilters.length > 0){
+
+            formController.push(
+                $.Teamyar.layout({
+                    type: `COL-${filtersColsNumber}`,
+                    class_name: 'pe-4',
+                    controls: listFilters
+                })
+            )
+            formClass = "";
+        }
+        else if (listFiltersGroup.length > 0){
+
+
+            report["{{_bot_name}}"].openOrCloseFilterNumber= function (filterNumber , isOpen= false) {
+                $.Teamyar.line.set(`#line_filter_group_{{rep_id}}_${filterNumber}`,'arrow_dir' , isOpen ? "down" : "up")
+                $.Teamyar.layout.set(`#body_filter_group_{{rep_id}}_${filterNumber}`,'class_name', isOpen ? "body_filter_group mx-auto" : "d-none")
+            }
+
+            report["{{_bot_name}}"].openOrCloseFilterNumberEvent= function (p1 , p2) {
+                const filterId = p1.hasOwnProperty("filterId") ? p1.filterId: 0;
+                const status= p2.hasOwnProperty("type") && p2.type == "open"
+                if (status){
+                    report["{{_bot_name}}"].openOrCloseFilterNumber(filterId , false)
+                }
+                else{
+                    report["{{_bot_name}}"].openOrCloseFilterNumber(filterId , true)
+                }
+            }
+
+
+            let filtersWithGroup = [];
+            for (let i=0; i< listFiltersGroup.length ; i++){
+                const itemGroup = listFiltersGroup[i];
+                if (itemGroup != null && itemGroup.hasOwnProperty("title") && itemGroup.hasOwnProperty("filters")){
+                    filtersWithGroup.push(
+                        $.Teamyar.layout({
+                            type: 'COL-1',
+                            controls:
+                                [
+                                    $.Teamyar.line({
+                                        id:         `line_filter_group_{{rep_id}}_${i}` ,
+                                        with_arrow: true,
+                                        title:      itemGroup.title ,
+                                        arrow_dir:  itemGroup.hasOwnProperty("isOpen") && itemGroup.isOpen ? "down" : "up" ,
+                                        events: {"onclick" : ['report.'+reportPath+'.openOrCloseFilterNumberEvent' , {filterId: i}] } ,
+                                    }) ,
+
+                                    $.Teamyar.layout({
+                                        id:          `body_filter_group_{{rep_id}}_${i}` ,
+                                        type:        `COL-${filtersColsNumber}`,
+                                        class_name:  "body_filter_group mx-auto "+ (itemGroup.hasOwnProperty("isOpen") && itemGroup.isOpen ? "" : "d-none"),
+                                        controls:    itemGroup.filters
+                                    })
+                                ]
+                        })
+                    )
+                }
+            }
+
+
+            formController.push(
+                $.Teamyar.layout({
+                    type: `COL-1`,
+                    class_name: 'pe-4',
+                    controls: filtersWithGroup
+                })
+            )
+            formClass = "";
+        }
+
+        formController.push(
+            $.Teamyar.layout({
+                type: 'COL-1',
+                class_name: "" ,
+                controls: [
+                    $.Teamyar.button(
+                        {
+                            events: {
+                                onclick: [
+                                    'report["{{_bot_name}}"].onclickFormSubmit'
+                                ]
+                            },
+                            id: "btn-search-report",
+                            title: report["{{_bot_name}}"].translateWord("_btn_search_report"),
+                            type: "submit",
+                            class_name: "btn btn-warning"
+                        }
+                    )
+                ]
+            })
+        )
+
+
+
+        let formControllers = [];
+        if (elementTopControllers != null){
+            formControllers.push(elementTopControllers)
+        }
+        formControllers.push(
+            $.Teamyar.form({
+                ajax:{"contentType":"JSON"} ,
+                class_name: "core_icongroup_holder_filter mt-2 p-2 mb-0 "+formClass ,
+                id: 'form-report',
+                action: report["{{_bot_name}}"].getBotPath() + '?type=100',
+                method: 'POST',
+                controls: formController
+            })
+        )
+        $.Teamyar.layout({
+            selector: report["{{_bot_name}}"].getBotWidgetId() +" > #div-form-report_parent",
+            class_name:" m-0 ",
+            id: 'div-form-report',
+            type: 'COL-1',
+            controls: formControllers
+        });
+
+
+
+        report["{{_bot_name}}"].setInputSelectColumns({{select_columns_active}});
+
+
+
+        report["{{_bot_name}}"].onClickBtnSubmit = function () {
+            report["{{_bot_name}}"].getGetResponseReport(true)
+        }
+        report["{{_bot_name}}"].onClickBtnSubmit(false);
+
+
+
+        report["{{_bot_name}}"].showFilters = function () {
+            const formElement =   $(report["{{_bot_name}}"].getBotWidgetId() + " #div-form-report_parent #form-report");
+            if (formElement.hasClass("d-none")){
+                formElement.removeClass("d-none");
+            }
+            else {
+                formElement.addClass("d-none");
+            }
+        }
+
+
+
+
+    })();
+
+</script>
+
+
+
+
+<!--excel-->
+<script>
+
+    report["{{_bot_name}}"].excel_property = {
+        // ---
+        element_id : "element_table_select_columns_for_excel"+report["{{_bot_name}}"].getBotReportId() ,
+        // ---
+        columns : null ,
+        value : null ,
+        sort : null ,
+        data_list : null ,
+        //----
+        table_array_id: [],
+        table_header: [],
+        table_columns: [],
+        //----
+        key_data_type: "excel_type",
+        key_sum: "excel_sum",
+        key_alphabet: "excel_alphabet",
+        key_bg_color: "excel_bg_color",
+        key_text_color: "excel_text_color",
+        //----
+        dataTypes_real_id: 0,
+        dataTypes_real_title: "REAL",
+        dataTypes_text_id: 1,
+        dataTypes_text_title: "TEXT",
+        dataTypes_number_id: 2,
+        dataTypes_number_title: "NUMBER",
+        dataTypes_date_id: 3,
+        dataTypes_date_title: "Date",
+        dataTypes_date_time_id: 4,
+        dataTypes_date_time_title: "Date_Time",
+        dataTypes_time_id: 5,
+        dataTypes_time_title: "Time",
+        //----
+        formula_none_id:0 ,
+        formula_none_title:"NONE",
+        formula_sum_id:1 ,
+        formula_sum_title:"SUM",
+        formula_avg_id:2 ,
+        formula_avg_title:"AVG",
+        formula_min_id:3 ,
+        formula_min_title:"MIN",
+        formula_max_id:4 ,
+        formula_max_title:"MAX",
+        formula_count_all_id:5 ,
+        formula_count_all_title:"Count all",
+        formula_count_num_id:6 ,
+        formula_count_num_title:"Count Numbers",
+        formula_count_distinct_id:7 ,
+        formula_count_distinct_title:"Count distinct",
+    };
+
+
+
+
+    /*data type column*/
+    report["{{_bot_name}}"].excel_getDataTypeColumn = function (index){
+        const itemColumns = report["{{_bot_name}}"].excel_property.columns[index];
+        const itemColumns_type = itemColumns.hasOwnProperty("type") ? itemColumns.type: "";
+
+        let excelType = 0;
+        if (itemColumns_type == "price"){
+            excelType = report["{{_bot_name}}"].excel_property.dataTypes_number_id
+        }
+        else if (itemColumns_type == "date"){
+            excelType = report["{{_bot_name}}"].excel_property.dataTypes_date_id
+        }
+
+        report["{{_bot_name}}"].excel_property.columns[index][report["{{_bot_name}}"].excel_property.key_data_type] = excelType;
+    }
+    report["{{_bot_name}}"].excel_setDataTypeColumn = function (index , p2){
+        if (typeof report["{{_bot_name}}"].excel_property.columns[index]  != "undefined"){
+            report["{{_bot_name}}"].excel_property.columns[index][report["{{_bot_name}}"].excel_property.key_data_type] = p2.event.target.value;
+        }
+    }
+    report["{{_bot_name}}"].excel_getListDataTypes = function (index){
+        report["{{_bot_name}}"].excel_getDataTypeColumn(index);
+
+        const itemColumns = report["{{_bot_name}}"].excel_property.columns[index];
+        const itemColumns_name = itemColumns.hasOwnProperty("value") ? itemColumns.value: "___";
+        const itemColumns_excel_type = itemColumns.hasOwnProperty(report["{{_bot_name}}"].excel_property.key_data_type) ? itemColumns[report["{{_bot_name}}"].excel_property.key_data_type]: report["{{_bot_name}}"].excel_property.dataTypes_real_id;
+
+        return $.Teamyar.input.combobox({
+            id: "excel_dataType_"+itemColumns_name,
+            name: "excel_dataType_"+itemColumns_name,
+            data_list: [
+                [
+                    report["{{_bot_name}}"].excel_property.dataTypes_real_id,
+                    report["{{_bot_name}}"].excel_property.dataTypes_real_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.dataTypes_text_id,
+                    report["{{_bot_name}}"].excel_property.dataTypes_text_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.dataTypes_number_id,
+                    report["{{_bot_name}}"].excel_property.dataTypes_number_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.dataTypes_date_id,
+                    report["{{_bot_name}}"].excel_property.dataTypes_date_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.dataTypes_date_time_id,
+                    report["{{_bot_name}}"].excel_property.dataTypes_date_time_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.dataTypes_time_id,
+                    report["{{_bot_name}}"].excel_property.dataTypes_time_title
+                ]
+            ] ,
+            value: itemColumns_excel_type ,
+            events: {"onchange" : ['report.'+reportPath+'.excel_setDataTypeColumn' , [index]]} ,
+        })
+
+    }
+
+
+
+    /*sum column*/
+    report["{{_bot_name}}"].excel_getSumsColumn = function (index){
+        report["{{_bot_name}}"].excel_property.columns[index][report["{{_bot_name}}"].excel_property.key_sum] = report["{{_bot_name}}"].excel_property.formula_none_id;
+    }
+    report["{{_bot_name}}"].excel_setSumsColumn = function (index , p2){
+        if (typeof report["{{_bot_name}}"].excel_property.columns[index]  != "undefined"){
+            report["{{_bot_name}}"].excel_property.columns[index][report["{{_bot_name}}"].excel_property.key_sum] = p2.event.target.value;
+        }
+    }
+    report["{{_bot_name}}"].excel_getListSumsColumn = function (index){
+        report["{{_bot_name}}"].excel_getSumsColumn(index);
+
+        const itemColumns = report["{{_bot_name}}"].excel_property.columns[index];
+        const itemColumns_name = itemColumns.hasOwnProperty("value") ? itemColumns.value: "___";
+        const itemColumns_excel_sum = itemColumns.hasOwnProperty(report["{{_bot_name}}"].excel_property.key_sum) ? itemColumns[report["{{_bot_name}}"].excel_property.key_sum]:  report["{{_bot_name}}"].excel_property.formula_none_id;
+
+        return $.Teamyar.input.combobox({
+            id: "excel_sum_"+itemColumns_name,
+            name: "excel_sum_"+itemColumns_name,
+            data_list: [
+                [
+                    report["{{_bot_name}}"].excel_property.formula_none_id,
+                    report["{{_bot_name}}"].excel_property.formula_none_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.formula_sum_id,
+                    report["{{_bot_name}}"].excel_property.formula_sum_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.formula_avg_id,
+                    report["{{_bot_name}}"].excel_property.formula_avg_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.formula_min_id,
+                    report["{{_bot_name}}"].excel_property.formula_min_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.formula_max_id,
+                    report["{{_bot_name}}"].excel_property.formula_max_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.formula_count_all_id,
+                    report["{{_bot_name}}"].excel_property.formula_count_all_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.formula_count_num_id,
+                    report["{{_bot_name}}"].excel_property.formula_count_num_title
+                ],
+                [
+                    report["{{_bot_name}}"].excel_property.formula_count_distinct_id,
+                    report["{{_bot_name}}"].excel_property.formula_count_distinct_title
+                ]
+            ] ,
+            value: itemColumns_excel_sum ,
+            events: {"onchange" : ['report.'+reportPath+'.excel_setSumsColumn' , [index]]} ,
+        })
+    }
+
+
+
+    /*bg color column*/
+    report["{{_bot_name}}"].excel_getBgColorColumn = function (index){
+        report["{{_bot_name}}"].excel_property.columns[index][report["{{_bot_name}}"].excel_property.key_bg_color] = "";
+    }
+    report["{{_bot_name}}"].excel_setBgColorColumn = function (index , p2){
+        console.log(p2 , p2.this[0].id)
+        if (typeof report["{{_bot_name}}"].excel_property.columns[index]  != "undefined"){
+            let value = $.Teamyar.input.color.get("#" + p2.this[0].id , "value");
+            value = value.split("#")
+            report["{{_bot_name}}"].excel_property.columns[index][report["{{_bot_name}}"].excel_property.key_bg_color] = value[1];
+        }
+    }
+    report["{{_bot_name}}"].excel_getListBgColorColumn = function (index){
+        report["{{_bot_name}}"].excel_getBgColorColumn(index);
+
+        const itemColumns = report["{{_bot_name}}"].excel_property.columns[index];
+        const itemColumns_name = itemColumns.hasOwnProperty("value") ? itemColumns.value: "___";
+        const itemColumns_excel_bg_color = itemColumns.hasOwnProperty(report["{{_bot_name}}"].excel_property.key_bg_color) ? itemColumns[report["{{_bot_name}}"].excel_property.key_bg_color]: "";
+
+        return $.Teamyar.input.color({
+            id: "excel_bg_color_"+itemColumns_name,
+            name: "excel_bg_color_"+itemColumns_name,
+            value: itemColumns_excel_bg_color ,
+            events: {"onchange" : ['report.'+reportPath+'.excel_setBgColorColumn' , [index]]} ,
+        })
+    }
+
+
+
+
+    /*text color column*/
+    report["{{_bot_name}}"].excel_getTextColorColumn = function (index){
+        report["{{_bot_name}}"].excel_property.columns[index][report["{{_bot_name}}"].excel_property.key_text_color] = "";
+    }
+    report["{{_bot_name}}"].excel_setTextColorColumn = function (index , p2){
+        console.log(p2 , p2.this[0].id)
+        if (typeof report["{{_bot_name}}"].excel_property.columns[index]  != "undefined"){
+            let value = $.Teamyar.input.color.get("#" + p2.this[0].id , "value");
+            value = value.split("#")
+            report["{{_bot_name}}"].excel_property.columns[index][report["{{_bot_name}}"].excel_property.key_text_color] = value[1];
+        }
+    }
+    report["{{_bot_name}}"].excel_getListTextColorColumn = function (index){
+        report["{{_bot_name}}"].excel_getTextColorColumn(index);
+
+        const itemColumns = report["{{_bot_name}}"].excel_property.columns[index];
+        const itemColumns_name = itemColumns.hasOwnProperty("value") ? itemColumns.value: "___";
+        const itemColumns_excel_text_color = itemColumns.hasOwnProperty(report["{{_bot_name}}"].excel_property.key_text_color) ? itemColumns[report["{{_bot_name}}"].excel_property.key_text_color]: "";
+
+        return $.Teamyar.input.color({
+            id: "excel_text_color_"+itemColumns_name,
+            name: "excel_text_color_"+itemColumns_name,
+            value: itemColumns_excel_text_color ,
+            events: {"onchange" : ['report.'+reportPath+'.excel_setTextColorColumn' , [index]]} ,
+        })
+    }
+
+
+
+
+
+
+    report["{{_bot_name}}"].excel_getKeyColumnExcel = function (index){
+        let columnName = "";
+        while (index > 0) {
+            let remainder = (index - 1) % 26;
+            columnName = String.fromCharCode(65 + remainder) + columnName;
+            index = Math.floor((index - 1) / 26);
+        }
+
+
+        return columnName;
+    }
+
+    report["{{_bot_name}}"].excel_refreshTableForSelectColumns = function (){
+        $("#" +report["{{_bot_name}}"].excel_property.element_id).html("");
+
+        const columnsSelector =  report["{{_bot_name}}"].excel_getSelectorForSelectColumns();
+        if (columnsSelector != null){
+
+            report["{{_bot_name}}"].excel_property.table_array_id = ["#" , "row" , "column" , "data_type" , "footer" , "bg_color" , "text_color"];
+            report["{{_bot_name}}"].excel_property.table_header = [
+                {
+                    id:"#",
+                    content: columnsSelector,
+                    style: "background-color: #e9e9e9;"
+                } ,
+                {
+                    id:"row",
+                    content: "COLUMN",
+                    style: "background-color: #e9e9e9;"
+                },
+                {
+                    id:"column",
+                    content: "TITLE",
+                    style: "background-color: #e9e9e9;"
+                },
+                {
+                    id:"data_type",
+                    content: "DATA TYPE",
+                    style: "background-color: #e9e9e9;"
+                },
+                {
+                    id:"footer",
+                    content: "FOOTER",
+                    style: "background-color: #e9e9e9;"
+                },
+                {
+                    id:"bg_color",
+                    content: "BG COLOR",
+                    style: "background-color: #e9e9e9;"
+                },
+                {
+                    id:"text_color",
+                    content: "TEXT COLOR",
+                    style: "background-color: #e9e9e9;"
+                }
+            ];
+
+            report["{{_bot_name}}"].excel_property.table_columns = []
+            if (report["{{_bot_name}}"].excel_property.columns != null){
+                for (let i = 0; i < report["{{_bot_name}}"].excel_property.columns.length; i++) {
+                    const itemCol = report["{{_bot_name}}"].excel_property.columns[i];
+
+                    if (itemCol.hasOwnProperty("id")){
+                        report["{{_bot_name}}"].excel_property.columns[i][report["{{_bot_name}}"].excel_property.key_alphabet] = report["{{_bot_name}}"].excel_getKeyColumnExcel(i+1) ;
+
+                        report["{{_bot_name}}"].excel_property.table_columns.push({
+                            "#" : {content: i + 1 , style: "background-color: #edeff4;"} ,
+                            "row" :   {content:  report["{{_bot_name}}"].excel_property.columns[i][report["{{_bot_name}}"].excel_property.key_alphabet] } ,
+                            "column" : {
+                                content: report["{{_bot_name}}"].translateWord(itemCol.value) ,
+                                toolbar : [
+                                    ["delete."+itemCol.id  , "delete",  "delete"] ,
+                                ]
+                            }  ,
+                            "data_type" : {
+                                content: report["{{_bot_name}}"].excel_getListDataTypes(i)
+                            }  ,
+                            "formula" : {
+                                content: report["{{_bot_name}}"].excel_getListSumsColumn(i)
+                            }  ,
+                            "bg_color" : {
+                                content: report["{{_bot_name}}"].excel_getListBgColorColumn(i)
+                            }  ,
+                            "text_color" : {
+                                content: report["{{_bot_name}}"].excel_getListTextColorColumn(i)
+                            }  ,
+                        })
+                    }
+
+                }
+            }
+
+            $.Teamyar.table({
+                selector: "#" +report["{{_bot_name}}"].excel_property.element_id,
+                events:{'ontoolbar':["report.{{_bot_name}}.ToolbarExcel",{}]} ,
+                arrayId: report["{{_bot_name}}"].excel_property.table_array_id,
+                objData: report["{{_bot_name}}"].excel_property.table_columns,
+                objHeader: report["{{_bot_name}}"].excel_property.table_header,
+            })
+        }
+    }
+
+    report["{{_bot_name}}"].ToolbarExcel = function (p1 , p2){
+        const type = p2.hasOwnProperty("type") ? p2.type : null;
+        const data = type.split(".");
+        if (data != null && data[0] != null && data[1] !=null){
+            let row = null;
+            const id = parseInt(data[1]);
+            for (let i = 0; i < report["{{_bot_name}}"].excel_property.columns.length ; i++) {
+                const item = report["{{_bot_name}}"].excel_property.columns[i];
+                if (item.hasOwnProperty("id") && item.id == id){
+                    row = i;
+                    break;
+                }
+            }
+            if (row != null){
+                switch (data[0]){
+                    case "delete":
+                        report["{{_bot_name}}"].excel_property.columns.splice(row, 1);
+                        console.log(type)
+                        break;
+                }
+                report["{{_bot_name}}"].excel_refreshTableForSelectColumns();
+            }
+        }
+
+    }
+
+    report["{{_bot_name}}"].excel_getSelectorForSelectColumns = function (){
+        let listDataAll = report["{{_bot_name}}"].getBotSelectColumnsAll();
+        const listData =  report["{{_bot_name}}"].getSelectColumns();
+
+        if ( report["{{_bot_name}}"].excel_property.columns == null){
+            report["{{_bot_name}}"].excel_property.columns = listDataAll;
+        }
+
+        report["{{_bot_name}}"].excel_property.value = report["{{_bot_name}}"].getSelectColumnsValue( report["{{_bot_name}}"].excel_property.columns)
+        report["{{_bot_name}}"].excel_property.sort =  report["{{_bot_name}}"].getSelectColumnsSortArr( report["{{_bot_name}}"].excel_property.columns , listDataAll)
+        report["{{_bot_name}}"].excel_property.data_list =  report["{{_bot_name}}"].getSelectColumnsDataList(listData)
+
+        return report["{{_bot_name}}"].getSelectorColumns(
+            "table_select_columns_option_forTableExcel_"+report["{{_bot_name}}"].getBotReportId(),
+            report["{{_bot_name}}"].excel_property.value ,
+            report["{{_bot_name}}"].excel_property.sort  ,
+            report["{{_bot_name}}"].excel_property.data_list  ,
+            "excel_changeColumnsSelected"
+        );
+    }
+
+    report["{{_bot_name}}"].excel_changeColumnsSelected = function (param1 , param2){
+        report["{{_bot_name}}"].excel_property.sort = $.Teamyar.checkedMenu.get('#'+"table_select_columns_option_forTableExcel_"+report["{{_bot_name}}"].getBotReportId(),'sort_arr');
+        report["{{_bot_name}}"].excel_property.value = $.Teamyar.checkedMenu.get('#'+"table_select_columns_option_forTableExcel_"+report["{{_bot_name}}"].getBotReportId(),'value');
+        const listData = report["{{_bot_name}}"].getSelectColumns();
+        const listSelected = [];
+        const listSelectedSorted = [];
+
+        if (listData != null) {
+            for (let i = 0; i < listData.length; i++) {
+                const itemColumn = listData[i];
+                const id = BigInt(itemColumn.id);
+                if ((BigInt( report["{{_bot_name}}"].excel_property.value) & id) === id) {
+                    listSelected.push(itemColumn);
+                }
+            }
+        }
+
+        if (report["{{_bot_name}}"].excel_property.sort  != null){
+            for (let i=0; i< report["{{_bot_name}}"].excel_property.sort .length; i++){
+                const itemSort = report["{{_bot_name}}"].excel_property.sort [i];
+                for (let x=0; x< listSelected.length; x++){
+                    const itemColumn = listSelected[x];
+                    if (itemColumn.hasOwnProperty("id") && itemSort == itemColumn.id){
+                        listSelectedSorted.push(itemColumn);
+                    }
+                }
+            }
+        }
+        report["{{_bot_name}}"].excel_property.columns  = listSelectedSorted;
+        report["{{_bot_name}}"].excel_refreshTableForSelectColumns();
+    }
+
+    report["{{_bot_name}}"].excelRecords = function (){
+        $.Teamyar.window({
+            options: {},
+            size: "lg" ,
+            path: "",
+            data: {
+                id: "window_excel_option",
+                TextHead:  report["{{_bot_name}}"].translateWord("_btn_excel_title"),
+                textbody:
+
+                    $.Teamyar.form({
+                        id: "form_data_excel" ,
+                        class_name: " mx-2 mt-2" ,
+                        ajax:{"contentType":"JSON"} ,
+                        action: report["{{_bot_name}}"].getBotPath() + '?type=101',
+                        method: 'POST',
+                        controls: [
+                            $.Teamyar.layout({
+                                type: 'COL-1',
+                                controls: [
+                                    $.Teamyar.input.text({
+                                        name:'excel_file_name',
+                                        //width_title:0,
+                                        value: report["{{_bot_name}}"].getCash("excel_file_name" , false , "file_name"),
+                                        title: report["{{_bot_name}}"].translateWord("_btn_excel_file_name")
+                                    }) ,
+                                    $.Teamyar.input.text({
+                                        name:'excel_from_page',
+                                        //width_title:0,
+                                        value: report["{{_bot_name}}"].getCash("excel_from_page" , false , 1),
+                                        title: report["{{_bot_name}}"].translateWord("_btn_excel_from_page")
+                                    }) ,
+                                    $.Teamyar.input.text({
+                                        name:'excel_to_page',
+                                        //width_title:0,
+                                        value: report["{{_bot_name}}"].getCash("excel_to_page" , false , 20),
+                                        title: report["{{_bot_name}}"].translateWord("_btn_excel_to_page")
+                                    }) ,
+                                    $.Teamyar.input.text({
+                                        name:'excel_per_page',
+                                        //width_title:0,
+                                        value: report["{{_bot_name}}"].getCash("excel_per_page" , false , 25),
+                                        title: report["{{_bot_name}}"].translateWord("_btn_excel_per_page")
+                                    }) ,
+                                    $.Teamyar.label({
+                                        title: report["{{_bot_name}}"].translateWord("_btn_excel_headers")
+                                    }),
+                                    "<div id='"+report["{{_bot_name}}"].excel_property.element_id+"' class='mx-2 my-2'></div>"
+                                ]
+                            }),
+
+                            $.Teamyar.layout({
+                                type: 'COL-1',
+                                controls: [
+                                    $.Teamyar.button(
+                                        {
+                                            events: {
+                                                onclick: [
+                                                    'report["{{_bot_name}}"].submitExcelRecords'
+                                                ]
+                                            },
+                                            id: "btn-excel-submit",
+                                            title: report["{{_bot_name}}"].translateWord("_btn_excel_submit"),
+                                            type: "submit",
+                                            class_name: "btn btn-warning"
+                                        }
+                                    )
+                                ]
+                            })
+
+                        ]
+                    })
+            },
+        });
+        report["{{_bot_name}}"].excel_refreshTableForSelectColumns();
+    }
+
+
+
+    report["{{_bot_name}}"].submitExcelRecords = function (){
+        const form = report["{{_bot_name}}"].getFormData();
+
+        let formExcelId = $("#form_data_excel");
+        let formDataExcel = $(formExcelId).serializeArray();
+        let formUrlExcel = $(formExcelId).attr('action');
+        let formMethodExcel = $(formExcelId).attr('method');
+
+        $.each(formDataExcel, function(_, field) {
+            form.data[field.name] = field.value;
+        });
+
+        $.Teamyar.ajax({
+            block_holder: 'body',
+            options: {
+                url: formUrlExcel,
+                type: formMethodExcel,
+                dataType: 'json',
+                async: true,
+                data: form.data
+            },
+            events: {
+                success: function (response) {
+
+                    if (typeof submitExcelRecordsCustom != "undefined"){
+                        submitExcelRecordsCustom(response)
+                    }
+                    else {
+                        const headers = report["{{_bot_name}}"].excel_property.columns;
+                        const listTableObjData = response.hasOwnProperty("values") ? response.values : [];
+                        const fileName = response.hasOwnProperty("file_name") ? response.file_name : "file_name";
+
+                        let values = report["{{_bot_name}}"].submitExcelRecords_executeRows(headers , listTableObjData);
+
+                        let footers = report["{{_bot_name}}"].submitExcelRecords_executeFooter(headers , values.length);
+
+                        let headersOut = {};
+                        for (let i=0; i< headers.length; i++ ){
+                            const itemHeader = headers[i];
+                            if (itemHeader.hasOwnProperty("key") && itemHeader.hasOwnProperty("value")){
+                                headersOut[itemHeader["key"]] = report["{{_bot_name}}"].translateWord(itemHeader["value"]) ;
+                            }
+                        }
+
+                        convertToExcel(headersOut , values , footers, fileName+".xlsx");
+                    }
+
+                }
+            }
+        });
+    }
+    report["{{_bot_name}}"].submitExcelRecords_executeRows = function (headers , listTableObjData){
+        const values = [];
+        for (let i=0; i<listTableObjData.length ; i++){
+            const itemRow = listTableObjData[i];
+            let listRow = {};
+
+            if (headers != null){
+                for (let x=0; x< headers.length ; x++) {
+                    const itemHeader = headers[x];
+                    const itemHeader_key = itemHeader.hasOwnProperty("key") ? itemHeader["key"] : null;
+                    const itemHeader_excelType =  itemHeader.hasOwnProperty(report["{{_bot_name}}"].excel_property.key_data_type) ? itemHeader[report["{{_bot_name}}"].excel_property.key_data_type]: report["{{_bot_name}}"].excel_property.dataTypes_real_id;
+                    const itemHeader_excelAlphabet =  itemHeader.hasOwnProperty(report["{{_bot_name}}"].excel_property.key_alphabet) ? itemHeader[report["{{_bot_name}}"].excel_property.key_alphabet]: "";
+                    const itemHeader_excelBgColor =  itemHeader.hasOwnProperty(report["{{_bot_name}}"].excel_property.key_bg_color) ? itemHeader[report["{{_bot_name}}"].excel_property.key_bg_color]: "";
+                    const itemHeader_excelTextColor =  itemHeader.hasOwnProperty(report["{{_bot_name}}"].excel_property.key_text_color) ? itemHeader[report["{{_bot_name}}"].excel_property.key_text_color]: "";
+
+                    if (itemHeader_key != null) {
+
+                        Object.keys(itemRow).forEach(key => {
+                            if (key == itemHeader_key) {
+                                let val = itemRow[key]
+
+                                switch (parseInt(itemHeader_excelType)){
+                                    case report["{{_bot_name}}"].excel_property.dataTypes_number_id:
+                                        val = Number(val);
+                                        break;
+                                    case report["{{_bot_name}}"].excel_property.dataTypes_text_id:
+                                        val = val.toString();
+                                        break;
+                                    case report["{{_bot_name}}"].excel_property.dataTypes_date_id:
+                                        val = $.Teamyar.convertNormalDate({date:val ,format:"yyyy/MM/dd"})
+                                        break;
+                                    case report["{{_bot_name}}"].excel_property.dataTypes_date_time_id:
+                                        val = $.Teamyar.convertNormalDate({date:val ,format:"yyyy/MM/dd hh:mm:ss"});
+                                        break;
+                                    case report["{{_bot_name}}"].excel_property.dataTypes_date_time_id:
+                                        val = $.Teamyar.convertNormalDate({date:val ,format:"hh:mm:ss"});
+                                        break;
+                                    default:
+                                        break;
+                                }
+
+                                listRow[key] = {
+                                    value : val ,
+                                    bgColor : itemHeader_excelBgColor ,
+                                    textColor : itemHeader_excelTextColor ,
+                                    alphabet: itemHeader_excelAlphabet+ (i+2)
+                                }
+                            }
+                        })
+                    }
+                }
+            }
+
+            values.push(listRow)
+        }
+        return values;
+    }
+    report["{{_bot_name}}"].submitExcelRecords_executeFooter = function (headers , length){
+        let values = {};
+        if (headers != null){
+
+            for (let x=0; x< headers.length ; x++) {
+                const itemHeader = headers[x];
+                const itemHeader_key = itemHeader.hasOwnProperty("key") ? itemHeader["key"] : null;
+                const itemHeader_excelAlphabet=  itemHeader.hasOwnProperty(report["{{_bot_name}}"].excel_property.key_alphabet) ? itemHeader[report["{{_bot_name}}"].excel_property.key_alphabet]: null;
+                const itemHeader_excelSum =  itemHeader.hasOwnProperty(report["{{_bot_name}}"].excel_property.key_sum) ? itemHeader[report["{{_bot_name}}"].excel_property.key_sum]: report["{{_bot_name}}"].excel_property.formula_none_id;
+
+
+                let sumRowVal = "";
+                if (itemHeader_excelAlphabet != null){
+                    switch (parseInt(itemHeader_excelSum)){
+                        case report["{{_bot_name}}"].excel_property.formula_sum_id:
+                            sumRowVal = {
+                                formula: "SUM("+itemHeader_excelAlphabet+"2:"+itemHeader_excelAlphabet+(length+1)+")"
+                            }
+                            break;
+                        case report["{{_bot_name}}"].excel_property.formula_avg_id:
+                            sumRowVal = {
+                                formula: "AVERAGE("+itemHeader_excelAlphabet+"2:"+itemHeader_excelAlphabet+(length+1)+")"
+                            }
+                            break;
+                        case report["{{_bot_name}}"].excel_property.formula_min_id:
+                            sumRowVal = {
+                                formula: "MIN("+itemHeader_excelAlphabet+"2:"+itemHeader_excelAlphabet+(length+1)+")"
+                            }
+                            break;
+                        case report["{{_bot_name}}"].excel_property.formula_max_id:
+                            sumRowVal = {
+                                formula: "MAX("+itemHeader_excelAlphabet+"2:"+itemHeader_excelAlphabet+(length+1)+")"
+                            }
+                            break;
+                        case report["{{_bot_name}}"].excel_property.formula_count_all_id:
+                            sumRowVal = {
+                                formula: "COUNTA("+itemHeader_excelAlphabet+"2:"+itemHeader_excelAlphabet+(length+1)+")"
+                            }
+                            break;
+                        case report["{{_bot_name}}"].excel_property.formula_count_num_id:
+                            sumRowVal = {
+                                formula: "COUNT("+itemHeader_excelAlphabet+"2:"+itemHeader_excelAlphabet+(length+1)+")"
+                            }
+                            break;
+                        case report["{{_bot_name}}"].excel_property.formula_count_distinct_id:
+                            sumRowVal = {
+                                formula: "SUM(IF(FREQUENCY(MATCH("+itemHeader_excelAlphabet+"2:"+itemHeader_excelAlphabet+(length+1)+", "+itemHeader_excelAlphabet+"2:"+itemHeader_excelAlphabet+(length+1)+",0), MATCH("+itemHeader_excelAlphabet+"2:"+itemHeader_excelAlphabet+(length+1)+", "+itemHeader_excelAlphabet+"2:"+itemHeader_excelAlphabet+(length+1)+",0))>0,1))"
+                            }
+                            break;
+                    }
+
+                }
+                values[itemHeader_key] = sumRowVal
+            }
+        }
+
+        return values;
+    }
+</script>
+
+
+
+
+<!--print-->
+<script>
+
+    report["{{_bot_name}}"].printRecords = function (){
+        $.Teamyar.window({
+            options: {},
+            path: "",
+            data: {
+                id: "window_print_option",
+                TextHead:  report["{{_bot_name}}"].translateWord("_btn_print_title"),
+                textbody:
+
+                    $.Teamyar.layout({
+                        type: 'COL-1',
+                        controls: [
+
+                            $.Teamyar.layout({
+                                type: 'COL-1',
+                                class_name: "my-2" ,
+                                controls: [
+
+                                    $.Teamyar.input.radio({
+                                        name: 'print_type_'+report["{{_bot_name}}"].getBotReportId(),
+                                        group_id: 'print_type_'+report["{{_bot_name}}"].getBotReportId(),
+                                        value: '0',
+                                        inline:false,
+                                        title: report["{{_bot_name}}"].translateWord("_btn_print_all"),
+                                        checked: false
+                                    }),
+                                    $.Teamyar.input.radio({
+                                        name: 'print_type_'+report["{{_bot_name}}"].getBotReportId(),
+                                        group_id: 'print_type_'+report["{{_bot_name}}"].getBotReportId(),
+                                        value: '1',
+                                        inline:false,
+                                        title: report["{{_bot_name}}"].translateWord("_btn_print_single"),
+                                        checked: true
+                                    }),
+                                ]
+                            }),
+
+
+
+
+                            $.Teamyar.layout({
+                                type: 'COL-1',
+                                controls: [
+                                    $.Teamyar.button(
+                                        {
+                                            events: {
+                                                onclick: [
+                                                    'report["{{_bot_name}}"].submitPrintRecords'
+                                                ]
+                                            },
+                                            id: "btn-print-submit",
+                                            title: report["{{_bot_name}}"].translateWord("_btn_print"),
+                                            type: "submit",
+                                            class_name: "btn btn-warning"
+                                        }
+                                    )
+                                ]
+                            })
+                        ]
+                    }),
+
+            },
+        });
+    }
+
+    report["{{_bot_name}}"].submitPrintRecords = function (){
+        const printType = $("input[name=print_type_"+report["{{_bot_name}}"].getBotReportId()+"]:checked").val();
+        switch (printType){
+            case "0":
+                report["{{_bot_name}}"].printRecordsAll()
+                break;
+            case "1":
+                let table = $("#section-table-"+report["{{_bot_name}}"].getBotReportId());
+                if(typeof report["{{_bot_name}}"].getTablePrintSingle != "undefined"){
+                    table = report["{{_bot_name}}"].getTablePrintSingle();
+                }
+                else{
+                    table = table.html()
+                }
+                $.Teamyar.print({title:'', date_create:'',description:'',content:table,keep_dir:'',content_url:''});
+                break
+        }
+    }
+
+    report["{{_bot_name}}"].printRecordsAll = function (){
+
+        const form = report["{{_bot_name}}"].getFormData();
+
+        $.Teamyar.ajax({
+            block_holder: 'body',
+            options: {
+                url: report["{{_bot_name}}"].getBotPath() + '?type=102',
+                type: form.action ,
+                dataType: 'json',
+                async: true,
+                data: form.data
+            },
+            events: {
+                success: function (view) {
+                    const elementExtraId = report["{{_bot_name}}"].getBotWidgetId() +" > #extra";
+                    const elementExtra = $(elementExtraId);
+
+                    elementExtra.html(view);
+                    const table = $("#section-table-0");
+                    $.Teamyar.print({title:'', date_create:'',description:'',content:table.html(),keep_dir:'',content_url:''});
+                    table.remove();
+                }
+            }
+        });
+
+    }
+</script>
+
+
+
+<!--developer-->
+<script>
+    report["{{_bot_name}}"].windowDeveloper = function (){
+        const dataDeveloper = {{_info_developer}};
+
+        let view = [];
+        if (dataDeveloper.hasOwnProperty("name") || dataDeveloper.hasOwnProperty("version") || dataDeveloper.hasOwnProperty("date") || dataDeveloper.hasOwnProperty("description")){
+            if (dataDeveloper.hasOwnProperty("name") && dataDeveloper.name!==""){
+                view.push(
+                    "<div class='row p-0 m-0'>"+
+                    "<p class='col-4  border p-2 bg-dark text-white' style='line-height: 25px'>"+report["{{_bot_name}}"].translateWord("_btn_developer_name")+"</p>" +
+                    "<p class='col-8 bg-white text-dark' style='line-height: 25px'>"+dataDeveloper.name+"</p>" +
+                    "</div>"
+                )
+            }
+            if (dataDeveloper.hasOwnProperty("version") && dataDeveloper.version!==""){
+                view.push(
+                    "<div class='row p-0 m-0'>"+
+                    "<p class='col-4  border p-2 bg-dark text-white' style='line-height: 25px'>"+report["{{_bot_name}}"].translateWord("_btn_developer_version")+"</p>" +
+                    "<p class='col-8 bg-white text-dark' style='line-height: 25px'>"+dataDeveloper.version+"</p>" +
+                    "</div>"
+                )
+            }
+            if (dataDeveloper.hasOwnProperty("date") && dataDeveloper.date!==""){
+                view.push(
+                    "<div class='row p-0 m-0'>"+
+                    "<p class='col-4  border p-2 bg-dark text-white' style='line-height: 25px'>"+report["{{_bot_name}}"].translateWord("_btn_developer_date")+"</p>" +
+                    "<p class='col-8 bg-white text-dark' style='line-height: 25px'>"+dataDeveloper.date+"</p>" +
+                    "</div>"
+                )
+            }
+            if (dataDeveloper.hasOwnProperty("description") && dataDeveloper.description!==""){
+                view.push(
+                    "<div class='row p-0 m-0'>"+
+                    "<p class='col-4  border p-2 bg-dark text-white' style='line-height: 25px'>"+report["{{_bot_name}}"].translateWord("_btn_developer_description")+"</p>" +
+                    "<p class='col-8 bg-white text-dark' style='line-height: 25px'>"+dataDeveloper.description+"</p>" +
+                    "</div>"
+                )
+            }
+        }
+
+        $.Teamyar.window({
+            options: {},
+            path: "",
+            data: {
+                id: "window_excel_option",
+                TextHead:  report["{{_bot_name}}"].translateWord("_btn_developer_title"),
+                textbody:
+
+                    $.Teamyar.layout({
+                        type: 'COL-1',
+                        controls: view
+                    }),
+            },
+        });
+    }
+</script>
+
+
+
+<script>
+    report["{{_bot_name}}"].setAclsUrl()
+</script>
+
+
+<!-- =====================================================================
+     افزودهٔ گایدلاین ۱۴۰ (۱۴۰۵/۰۵/۲۶) — ظاهر مشترک/پیش‌فرض همهٔ بات‌های RES
+     (هر باتی که از install_res.resReport/resTable همین res_v2 رندر می‌گیرد).
+     فونت Peyda + پالت #16509D + اندازهٔ فونت‌ها + پیکان‌های مرتب‌سازی جدول.
+     اسکوپ زیر section[data-name="{{_bot_name}}"]: چون {{_bot_name}} در زمان
+     رندر هر بات با نام واقعی همان بات جایگزین می‌شود، این قوانین فقط روی همان
+     یک بات که الان صفحه‌اش باز است اعمال می‌شوند، نه کل پرتال تیم‌یار.
+     هر بات RES که پیوست data.css اختصاصی خودش را هم دارد (مثل crm_rfm_1،
+     set_by_select_1، sales_settlement_group_auto در این ریپو) با !important
+     روی همین قوانین override می‌کند؛ این‌جا فقط پیش‌فرض مشترک/فال‌بک است —
+     برای هر بات دیگری که پیوست اختصاصی ندارد هم گایدلاین ۱۴۰ خودکار اعمال
+     می‌شود، بدون نیاز به ساختن data.css/data.js جدا برای هرکدام.
+     ===================================================================== -->
 <style>
 @font-face {
     font-family: "PeydaReport";
@@ -18,149 +1567,195 @@
     font-style: normal;
 }
 
-section[data-name="set_by_select_1"] * {
-    font-family: "PeydaReport", "Peyda", "IRANSans", "Tahoma", "Arial", sans-serif !important;
+
+section[data-name="{{_bot_name}}"] {
     font-size: 14px;
 }
-
-/* جدول */
-section[data-name="set_by_select_1"] table {
-    width: auto;
+section[data-name="{{_bot_name}}"] *:not([class*="tyf"]) {
+    font-family: "PeydaReport", "Peyda", "IRANSans", "Tahoma", "Arial", sans-serif !important;
 }
-section[data-name="set_by_select_1"] table thead th {
-    background-color: #16509D !important;
-    color: #fff !important;
-    font-size: 15px !important;
-    font-weight: bold !important;
-    white-space: nowrap;
+section[data-name="{{_bot_name}}"] #header_text_report {
+    color: #16509D;
+    font-size: 15px;
+    font-weight: bold;
 }
-section[data-name="set_by_select_1"] table tbody td,
-section[data-name="set_by_select_1"] table tbody th {
-    white-space: nowrap;
-    border-color: #666 !important;
-    font-size: 14px !important;
-}
-section[data-name="set_by_select_1"] table tbody tr:nth-child(even) {
-    background-color: #f5f5f5 !important;
-}
-
-/* دکمه‌های تسویه (تکی/گروهی) — پالت الزامی: فقط #16509D / خاکستری / سفید */
-section[data-name="set_by_select_1"] .btn-success,
-section[data-name="set_by_select_1"] .btn-primary {
+section[data-name="{{_bot_name}}"] .btn,
+section[data-name="{{_bot_name}}"] .btn-warning,
+section[data-name="{{_bot_name}}"] .core_navbar_btn_icon {
     background-color: #16509D !important;
     border-color: #16509D !important;
     color: #fff !important;
     font-size: 14px !important;
 }
+section[data-name="{{_bot_name}}"] .btn:hover,
+section[data-name="{{_bot_name}}"] .btn-warning:hover {
+    background-color: #113e7a !important;
+    border-color: #113e7a !important;
+}
+section[data-name="{{_bot_name}}"] .core_navbar span[class*="tyf"] {
+    color: #16509D !important;
+}
 
-/* نوار بالای جدول (توضیح + دکمه تسویه گروهی + انتخاب همه) */
-section[data-name="set_by_select_1"] .alert,
-section[data-name="set_by_select_1"] .alert-info {
+/* جدول نتایج — سرستون آبی/سفید + پیکان مرتب‌سازی، بدنه سفید/خاکستری زبرا */
+section[data-name="{{_bot_name}}"] table thead th,
+section[data-name="{{_bot_name}}"] table thead td,
+section[data-name="{{_bot_name}}"] .table-warning,
+section[data-name="{{_bot_name}}"] .table-primary {
+    background-color: #16509D !important;
+    color: #fff !important;
+    font-weight: bold !important;
+    font-size: 15px !important;
+    border-color: #666 !important;
+    cursor: pointer;
+    user-select: none;
+}
+section[data-name="{{_bot_name}}"] table thead th.res-sort-asc::after,
+section[data-name="{{_bot_name}}"] table thead td.res-sort-asc::after { content: ' \25B2'; }
+section[data-name="{{_bot_name}}"] table thead th.res-sort-desc::after,
+section[data-name="{{_bot_name}}"] table thead td.res-sort-desc::after { content: ' \25BC'; }
+section[data-name="{{_bot_name}}"] table tbody td,
+section[data-name="{{_bot_name}}"] table tbody th {
+    border-color: #666 !important;
+    font-size: 14px !important;
+}
+section[data-name="{{_bot_name}}"] table tbody tr:nth-child(even) {
+    background-color: #f5f5f5 !important;
+}
+
+/* پیام‌ها/هشدارها — پالت الزامی رنگ سبز/زرد/قرمز پیش‌فرض Bootstrap ندارد؛ خاکستری/آبی */
+section[data-name="{{_bot_name}}"] .alert,
+section[data-name="{{_bot_name}}"] .alert-info {
     background-color: #f5f5f5 !important;
     border-color: #666 !important;
     color: #000 !important;
     font-size: 14px !important;
-    position: relative;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
 }
 
-/* نشان «صف تسویه: N فاکتور» */
-.settle-queue-badge {
-    display: inline-block;
-    background-color: #16509D;
-    color: #fff;
-    font-size: 14px !important;
-    font-weight: bold;
-    padding: 4px 10px;
-    border-radius: 4px;
-    margin-left: 8px;
-}
-
-/* لوگوی برند ۱۴۰ — روی زمینه‌ی خاکستری روشن نوار بالای جدول => نسخه‌ی رنگی طبق قاعده‌ی پس‌زمینه */
-.settle-brand140-logo {
-    display: inline-block;
-    height: 28px;
-    width: auto;
-    margin-right: auto;
-    margin-left: 4px;
-    vertical-align: middle;
-}
-
-/* فرم فیلتر (شعبه/تاریخ/فاکتور/برچسب/مشتری/انبار/کالا) */
-section[data-name="set_by_select_1"] .core_icongroup_holder_filter label,
-section[data-name="set_by_select_1"] .core_icongroup_holder_filter input,
-section[data-name="set_by_select_1"] .core_icongroup_holder_filter select {
+/* فرم فیلتر تیم‌یار (تاریخ/ACL/...) */
+section[data-name="{{_bot_name}}"] .core_icongroup_holder_filter label,
+section[data-name="{{_bot_name}}"] .core_icongroup_holder_filter input,
+section[data-name="{{_bot_name}}"] .core_icongroup_holder_filter select {
     font-size: 14px !important;
 }
-section[data-name="set_by_select_1"] .core_icongroup_holder_filter input:focus,
-section[data-name="set_by_select_1"] .core_icongroup_holder_filter select:focus {
+section[data-name="{{_bot_name}}"] .core_icongroup_holder_filter input:focus,
+section[data-name="{{_bot_name}}"] .core_icongroup_holder_filter select:focus {
     border-color: #16509D !important;
+    box-shadow: 0 0 0 2px rgba(22, 80, 157, 0.2) !important;
 }
 
-/* دکمه‌ی راهنما (تزریق‌شده توسط data.js) */
-.btn-settle-help {
-    background-color: #16509D !important;
-    border-color: #16509D !important;
-    color: #fff !important;
+/* جعبهٔ جستجو/فیلتر نتایج (اسکریپت پایین همین فایل اضافه می‌کند) */
+.res-filter-input {
     font-size: 14px !important;
-    padding: 4px 14px;
-    border-radius: 4px;
-}
-
-/* مودال راهنما */
-.settle-help-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 99999;
-    align-items: center;
-    justify-content: center;
-}
-.settle-help-modal {
-    background-color: #fff;
-    border-radius: 6px;
-    max-width: 560px;
-    width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
-    direction: rtl;
     font-family: "PeydaReport", "Peyda", "IRANSans", "Tahoma", "Arial", sans-serif !important;
+    border: 1px solid #666;
+    border-radius: 4px;
+    padding: 4px 10px;
+    float: left;
+    margin: 4px;
+    min-width: 200px;
 }
-.settle-help-modal-header {
-    background-color: #16509D;
-    color: #fff;
-    padding: 12px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 15px !important;
-    font-weight: bold;
-    border-radius: 6px 6px 0 0;
-}
-.settle-help-modal-header .settle-help-close {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 20px;
-    cursor: pointer;
-    line-height: 1;
-}
-.settle-help-modal-body {
-    padding: 16px;
-    color: #000;
-    font-size: 14px !important;
-    line-height: 1.9;
-}
-.settle-help-modal-body h4 {
-    color: #16509D;
-    font-size: 15px !important;
-    font-weight: bold;
-    margin-top: 0;
-}
-.settle-help-modal-body ul {
-    padding-right: 20px;
+.res-filter-input:focus {
+    border-color: #16509D;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(22, 80, 157, 0.2);
 }
 </style>
+
+
+<script>
+(function () {
+    var BOT_NAME = "{{_bot_name}}";
+    var ROOT_SELECTOR = 'section[data-name="' + BOT_NAME + '"]';
+    var FILTER_INPUT_ID = "res-filter-input-" + BOT_NAME;
+
+    // -------------------------------------------------------------------
+    // افزودهٔ گایدلاین ۱۴۰ (۱۴۰۵/۰۵/۲۶) — مرتب‌سازی با کلیک روی سرستون + فیلتر
+    // متنی جدول نتایج، برای همهٔ بات‌های RES به‌صورت سراسری (نه فقط این بات).
+    // جدول واقعی توسط ویجت هسته‌ای پلتفرم $.Teamyar.table() رندر می‌شود که نه
+    // سورسش در دسترس است نه خودش سورت/فیلتر دارد؛ این یک لایهٔ کاملاً مستقل
+    // کلاینت‌ساید روی خروجی رندرشده است — چیزی از renderTable()/دیسپچ RES/منطق
+    // بات‌ها حذف یا تغییر نمی‌دهد، فقط بعد از رندر شدن جدول در DOM کار می‌کند.
+    // چون هر بار صفحه/فیلتر RES عوض شود جدول از نو در DOM رندر می‌شود، کلیک
+    // مرتب‌سازی با event delegation روی document پیاده شده (یک‌بار برای کل
+    // صفحه، نه هر بار جدول رندر می‌شود) — نیازی به bind دوباره نیست. چون هر
+    // صفحهٔ بات دقیقاً یک section[data-name] دارد، این delegation ژنریک برای
+    // هر بات RES صحیح و مستقل عمل می‌کند.
+    // -------------------------------------------------------------------
+
+    function getCellSortValue(cell) {
+        var text = cell ? cell.textContent.trim() : "";
+        var n = text.replace(/[,٪%]/g, "").trim();
+        if (n !== "" && /^-?\d+(\.\d+)?$/.test(n)) return parseFloat(n);
+        return text;
+    }
+
+    function sortTableByColumn(table, colIndex, dir) {
+        var tbody = table.querySelector("tbody");
+        if (!tbody) return;
+        var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+        rows.sort(function (ra, rb) {
+            var a = getCellSortValue(ra.children[colIndex]);
+            var b = getCellSortValue(rb.children[colIndex]);
+            var cmp;
+            if (typeof a === "number" && typeof b === "number") cmp = a - b;
+            else cmp = String(a).localeCompare(String(b), "fa");
+            return dir === "asc" ? cmp : -cmp;
+        });
+        rows.forEach(function (row) { tbody.appendChild(row); });
+    }
+
+    // روی کل document یک‌بار bind می‌شود (نه هر section) تا اگر چند بات RES
+    // هم‌زمان روی یک صفحه باشند (ویجت/داشبورد) هم درست کار کند و دوباره bind نشود
+    if (!window.__resGuideline140SortBound) {
+        window.__resGuideline140SortBound = true;
+        document.addEventListener("click", function (e) {
+            var th = e.target.closest ? e.target.closest('section[data-name] table thead th, section[data-name] table thead td') : null;
+            if (!th || !th.textContent.trim()) return; // ستون بدون عنوان (چک‌باکس/دکمه) قابل مرتب‌سازی نیست
+            var table = th.closest("table");
+            if (!table) return;
+            var headers = Array.prototype.slice.call(table.querySelectorAll("thead th, thead td"));
+            var colIndex = headers.indexOf(th);
+            if (colIndex === -1) return;
+            var dir = th.classList.contains("res-sort-asc") ? "desc" : "asc";
+            headers.forEach(function (h) { h.classList.remove("res-sort-asc", "res-sort-desc"); });
+            th.classList.add(dir === "asc" ? "res-sort-asc" : "res-sort-desc");
+            sortTableByColumn(table, colIndex, dir);
+        });
+    }
+
+    function applyRowFilter() {
+        var input = document.getElementById(FILTER_INPUT_ID);
+        var table = document.querySelector(ROOT_SELECTOR + " table");
+        if (!input || !table) return;
+        var q = input.value.trim().toLowerCase();
+        var tbody = table.querySelector("tbody");
+        if (!tbody) return;
+        Array.prototype.forEach.call(tbody.querySelectorAll("tr"), function (row) {
+            var text = row.textContent.toLowerCase();
+            row.style.display = q === "" || text.indexOf(q) !== -1 ? "" : "none";
+        });
+    }
+
+    function injectFilterInput() {
+        var toolbar = document.querySelector(ROOT_SELECTOR + " .core_navbar");
+        if (!toolbar || document.getElementById(FILTER_INPUT_ID)) return;
+        var input = document.createElement("input");
+        input.type = "text";
+        input.id = FILTER_INPUT_ID;
+        input.className = "res-filter-input";
+        input.placeholder = "جستجو در نتایج...";
+        input.addEventListener("input", applyRowFilter);
+        toolbar.appendChild(input);
+    }
+
+    var root = document.querySelector(ROOT_SELECTOR);
+    if (root) {
+        injectFilterInput();
+        var tableObserver = new MutationObserver(function () {
+            injectFilterInput();
+            applyRowFilter(); // بعد از رندر مجدد جدول (صفحه‌بندی/فیلتر RES)، فیلتر جاری دوباره اعمال شود
+        });
+        tableObserver.observe(root, { childList: true, subtree: true });
+    }
+})();
+</script>

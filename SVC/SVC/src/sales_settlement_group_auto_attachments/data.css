@@ -43,11 +43,7 @@ section[data-name="sales_settlement_group_auto"] table thead th {
     font-size: 15px !important;
     font-weight: bold !important;
     white-space: nowrap;
-    cursor: pointer;
-    user-select: none;
 }
-section[data-name="sales_settlement_group_auto"] table thead th.sort-asc::after { content: ' \25B2'; }
-section[data-name="sales_settlement_group_auto"] table thead th.sort-desc::after { content: ' \25BC'; }
 section[data-name="sales_settlement_group_auto"] table tbody td,
 section[data-name="sales_settlement_group_auto"] table tbody th {
     white-space: nowrap;
@@ -88,23 +84,6 @@ section[data-name="sales_settlement_group_auto"] .core_icongroup_holder_filter s
 section[data-name="sales_settlement_group_auto"] .core_icongroup_holder_filter input:focus,
 section[data-name="sales_settlement_group_auto"] .core_icongroup_holder_filter select:focus {
     border-color: #16509D !important;
-}
-
-/* جعبهٔ جستجو/فیلتر نتایج (data.js اضافه می‌کند) — سمت کلاینت، روی صفحهٔ جاری جدول */
-.ssga-filter-input {
-    font-size: 14px !important;
-    font-family: "PeydaReport", "Peyda", "IRANSans", "Tahoma", "Arial", sans-serif !important;
-    border: 1px solid #666;
-    border-radius: 4px;
-    padding: 4px 10px;
-    float: left;
-    margin: 4px;
-    min-width: 200px;
-}
-.ssga-filter-input:focus {
-    border-color: #16509D;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(22, 80, 157, 0.2);
 }
 
 /* دکمه‌ی راهنما (تزریق‌شده توسط data.js) */
