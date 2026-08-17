@@ -1,10 +1,10 @@
 ﻿-- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/27 01:21
+-- Last Edit = 1405/05/27 01:29
 
 -- botName = Sum Workdays And Sales Params
 -- creator = zmo
 -- date = 02/25/2025
--- version= 1.1 (اصلاح باگ‌های getData: وزن F/M در محاسبهٔ سگمنت + پیش‌فرض تاریخ)
+-- version= 1.2 (اصلاح باگ‌های getData: وزن F/M در سگمنت + پیش‌فرض تاریخ + مبنای Recency=datet)
 --
 -- تغییرات این نسخه (طبق درخواست کاربر، فقط ۳ باگ زیر؛ بقیهٔ کد عیناً بات ۵۰۱ باقی مانده):
 --   ۱و۳) ستون‌های R/F/M و فرمول سگمنت: f_nummber/m_nummber هر دو به‌اشتباه از cdata.rnumber
@@ -18,6 +18,10 @@
 --      تاریخچهٔ فاکتورها را می‌گرفت. اصلاح شد: "<= 0" هم چک می‌شود و پیش‌فرض به «امروز» تغییر کرد
 --      (بدون فیلتر انتخابی، بازهٔ خالی/تقریباً خالی نشان می‌دهد که سیگنال واضحی است، نه کل تاریخچه
 --      به‌شکل گمراه‌کننده). همین اصلاح روی بات ۶۰۰ تأیید شده است.
+--   ۴) مبنای Recency/Days (طبق تأیید کاربر پس از مشورت): قبلاً همیشه با «امروز» واقعی سیستم حساب
+--      می‌شد، حتی وقتی کاربر بازهٔ تاریخی گذشته را فیلتر کرده بود. اصلاح شد که مبنا «انتهای بازهٔ
+--      فیلترشده» (datet) باشد — چون datet خودش وقتی خالی است پیش‌فرض «امروز» می‌گیرد (بند ۲)، رفتار
+--      حالت بدون فیلتر تغییری نمی‌کند.
 
 --
 --------------------------------------------
@@ -145,7 +149,10 @@ function getData(queryType , pageFrom , perPage , pageTo )
   end
   dataQuery.query = string.gsub(dataQuery.query,"{{datet}}",datet);
   dataQuery.query = string.gsub(dataQuery.query,"{{datef}}",datef);
-  dataQuery.query = string.gsub(dataQuery.query,"{{current_date}}",currentdate);
+  -- طبق تأیید کاربر: مبنای Recency/Days باید «انتهای بازهٔ فیلترشده» (datet) باشد، نه امروز واقعی —
+  -- وقتی فیلتر خالی است datet خودش پیش‌فرض «امروز» گرفته (فیکس بالا)، پس رفتار بدون فیلتر عوض نمی‌شود؛
+  -- وقتی بازهٔ گذشته فیلتر شود (مثلاً کل سال ۱۴۰۴)، Days نسبت به پایان همان بازه حساب می‌شود نه امروز.
+  dataQuery.query = string.gsub(dataQuery.query,"{{current_date}}",datet);
   dataQuery.query = string.gsub(dataQuery.query,"{{where_cat}}",where_cat);
   dataQuery.query = string.gsub(dataQuery.query,"{{where_crm}}",where_crm);
   dataQuery.query = string.gsub(dataQuery.query,"{{where_ctype}}",where_ctype);
