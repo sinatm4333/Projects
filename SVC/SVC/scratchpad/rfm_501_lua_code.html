@@ -1,0 +1,1538 @@
+<title>کد بات RFM ۵۰۱</title>
+<style>
+  :root {
+    --bg: #eef1f5;
+    --surface: #ffffff;
+    --surface-border: #d7dee6;
+    --text: #17212f;
+    --text-muted: #5b6b7d;
+    --accent: #16509d;
+    --accent-contrast: #ffffff;
+    --accent-soft: #e4ecf7;
+    --shadow: 0 1px 2px rgba(23,33,47,.06), 0 8px 24px rgba(23,33,47,.06);
+
+    --code-bg: #0d1526;
+    --code-bg-header: #0a101e;
+    --code-gutter: #0a1120;
+    --code-gutter-text: #4a6486;
+    --code-text: #dbe4f0;
+    --code-border: #1c2c46;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1220;
+      --surface: #121b2c;
+      --surface-border: #23324a;
+      --text: #e7edf5;
+      --text-muted: #94a5ba;
+      --accent: #5b9ae0;
+      --accent-contrast: #06111f;
+      --accent-soft: #17273f;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 28px rgba(0,0,0,.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0b1220;
+    --surface: #121b2c;
+    --surface-border: #23324a;
+    --text: #e7edf5;
+    --text-muted: #94a5ba;
+    --accent: #5b9ae0;
+    --accent-contrast: #06111f;
+    --accent-soft: #17273f;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 28px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Vazirmatn", "Segoe UI", Tahoma, sans-serif;
+    direction: rtl;
+    padding: 32px 20px 64px;
+  }
+
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  header.page-head {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: var(--accent);
+    text-transform: uppercase;
+    font-family: "IBM Plex Mono", "Vazirmatn", monospace;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    text-wrap: balance;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    align-items: center;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-family: "IBM Plex Mono", "Vazirmatn", monospace;
+  }
+
+  .desc {
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1.9;
+    max-width: 65ch;
+  }
+
+  .panel {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--code-bg-header);
+    border-bottom: 1px solid var(--code-border);
+  }
+
+  .panel-head-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    color: var(--code-gutter-text);
+    direction: ltr;
+  }
+
+  .dots { display: flex; gap: 6px; }
+  .dots span {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #2a3b58;
+  }
+
+  .copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--code-border);
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-family: "Vazirmatn", sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    padding: 8px 16px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: filter .15s ease, transform .1s ease;
+  }
+  .copy-btn:hover { filter: brightness(1.08); }
+  .copy-btn:active { transform: translateY(1px); }
+  .copy-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .copy-btn.copied { background: #2f8f5b; }
+
+  .code-scroll {
+    overflow: auto;
+    max-height: 74vh;
+    direction: ltr;
+  }
+
+  table.code-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    direction: ltr;
+  }
+
+  td.ln {
+    user-select: none;
+    text-align: right;
+    color: var(--code-gutter-text);
+    background: var(--code-gutter);
+    padding: 0 14px;
+    width: 1%;
+    white-space: nowrap;
+    border-right: 1px solid var(--code-border);
+    font-variant-numeric: tabular-nums;
+  }
+
+  td.code-line {
+    padding: 0 16px;
+    white-space: pre;
+    color: var(--code-text);
+  }
+
+  tr:hover td.code-line, tr:hover td.ln {
+    background: rgba(255,255,255,.03);
+  }
+
+  footer.note {
+    margin-top: 18px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  #raw-source {
+    position: absolute;
+    width: 1px; height: 1px;
+    opacity: 0; pointer-events: none;
+  }
+
+  ::selection { background: var(--accent-soft); color: var(--text); }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">crm_rfm_bot.lua — بات ۵۰۱</div>
+    <h1>کد کامل بات ۵۰۱ برای کپی مستقیم</h1>
+    <div class="meta-row">
+      <span class="chip">622 خط</span>
+      <span class="chip">26,511 کاراکتر</span>
+      <span class="chip">نسخهٔ ۱۴۰۵/۰۵/۲۷ — دور سوم (فیلتر بازهٔ درآمد)</span>
+    </div>
+    <p class="desc">
+      همین متن را مستقیم در فیلد command بات ۵۰۱ در پنل Teamyar جایگزین کنید.
+      برای کپی کامل، دکمهٔ «کپی کد» را بزنید یا داخل کادر کلیک کرده و
+      Ctrl+A سپس Ctrl+C را بزنید.
+    </p>
+  </header>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-head-title">
+        <span class="dots"><span></span><span></span><span></span></span>
+        src/crm_rfm_bot.lua
+      </div>
+      <button class="copy-btn" id="copyBtn" type="button">کپی کد</button>
+    </div>
+    <div class="code-scroll">
+      <table class="code-table">
+        <tbody>
+<tr><td class="ln">1</td><td class="code-line">﻿-- تحلیل و ایجاد توسط سینا مقدم 09121011778</td></tr>
+<tr><td class="ln">2</td><td class="code-line">-- Last Edit = 1405/05/27 01:47</td></tr>
+<tr><td class="ln">3</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">4</td><td class="code-line">-- botName = Sum Workdays And Sales Params</td></tr>
+<tr><td class="ln">5</td><td class="code-line">-- creator = zmo</td></tr>
+<tr><td class="ln">6</td><td class="code-line">-- date = 02/25/2025</td></tr>
+<tr><td class="ln">7</td><td class="code-line">-- version= 1.4 (فیلتر سازمان + alias/joinهای مرده + مرتب‌سازی کل دیتاست + فیلتر بازهٔ درآمد)</td></tr>
+<tr><td class="ln">8</td><td class="code-line">--</td></tr>
+<tr><td class="ln">9</td><td class="code-line">-- تغییرات این نسخه (طبق درخواست کاربر، فقط ۳ باگ زیر؛ بقیهٔ کد عیناً بات ۵۰۱ باقی مانده):</td></tr>
+<tr><td class="ln">10</td><td class="code-line">--   ۱و۳) ستون‌های R/F/M و فرمول سگمنت: f_nummber/m_nummber هر دو به‌اشتباه از cdata.rnumber</td></tr>
+<tr><td class="ln">11</td><td class="code-line">--        خوانده می‌شدند (کپی/پیست) — یعنی وزن ورودی F و M همیشه نادیده گرفته می‌شد و fd/md/rfm/segment</td></tr>
+<tr><td class="ln">12</td><td class="code-line">--        همه فقط با وزن R محاسبه می‌شدند، نه با اعدادی که واقعاً برای F و M وارد شده بود. اصلاح شد:</td></tr>
+<tr><td class="ln">13</td><td class="code-line">--        هرکدام از فیلد پیکربندی خودش (cdata.fnumber / cdata.mnumber) می‌خواند.</td></tr>
+<tr><td class="ln">14</td><td class="code-line">--   ۲) Monetary/Frequency/Days فیلتر تاریخ را نادیده می‌گرفتند: چون data.txt نوع datef/datet را</td></tr>
+<tr><td class="ln">15</td><td class="code-line">--      "number" declare کرده، مقدار ست‌نشده را خود فریم‌ورک بی‌صدا به 0 تبدیل می‌کند (نه nil) —</td></tr>
+<tr><td class="ln">16</td><td class="code-line">--      چک قبلی فقط "== nil" بود که هرگز true نمی‌شد، پس {{datef}}/{{datet}} با 0 (معادل تاریخ</td></tr>
+<tr><td class="ln">17</td><td class="code-line">--      سال ۱۶۰۱ میلادی/شروع FILETIME) جایگزین می‌شد و بازهٔ "between 0 and {{datet}}" عملاً کل</td></tr>
+<tr><td class="ln">18</td><td class="code-line">--      تاریخچهٔ فاکتورها را می‌گرفت. اصلاح شد: "&lt;= 0" هم چک می‌شود و پیش‌فرض به «امروز» تغییر کرد</td></tr>
+<tr><td class="ln">19</td><td class="code-line">--      (بدون فیلتر انتخابی، بازهٔ خالی/تقریباً خالی نشان می‌دهد که سیگنال واضحی است، نه کل تاریخچه</td></tr>
+<tr><td class="ln">20</td><td class="code-line">--      به‌شکل گمراه‌کننده). همین اصلاح روی بات ۶۰۰ تأیید شده است.</td></tr>
+<tr><td class="ln">21</td><td class="code-line">--   ۴) مبنای Recency/Days (طبق تأیید کاربر پس از مشورت): قبلاً همیشه با «امروز» واقعی سیستم حساب</td></tr>
+<tr><td class="ln">22</td><td class="code-line">--      می‌شد، حتی وقتی کاربر بازهٔ تاریخی گذشته را فیلتر کرده بود. اصلاح شد که مبنا «انتهای بازهٔ</td></tr>
+<tr><td class="ln">23</td><td class="code-line">--      فیلترشده» (datet) باشد — چون datet خودش وقتی خالی است پیش‌فرض «امروز» می‌گیرد (بند ۲)، رفتار</td></tr>
+<tr><td class="ln">24</td><td class="code-line">--      حالت بدون فیلتر تغییری نمی‌کند.</td></tr>
+<tr><td class="ln">25</td><td class="code-line">--</td></tr>
+<tr><td class="ln">26</td><td class="code-line">-- تغییرات این نسخه (۱۴۰۵/۰۵/۲۷ — دور دوم، طبق درخواست بعدی کاربر):</td></tr>
+<tr><td class="ln">27</td><td class="code-line">--   ۵) فیلتر «سازمان» اصلاح شد: data.js فیلد ACL سازمان را با name="org" ارسال می‌کند ولی</td></tr>
+<tr><td class="ln">28</td><td class="code-line">--      data.txt فقط کلید "org_id" را declare کرده بود؛ چون getInput فقط کلیدهای declare‌شده در</td></tr>
+<tr><td class="ln">29</td><td class="code-line">--      data.txt را می‌خواند، getInput("org") همیشه خالی برمی‌گشت و فیلتر سازمان همیشه نادیده گرفته</td></tr>
+<tr><td class="ln">30</td><td class="code-line">--      می‌شد (این کد Lua از اول روی "org" درست بود). کلید data.txt به "org" تغییر کرد (پیوست جدا</td></tr>
+<tr><td class="ln">31</td><td class="code-line">--      فرستاده شد، چون آپلود پیوست از راه API ممکن نیست). ورودی «crm» هم به همین بیماری دچار بود</td></tr>
+<tr><td class="ln">32</td><td class="code-line">--      (در data.js با name="crm" ارسال می‌شود ولی اصلاً در data.txt declare نشده بود) — همان‌جا</td></tr>
+<tr><td class="ln">33</td><td class="code-line">--      کلید "crm" هم اضافه شد.</td></tr>
+<tr><td class="ln">34</td><td class="code-line">--   ۶) دو باگ کد مردهٔ دیگر که موقع بررسی فیلتر سازمان دیده شد: فیلتر "cat" به alias نامعتبر</td></tr>
+<tr><td class="ln">35</td><td class="code-line">--      c.id ارجاع می‌داد (در FROM فقط alias «p» برای pa_client هست) — اصلاح شد به p.id. فیلتر</td></tr>
+<tr><td class="ln">36</td><td class="code-line">--      "ctype"/"crm" به ui.USER_TYPE ارجاع می‌داد بدون اینکه profile_user_info جایی با alias ui</td></tr>
+<tr><td class="ln">37</td><td class="code-line">--      join شده باشد — LEFT JOIN profile_user_info ui ON ui.id = p.REFFERE_ID به پیوست</td></tr>
+<tr><td class="ln">38</td><td class="code-line">--      query_list_invoice.txt اضافه شد. مقادیر id همهٔ فیلترهای ACL (cat/ctype/crm/org) هم قبل</td></tr>
+<tr><td class="ln">39</td><td class="code-line">--      از concat با tonumber() اعتبارسنجی می‌شوند.</td></tr>
+<tr><td class="ln">40</td><td class="code-line">--   ۷) مرتب‌سازی روی کل دیتاست (نه فقط صفحهٔ فعلی): چون $.Teamyar.table() یک ویجت هسته‌ای پلتفرم</td></tr>
+<tr><td class="ln">41</td><td class="code-line">--      است (نه چیزی در attachment این بات)، کلیک-روی-ستون واقعی قابل اضافه‌کردن امن نیست؛ به‌جایش</td></tr>
+<tr><td class="ln">42</td><td class="code-line">--      دو ورودی جدید sort_key/sort_dir به فرم فیلتر اضافه شد (کنار تاریخ/سازمان/...، از طبق کاربر</td></tr>
+<tr><td class="ln">43</td><td class="code-line">--      برای Excel/Report/Print) — این‌ها ORDER BY را مستقیماً داخل خودِ کوئری SQL عوض می‌کنند</td></tr>
+<tr><td class="ln">44</td><td class="code-line">--      (قبل از LIMIT/OFFSET صفحه‌بندی)، پس کل دیتاست مرتب می‌شود نه فقط ردیف‌های همان صفحه. کلید</td></tr>
+<tr><td class="ln">45</td><td class="code-line">--      sort_key فقط از یک whitelist ثابت (_SORT_COLUMNS) عبور می‌کند — هرگز مستقیم داخل SQL</td></tr>
+<tr><td class="ln">46</td><td class="code-line">--      نمی‌رود؛ خالی/نامعتبر = رفتار پیش‌فرض قبلی (order by rfm desc).</td></tr>
+<tr><td class="ln">47</td><td class="code-line">--</td></tr>
+<tr><td class="ln">48</td><td class="code-line">-- تغییرات این نسخه (۱۴۰۵/۰۵/۲۷ — دور سوم، طبق درخواست بعدی کاربر):</td></tr>
+<tr><td class="ln">49</td><td class="code-line">--   ۸) فیلتر «بازهٔ درآمد» (Monetary min/max) اضافه شد: دو ورودی جدید monetary_min/monetary_max</td></tr>
+<tr><td class="ln">50</td><td class="code-line">--      به فرم فیلتر اضافه شدند. چون Monetary یک sum() تجمیعی به‌ازای هر مشتری است (نه ستون خام هر</td></tr>
+<tr><td class="ln">51</td><td class="code-line">--      فاکتور)، فیلترش با HAVING روی CTE «crm_factor» پیاده شد نه WHERE (در HAVING، برخلاف WHERE،</td></tr>
+<tr><td class="ln">52</td><td class="code-line">--      ارجاع به alias ستون Monetary مجاز است). چون این فیلتر قبل از محاسبهٔ ntile (رتبهٔ R/F/M) در</td></tr>
+<tr><td class="ln">53</td><td class="code-line">--      CTE بعدی اعمال می‌شود، مثل بقیهٔ فیلترها (سازمان/رده/...) رتبه‌ها هم فقط نسبت به همان</td></tr>
+<tr><td class="ln">54</td><td class="code-line">--      زیرمجموعهٔ فیلترشده حساب می‌شوند — نه فیلتر پس از رتبه‌بندی روی کل مشتریان. مقادیر با</td></tr>
+<tr><td class="ln">55</td><td class="code-line">--      tonumber() اعتبارسنجی می‌شوند و هرکدام که خالی/نامعتبر باشد نادیده گرفته می‌شود (نه خطا).</td></tr>
+<tr><td class="ln">56</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">57</td><td class="code-line">--</td></tr>
+<tr><td class="ln">58</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">59</td><td class="code-line">--- CONFIG DATA</td></tr>
+<tr><td class="ln">60</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">61</td><td class="code-line">local day = time.get_day(time.current());</td></tr>
+<tr><td class="ln">62</td><td class="code-line">local month = time.get_month(time.current());</td></tr>
+<tr><td class="ln">63</td><td class="code-line">local year = time.get_year(time.current());</td></tr>
+<tr><td class="ln">64</td><td class="code-line">local hour = time.get_hour(time.current());</td></tr>
+<tr><td class="ln">65</td><td class="code-line">local min = time.get_minute (time.current());</td></tr>
+<tr><td class="ln">66</td><td class="code-line">local sec = time.get_second(time.current());</td></tr>
+<tr><td class="ln">67</td><td class="code-line">local currentdate_time = time.get_filetime([[{"year":]]..year..[[,"month":]]..month..[[,"day":]]..day..[[,"hour":]]..hour..[[,"minute":]]..min..[[,"second":]]..sec..[[}]])</td></tr>
+<tr><td class="ln">68</td><td class="code-line">local temp_time = time.get_filetime([[{"year":]]..year..[[,"month":]]..month..[[,"day":]]..day..[[,"hour":0,"minute":0,"second":0}]])</td></tr>
+<tr><td class="ln">69</td><td class="code-line">local currentdate = string.format("%18.0f" ,temp_time);</td></tr>
+<tr><td class="ln">70</td><td class="code-line">----------------------------</td></tr>
+<tr><td class="ln">71</td><td class="code-line">local _PAR_PAGE = 25</td></tr>
+<tr><td class="ln">72</td><td class="code-line">local _QUERY_TYPE = {</td></tr>
+<tr><td class="ln">73</td><td class="code-line">  _TYPE_TOTAL_SUM = 1 ,</td></tr>
+<tr><td class="ln">74</td><td class="code-line">  _TYPE_TOTAL_COUNT = 2 ,</td></tr>
+<tr><td class="ln">75</td><td class="code-line">  _TYPE_PAGE_REPORT = 3 ,</td></tr>
+<tr><td class="ln">76</td><td class="code-line">  _TYPE_PAGE_EXCEL = 4 ,</td></tr>
+<tr><td class="ln">77</td><td class="code-line">  _TYPE_PAGE_PRINT = 5 ,</td></tr>
+<tr><td class="ln">78</td><td class="code-line">}</td></tr>
+<tr><td class="ln">79</td><td class="code-line">-- مرتب‌سازی کل دیتاست (نه فقط صفحهٔ نمایش‌داده‌شده): چون ORDER BY داخل خودِ کوئری SQL اعمال</td></tr>
+<tr><td class="ln">80</td><td class="code-line">-- می‌شود (قبل از LIMIT/OFFSET صفحه‌بندی)، خروجی صفحه/اکسل/پرینت هر سه روی کل نتایج فیلترشده</td></tr>
+<tr><td class="ln">81</td><td class="code-line">-- مرتب می‌شوند. کلید ورودی sort_key فقط باید یکی از کلیدهای زیر باشد (whitelist — هرگز مستقیم</td></tr>
+<tr><td class="ln">82</td><td class="code-line">-- داخل SQL قرار نمی‌گیرد)؛ برای Customer از ستون خام (بدون تگ &lt;a&gt;) مرتب می‌شود چون ستون نمایشی</td></tr>
+<tr><td class="ln">83</td><td class="code-line">-- Customer با لینک HTML پیچیده شده و مرتب‌سازی متنی روی آن اشتباه بود. "segment" چون از rfm</td></tr>
+<tr><td class="ln">84</td><td class="code-line">-- مشتق می‌شود، بر اساس همان rfm مرتب می‌شود (هم‌ترازِ منطقی سگمنت‌ها).</td></tr>
+<tr><td class="ln">85</td><td class="code-line">local _SORT_COLUMNS = {</td></tr>
+<tr><td class="ln">86</td><td class="code-line">  Customer   = "CustomerSort",</td></tr>
+<tr><td class="ln">87</td><td class="code-line">  Days       = "Days",</td></tr>
+<tr><td class="ln">88</td><td class="code-line">  LastRunDate= "LastRunDate",</td></tr>
+<tr><td class="ln">89</td><td class="code-line">  Frequency  = "Frequency",</td></tr>
+<tr><td class="ln">90</td><td class="code-line">  Monetary   = "Monetary",</td></tr>
+<tr><td class="ln">91</td><td class="code-line">  rd         = "rd",</td></tr>
+<tr><td class="ln">92</td><td class="code-line">  fd         = "fd",</td></tr>
+<tr><td class="ln">93</td><td class="code-line">  md         = "md",</td></tr>
+<tr><td class="ln">94</td><td class="code-line">  rfm        = "rfm",</td></tr>
+<tr><td class="ln">95</td><td class="code-line">  segment    = "rfm",</td></tr>
+<tr><td class="ln">96</td><td class="code-line">}</td></tr>
+<tr><td class="ln">97</td><td class="code-line">-------------------------------------------</td></tr>
+<tr><td class="ln">98</td><td class="code-line">--- install [RES]</td></tr>
+<tr><td class="ln">99</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">100</td><td class="code-line">local _BAT_RES_PATH = "2/res_v2";</td></tr>
+<tr><td class="ln">101</td><td class="code-line">function readyCodes()</td></tr>
+<tr><td class="ln">102</td><td class="code-line">  local data = teamyar.get_input();</td></tr>
+<tr><td class="ln">103</td><td class="code-line">  data["res_type"] = "codes"</td></tr>
+<tr><td class="ln">104</td><td class="code-line">  data["config"] = json.decode(teamyar.get_attachment("data.txt"))</td></tr>
+<tr><td class="ln">105</td><td class="code-line">  local responseRes = teamyar.run_command(_BAT_RES_PATH , data);</td></tr>
+<tr><td class="ln">106</td><td class="code-line">  if responseRes ~= nil then</td></tr>
+<tr><td class="ln">107</td><td class="code-line">    responseRes = json.decode(responseRes)</td></tr>
+<tr><td class="ln">108</td><td class="code-line">    for i = 1 , #responseRes, 1 do</td></tr>
+<tr><td class="ln">109</td><td class="code-line">      local loadedFunction, errorMessage = load(responseRes[i])</td></tr>
+<tr><td class="ln">110</td><td class="code-line">      if loadedFunction then</td></tr>
+<tr><td class="ln">111</td><td class="code-line">        loadedFunction();</td></tr>
+<tr><td class="ln">112</td><td class="code-line">      else</td></tr>
+<tr><td class="ln">113</td><td class="code-line">        teamyar.write_log("Error: " .. errorMessage);</td></tr>
+<tr><td class="ln">114</td><td class="code-line">      end</td></tr>
+<tr><td class="ln">115</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">116</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">117</td><td class="code-line">end</td></tr>
+<tr><td class="ln">118</td><td class="code-line">readyCodes();</td></tr>
+<tr><td class="ln">119</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">120</td><td class="code-line">--- data</td></tr>
+<tr><td class="ln">121</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">122</td><td class="code-line">function getData(queryType , pageFrom , perPage , pageTo )</td></tr>
+<tr><td class="ln">123</td><td class="code-line">  ---- init Query</td></tr>
+<tr><td class="ln">124</td><td class="code-line">  local dataQuery = {</td></tr>
+<tr><td class="ln">125</td><td class="code-line">    query = teamyar.get_attachment("query_list_invoice.txt") ,</td></tr>
+<tr><td class="ln">126</td><td class="code-line">    params = {}</td></tr>
+<tr><td class="ln">127</td><td class="code-line">  };</td></tr>
+<tr><td class="ln">128</td><td class="code-line">  ---- Select</td></tr>
+<tr><td class="ln">129</td><td class="code-line">  local config = teamyar.get_config()</td></tr>
+<tr><td class="ln">130</td><td class="code-line">  local cdata={}</td></tr>
+<tr><td class="ln">131</td><td class="code-line">  local r_nummber = 0</td></tr>
+<tr><td class="ln">132</td><td class="code-line">  local f_nummber = 0</td></tr>
+<tr><td class="ln">133</td><td class="code-line">  local m_nummber = 0</td></tr>
+<tr><td class="ln">134</td><td class="code-line">  local c_count_out = 0</td></tr>
+<tr><td class="ln">135</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">136</td><td class="code-line">  if config ~= nil then </td></tr>
+<tr><td class="ln">137</td><td class="code-line">    cdata = config.data</td></tr>
+<tr><td class="ln">138</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">139</td><td class="code-line">    -- باگ اصلاح‌شده: قبلاً f_nummber/m_nummber هم از cdata.rnumber می‌خواندند (کپی/پیست) —</td></tr>
+<tr><td class="ln">140</td><td class="code-line">    -- ستون‌های F/M و فرمول سگمنت واقعاً از اعداد ورودی F/M استفاده نمی‌کردند.</td></tr>
+<tr><td class="ln">141</td><td class="code-line">    r_nummber = cdata.rnumber</td></tr>
+<tr><td class="ln">142</td><td class="code-line">    f_nummber = cdata.fnumber</td></tr>
+<tr><td class="ln">143</td><td class="code-line">    m_nummber = cdata.mnumber</td></tr>
+<tr><td class="ln">144</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">145</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">146</td><td class="code-line"> -- teamyar.write_log(c_box_id.."uuuuu")</td></tr>
+<tr><td class="ln">147</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">148</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">149</td><td class="code-line">  local user_info = teamyar.get_user_info()</td></tr>
+<tr><td class="ln">150</td><td class="code-line">  local time_zone = user_info.timezone</td></tr>
+<tr><td class="ln">151</td><td class="code-line">  local ctype = getInput("ctype");</td></tr>
+<tr><td class="ln">152</td><td class="code-line">  local cat = getInput("cat");</td></tr>
+<tr><td class="ln">153</td><td class="code-line">  local crm = getInput("crm");</td></tr>
+<tr><td class="ln">154</td><td class="code-line">  local org = getInput("org");</td></tr>
+<tr><td class="ln">155</td><td class="code-line">  local datef = getInput("datef");</td></tr>
+<tr><td class="ln">156</td><td class="code-line">  local datet = getInput("datet");</td></tr>
+<tr><td class="ln">157</td><td class="code-line">  local sort_key = getInput("sort_key");</td></tr>
+<tr><td class="ln">158</td><td class="code-line">  local sort_dir = getInput("sort_dir");</td></tr>
+<tr><td class="ln">159</td><td class="code-line">  local monetary_min = getInput("monetary_min");</td></tr>
+<tr><td class="ln">160</td><td class="code-line">  local monetary_max = getInput("monetary_max");</td></tr>
+<tr><td class="ln">161</td><td class="code-line">  local qs = getQuery_select(queryType)</td></tr>
+<tr><td class="ln">162</td><td class="code-line">  local inp = teamyar.get_input()</td></tr>
+<tr><td class="ln">163</td><td class="code-line">  ---- invoice Filter</td></tr>
+<tr><td class="ln">164</td><td class="code-line">  local where_str=" 1=1 "</td></tr>
+<tr><td class="ln">165</td><td class="code-line">  dataQuery.query , dataQuery.params  = queryTools.where:init({where_str})</td></tr>
+<tr><td class="ln">166</td><td class="code-line">  -- :addIn("ORG_ID", org)</td></tr>
+<tr><td class="ln">167</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">168</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">169</td><td class="code-line">  .run( dataQuery.query ,  dataQuery.params , "{{whereInvoice}}");</td></tr>
+<tr><td class="ln">170</td><td class="code-line">  local where_op_transfer = ""</td></tr>
+<tr><td class="ln">171</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">172</td><td class="code-line">  ---- page Number Query</td></tr>
+<tr><td class="ln">173</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{slicePageNumber}}", getQuery_page(queryType , pageFrom , perPage , pageTo));</td></tr>
+<tr><td class="ln">174</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{select}}",qs);</td></tr>
+<tr><td class="ln">175</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">176</td><td class="code-line">  local where_cat = ""</td></tr>
+<tr><td class="ln">177</td><td class="code-line">  local where_ctype= ""</td></tr>
+<tr><td class="ln">178</td><td class="code-line">  local where_crm= ""</td></tr>
+<tr><td class="ln">179</td><td class="code-line">  local where_org = ""</td></tr>
+<tr><td class="ln">180</td><td class="code-line">  -- باگ اصلاح‌شده: فیلتر "cat" به alias نامعتبر c.id ارجاع می‌داد — در FROM پیوست SQL فقط</td></tr>
+<tr><td class="ln">181</td><td class="code-line">  -- alias «p» برای pa_client وجود دارد (c.id هیچ‌جا تعریف نشده، کد مرده/همیشه با خطا می‌شکست).</td></tr>
+<tr><td class="ln">182</td><td class="code-line">  -- + مقدار id قبل از concat با tonumber() اعتبارسنجی می‌شود (اگر عددی نبود، فیلتر نادیده گرفته</td></tr>
+<tr><td class="ln">183</td><td class="code-line">  -- می‌شود به‌جای اینکه کوئری با متن نامعتبر بشکند).</td></tr>
+<tr><td class="ln">184</td><td class="code-line">  if cat ~= nil and cat[1] ~= nil and tonumber(cat[1].id) ~= nil then</td></tr>
+<tr><td class="ln">185</td><td class="code-line">    where_cat = where_cat.. [[ and p.id in (select CLIENT_ID from crm_cross where REFERE_ID =]]..tonumber(cat[1].id)..[[ )]]</td></tr>
+<tr><td class="ln">186</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">187</td><td class="code-line">  -- فیلتر "ctype"/"crm" نیازمند LEFT JOIN profile_user_info ui ON ui.id = p.REFFERE_ID در پیوست</td></tr>
+<tr><td class="ln">188</td><td class="code-line">  -- query_list_invoice.txt است (کد مرده بدون آن) — این join به پیوست اضافه شد.</td></tr>
+<tr><td class="ln">189</td><td class="code-line">  if ctype ~= nil and ctype[1] ~= nil and tonumber(ctype[1].id) ~= nil then</td></tr>
+<tr><td class="ln">190</td><td class="code-line">    where_ctype = where_ctype.. [[ and ui.USER_TYPE=]]..tonumber(ctype[1].id)</td></tr>
+<tr><td class="ln">191</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">192</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">193</td><td class="code-line">  if crm ~= nil and crm[1] ~= nil and tonumber(crm[1].id) ~= nil then</td></tr>
+<tr><td class="ln">194</td><td class="code-line">    where_crm = where_crm.. [[ and ui.USER_TYPE=]]..tonumber(crm[1].id)</td></tr>
+<tr><td class="ln">195</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">196</td><td class="code-line">  if org ~= nil and org[1] ~= nil and tonumber(org[1].id) ~= nil then</td></tr>
+<tr><td class="ln">197</td><td class="code-line">    -- باگ اصلاح‌شده (فیلتر سازمان): data.js فیلد را با name="org" می‌فرستد ولی data.txt فقط</td></tr>
+<tr><td class="ln">198</td><td class="code-line">    -- "org_id" را declare کرده بود -&gt; getInput("org") همیشه خالی برمی‌گشت. کلید data.txt به</td></tr>
+<tr><td class="ln">199</td><td class="code-line">    -- "org" تغییر کرد (پیوست جدا). کد Lua از قبل روی "org" درست بود، دست‌نخورده ماند.</td></tr>
+<tr><td class="ln">200</td><td class="code-line">    where_org = where_org.. [[ and s.org_id=]]..tonumber(org[1].id)..[[ and p.org_id=]]..tonumber(org[1].id)</td></tr>
+<tr><td class="ln">201</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">202</td><td class="code-line">  ---- فیلتر «بازهٔ درآمد» (Monetary min/max): چون Monetary یک sum() تجمیعی به‌ازای هر مشتری است</td></tr>
+<tr><td class="ln">203</td><td class="code-line">  ---- (نه ستون خام هر فاکتور)، فیلترش باید با HAVING روی همان CTE crm_factor باشد نه WHERE — در</td></tr>
+<tr><td class="ln">204</td><td class="code-line">  ---- HAVING، برخلاف WHERE، ارجاع به alias ستون‌های SELECT (اینجا Monetary) در MySQL مجاز است.</td></tr>
+<tr><td class="ln">205</td><td class="code-line">  ---- با HAVING به‌جای فیلتر روی نتیجهٔ نهایی: جمعیت مشتریان قبل از محاسبهٔ ntile (رتبهٔ R/F/M)</td></tr>
+<tr><td class="ln">206</td><td class="code-line">  ---- محدود می‌شود، یعنی رتبه‌ها هم‌مثل فیلترهای سازمان/رده فقط نسبت به همین زیرمجموعه حساب می‌شوند</td></tr>
+<tr><td class="ln">207</td><td class="code-line">  ---- (سازگار با رفتار بقیهٔ فیلترها). مقادیر با tonumber() اعتبارسنجی می‌شوند.</td></tr>
+<tr><td class="ln">208</td><td class="code-line">  local where_monetary = ""</td></tr>
+<tr><td class="ln">209</td><td class="code-line">  if tonumber(monetary_min) ~= nil then</td></tr>
+<tr><td class="ln">210</td><td class="code-line">    where_monetary = where_monetary.. [[ and Monetary &gt;= ]]..tonumber(monetary_min)</td></tr>
+<tr><td class="ln">211</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">212</td><td class="code-line">  if tonumber(monetary_max) ~= nil then</td></tr>
+<tr><td class="ln">213</td><td class="code-line">    where_monetary = where_monetary.. [[ and Monetary &lt;= ]]..tonumber(monetary_max)</td></tr>
+<tr><td class="ln">214</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">215</td><td class="code-line">  -- باگ اصلاح‌شده: data.txt نوع datef/datet را "number" declare کرده، پس مقدار نامعتبر/خالی را</td></tr>
+<tr><td class="ln">216</td><td class="code-line">  -- خود فریم‌ورک بی‌صدا به 0 تبدیل می‌کند نه nil — چک تنها "== nil" هرگز true نمی‌شد، در نتیجه</td></tr>
+<tr><td class="ln">217</td><td class="code-line">  -- "between 0 and {{datet}}" عملاً کل تاریخچهٔ فاکتورها را برمی‌گرداند (نه فقط بازهٔ انتخابی).</td></tr>
+<tr><td class="ln">218</td><td class="code-line">  -- با "&lt;= 0" هم مقدار nil‌شده و هم صفرشده گرفته می‌شود؛ پیش‌فرض به «امروز» تغییر کرد.</td></tr>
+<tr><td class="ln">219</td><td class="code-line">  if tonumber(datet) == nil or tonumber(datet) &lt;= 0 then</td></tr>
+<tr><td class="ln">220</td><td class="code-line">    datet = currentdate</td></tr>
+<tr><td class="ln">221</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">222</td><td class="code-line">  if tonumber(datef) == nil or tonumber(datef) &lt;= 0 then</td></tr>
+<tr><td class="ln">223</td><td class="code-line">    datef = currentdate</td></tr>
+<tr><td class="ln">224</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">225</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{datet}}",datet);</td></tr>
+<tr><td class="ln">226</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{datef}}",datef);</td></tr>
+<tr><td class="ln">227</td><td class="code-line">  -- طبق تأیید کاربر: مبنای Recency/Days باید «انتهای بازهٔ فیلترشده» (datet) باشد، نه امروز واقعی —</td></tr>
+<tr><td class="ln">228</td><td class="code-line">  -- وقتی فیلتر خالی است datet خودش پیش‌فرض «امروز» گرفته (فیکس بالا)، پس رفتار بدون فیلتر عوض نمی‌شود؛</td></tr>
+<tr><td class="ln">229</td><td class="code-line">  -- وقتی بازهٔ گذشته فیلتر شود (مثلاً کل سال ۱۴۰۴)، Days نسبت به پایان همان بازه حساب می‌شود نه امروز.</td></tr>
+<tr><td class="ln">230</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{current_date}}",datet);</td></tr>
+<tr><td class="ln">231</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_cat}}",where_cat);</td></tr>
+<tr><td class="ln">232</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_crm}}",where_crm);</td></tr>
+<tr><td class="ln">233</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_ctype}}",where_ctype);</td></tr>
+<tr><td class="ln">234</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_org}}",where_org);</td></tr>
+<tr><td class="ln">235</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_monetary}}",where_monetary);</td></tr>
+<tr><td class="ln">236</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{r_number}}",r_nummber);</td></tr>
+<tr><td class="ln">237</td><td class="code-line">    dataQuery.query = string.gsub(dataQuery.query,"{{f_number}}",f_nummber);</td></tr>
+<tr><td class="ln">238</td><td class="code-line"> dataQuery.query = string.gsub(dataQuery.query,"{{m_number}}",m_nummber);</td></tr>
+<tr><td class="ln">239</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">240</td><td class="code-line">  ---- مرتب‌سازی کل دیتاست: sort_key/sort_dir همیشه از whitelist بالا عبور می‌کنند، هرگز مستقیم</td></tr>
+<tr><td class="ln">241</td><td class="code-line">  ---- (raw) داخل SQL نمی‌روند — اگر ورودی نامعتبر/خالی باشد به همان رفتار پیش‌فرض قبلی</td></tr>
+<tr><td class="ln">242</td><td class="code-line">  ---- (order by rfm desc) برمی‌گردد.</td></tr>
+<tr><td class="ln">243</td><td class="code-line">  local sort_col = _SORT_COLUMNS[sort_key] or "rfm"</td></tr>
+<tr><td class="ln">244</td><td class="code-line">  local sort_direction = "desc"</td></tr>
+<tr><td class="ln">245</td><td class="code-line">  if sort_dir ~= nil and string.lower(tostring(sort_dir)) == "asc" then</td></tr>
+<tr><td class="ln">246</td><td class="code-line">    sort_direction = "asc"</td></tr>
+<tr><td class="ln">247</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">248</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{sort_col}}",sort_col);</td></tr>
+<tr><td class="ln">249</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{sort_dir}}",sort_direction);</td></tr>
+<tr><td class="ln">250</td><td class="code-line">  ---- Execute Query</td></tr>
+<tr><td class="ln">251</td><td class="code-line">  teamyar.write_log(dataQuery.query)</td></tr>
+<tr><td class="ln">252</td><td class="code-line">  return getQuery_result(queryType , dataQuery);</td></tr>
+<tr><td class="ln">253</td><td class="code-line">end</td></tr>
+<tr><td class="ln">254</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">255</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">256</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">257</td><td class="code-line">function getQuery_select(queryType)</td></tr>
+<tr><td class="ln">258</td><td class="code-line">  if queryType == _QUERY_TYPE._TYPE_TOTAL_SUM then</td></tr>
+<tr><td class="ln">259</td><td class="code-line">    return getTableConfig_sum()</td></tr>
+<tr><td class="ln">260</td><td class="code-line">  elseif queryType == _QUERY_TYPE._TYPE_TOTAL_COUNT then</td></tr>
+<tr><td class="ln">261</td><td class="code-line">    return getTableConfig_count()</td></tr>
+<tr><td class="ln">262</td><td class="code-line">  else</td></tr>
+<tr><td class="ln">263</td><td class="code-line">    return getTableConfig_select();</td></tr>
+<tr><td class="ln">264</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">265</td><td class="code-line">end</td></tr>
+<tr><td class="ln">266</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">267</td><td class="code-line">function getQuery_page(queryType , pageFrom , perPage , pageTo)</td></tr>
+<tr><td class="ln">268</td><td class="code-line">  local slicePageNumber = "";</td></tr>
+<tr><td class="ln">269</td><td class="code-line">  if queryType == _QUERY_TYPE._TYPE_PAGE_REPORT then</td></tr>
+<tr><td class="ln">270</td><td class="code-line">    local limit = tonumber(perPage);</td></tr>
+<tr><td class="ln">271</td><td class="code-line">    local offset = tonumber(pageFrom) ;</td></tr>
+<tr><td class="ln">272</td><td class="code-line">    slicePageNumber = "LIMIT "..limit .. " OFFSET "..offset;</td></tr>
+<tr><td class="ln">273</td><td class="code-line">  elseif queryType == _QUERY_TYPE._TYPE_PAGE_EXCEL then</td></tr>
+<tr><td class="ln">274</td><td class="code-line">    local limit = tonumber(perPage)*(tonumber(pageTo)  - tonumber(pageFrom) + 1) ;</td></tr>
+<tr><td class="ln">275</td><td class="code-line">    local offset = tonumber(perPage) *(tonumber(pageFrom) - 1);</td></tr>
+<tr><td class="ln">276</td><td class="code-line">    slicePageNumber = "LIMIT "..limit.." OFFSET "..offset;</td></tr>
+<tr><td class="ln">277</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">278</td><td class="code-line">  return slicePageNumber;</td></tr>
+<tr><td class="ln">279</td><td class="code-line">end</td></tr>
+<tr><td class="ln">280</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">281</td><td class="code-line">function getQuery_result(queryType , dataQuery)</td></tr>
+<tr><td class="ln">282</td><td class="code-line">  local resultExp = nil;</td></tr>
+<tr><td class="ln">283</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">284</td><td class="code-line">  db.query(dataQuery)</td></tr>
+<tr><td class="ln">285</td><td class="code-line">  local record={};</td></tr>
+<tr><td class="ln">286</td><td class="code-line">  if queryType == _QUERY_TYPE._TYPE_TOTAL_COUNT then</td></tr>
+<tr><td class="ln">287</td><td class="code-line">    record = db.query_fetch();</td></tr>
+<tr><td class="ln">288</td><td class="code-line">    resultExp = record[1];</td></tr>
+<tr><td class="ln">289</td><td class="code-line">  elseif queryType == _QUERY_TYPE._TYPE_TOTAL_SUM then</td></tr>
+<tr><td class="ln">290</td><td class="code-line">    local columnsSelected = {};</td></tr>
+<tr><td class="ln">291</td><td class="code-line">    local columns = getTableConfig();</td></tr>
+<tr><td class="ln">292</td><td class="code-line">    for i = 1, #columns , 1 do</td></tr>
+<tr><td class="ln">293</td><td class="code-line">      local itemColumns = columns[i];</td></tr>
+<tr><td class="ln">294</td><td class="code-line">      if itemColumns.key ~= nil and itemColumns.sum ~= nil and itemColumns.sum == true then</td></tr>
+<tr><td class="ln">295</td><td class="code-line">        table.insert(columnsSelected , itemColumns.key)</td></tr>
+<tr><td class="ln">296</td><td class="code-line">      end</td></tr>
+<tr><td class="ln">297</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">298</td><td class="code-line">    if #columns &gt; 0 then</td></tr>
+<tr><td class="ln">299</td><td class="code-line">      resultExp = {};</td></tr>
+<tr><td class="ln">300</td><td class="code-line">      record = db.query_fetch();</td></tr>
+<tr><td class="ln">301</td><td class="code-line">      for i = 1, #columnsSelected , 1 do</td></tr>
+<tr><td class="ln">302</td><td class="code-line">        resultExp[columnsSelected[i]] = record[i];</td></tr>
+<tr><td class="ln">303</td><td class="code-line">      end</td></tr>
+<tr><td class="ln">304</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">305</td><td class="code-line">  else</td></tr>
+<tr><td class="ln">306</td><td class="code-line">    resultExp = {};</td></tr>
+<tr><td class="ln">307</td><td class="code-line">    while db.query_fetch(record) do</td></tr>
+<tr><td class="ln">308</td><td class="code-line">      local itemRow = {};</td></tr>
+<tr><td class="ln">309</td><td class="code-line">      local columns = getTableConfig();</td></tr>
+<tr><td class="ln">310</td><td class="code-line">      for i = 1, #columns , 1 do</td></tr>
+<tr><td class="ln">311</td><td class="code-line">        local itemColumns = columns[i];</td></tr>
+<tr><td class="ln">312</td><td class="code-line">        if itemColumns.key ~= nil then</td></tr>
+<tr><td class="ln">313</td><td class="code-line">          itemRow[itemColumns.key] = record[i];</td></tr>
+<tr><td class="ln">314</td><td class="code-line">        end</td></tr>
+<tr><td class="ln">315</td><td class="code-line">      end</td></tr>
+<tr><td class="ln">316</td><td class="code-line">      table.insert(resultExp, itemRow)</td></tr>
+<tr><td class="ln">317</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">318</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">319</td><td class="code-line">  db.query_free();</td></tr>
+<tr><td class="ln">320</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">321</td><td class="code-line">  return resultExp;</td></tr>
+<tr><td class="ln">322</td><td class="code-line">end</td></tr>
+<tr><td class="ln">323</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">324</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">325</td><td class="code-line">function getTableConfig()</td></tr>
+<tr><td class="ln">326</td><td class="code-line">  local cols = {</td></tr>
+<tr><td class="ln">327</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">328</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">329</td><td class="code-line">    {show = true ,    key = "Customer"           , value= "Customer" } ,</td></tr>
+<tr><td class="ln">330</td><td class="code-line">    {show = true ,    key = "mobile"           , value= "mobile" } ,</td></tr>
+<tr><td class="ln">331</td><td class="code-line">    {show = true ,    key = "factor_link"           , value= "factor_link" } ,</td></tr>
+<tr><td class="ln">332</td><td class="code-line">    {show = true ,    key = "Days"           , value= "Days" ,type="price"} ,</td></tr>
+<tr><td class="ln">333</td><td class="code-line">    {show = true ,    key = "LastRunDate"           , value= "LastRunDate",type="date" } ,</td></tr>
+<tr><td class="ln">334</td><td class="code-line">    {show = true ,   key = "Frequency"                  		 , value = "Frequency" } ,</td></tr>
+<tr><td class="ln">335</td><td class="code-line">    {show = true ,   key = "Monetary"                  		 , value = "Monetary" ,type="price" } ,</td></tr>
+<tr><td class="ln">336</td><td class="code-line">    {show = true ,   key = "rd"                  		 , value = "R" } ,</td></tr>
+<tr><td class="ln">337</td><td class="code-line">    {show = true ,   key = "fd"                  		 , value = "F" } ,</td></tr>
+<tr><td class="ln">338</td><td class="code-line">    {show = true ,   key = "md"                  		 , value = "M" } ,</td></tr>
+<tr><td class="ln">339</td><td class="code-line">    {show = true ,   key = "rfm"                  		 , value = "RFM" } ,</td></tr>
+<tr><td class="ln">340</td><td class="code-line">    {show = true ,   key = "segment"                  		 , value = "Segment" } ,</td></tr>
+<tr><td class="ln">341</td><td class="code-line">    {show = true ,   key = [[concat("&lt;input type='checkbox' id='ch_save_",crm_id,"' name='ch_save' oninput='ty__main.onChangeCheckInput(",crm_id,")' &gt;")]]  , value ="" } ,</td></tr>
+<tr><td class="ln">342</td><td class="code-line">    {show = true ,   key =  [[concat ( "&lt;button type='button' id='mdp_print_btn' style='float:left;'</td></tr>
+<tr><td class="ln">343</td><td class="code-line">      class='btn ty-btn-default core_btn btnforsubmit core_btn_submit_Form core_btn_revers_change ty-btn-ok' </td></tr>
+<tr><td class="ln">344</td><td class="code-line">      onclick='ty__main.send_sms(",crm_id,")'&gt;Send SMS&lt;/button&gt;")]]                		 , value = "" } ,</td></tr>
+<tr><td class="ln">345</td><td class="code-line">  };</td></tr>
+<tr><td class="ln">346</td><td class="code-line">  --   teamyar.write_log("ffcols6"..json.encode(cols))</td></tr>
+<tr><td class="ln">347</td><td class="code-line">  return cols</td></tr>
+<tr><td class="ln">348</td><td class="code-line">end</td></tr>
+<tr><td class="ln">349</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">350</td><td class="code-line">function getTableConfig_sum()</td></tr>
+<tr><td class="ln">351</td><td class="code-line">  teamyar.write_log("summ --")</td></tr>
+<tr><td class="ln">352</td><td class="code-line">  local columnsSelected = {};</td></tr>
+<tr><td class="ln">353</td><td class="code-line">  local select = "";</td></tr>
+<tr><td class="ln">354</td><td class="code-line">  local columns = getTableConfig();</td></tr>
+<tr><td class="ln">355</td><td class="code-line">  for i = 1, #columns , 1 do</td></tr>
+<tr><td class="ln">356</td><td class="code-line">    local itemColumns = columns[i];</td></tr>
+<tr><td class="ln">357</td><td class="code-line">    if itemColumns.key ~= nil and itemColumns.sum ~= nil and itemColumns.sum == true then</td></tr>
+<tr><td class="ln">358</td><td class="code-line">      table.insert(columnsSelected , itemColumns.key)</td></tr>
+<tr><td class="ln">359</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">360</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">361</td><td class="code-line">  for i = 1, #columnsSelected , 1 do</td></tr>
+<tr><td class="ln">362</td><td class="code-line">    local itemColumnsSelected = columnsSelected[i];</td></tr>
+<tr><td class="ln">363</td><td class="code-line">    select = select .."sum("..itemColumnsSelected..")"</td></tr>
+<tr><td class="ln">364</td><td class="code-line">    if i &lt; #columnsSelected   then</td></tr>
+<tr><td class="ln">365</td><td class="code-line">      select = select..",";</td></tr>
+<tr><td class="ln">366</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">367</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">368</td><td class="code-line">  return select;</td></tr>
+<tr><td class="ln">369</td><td class="code-line">end</td></tr>
+<tr><td class="ln">370</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">371</td><td class="code-line">function getTableConfig_select()</td></tr>
+<tr><td class="ln">372</td><td class="code-line">  local columnsSelected = {};</td></tr>
+<tr><td class="ln">373</td><td class="code-line">  local select = "";</td></tr>
+<tr><td class="ln">374</td><td class="code-line">  local columns = getTableConfig();</td></tr>
+<tr><td class="ln">375</td><td class="code-line">  for i = 1, #columns , 1 do</td></tr>
+<tr><td class="ln">376</td><td class="code-line">    local itemColumns = columns[i];</td></tr>
+<tr><td class="ln">377</td><td class="code-line">    if itemColumns.key ~= nil then</td></tr>
+<tr><td class="ln">378</td><td class="code-line">      table.insert(columnsSelected , itemColumns.key)</td></tr>
+<tr><td class="ln">379</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">380</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">381</td><td class="code-line">  for i = 1, #columnsSelected , 1 do</td></tr>
+<tr><td class="ln">382</td><td class="code-line">    local itemColumns = columnsSelected[i];</td></tr>
+<tr><td class="ln">383</td><td class="code-line">    select = select..itemColumns;</td></tr>
+<tr><td class="ln">384</td><td class="code-line">    if i &lt; #columns   then</td></tr>
+<tr><td class="ln">385</td><td class="code-line">      select = select.. ",";</td></tr>
+<tr><td class="ln">386</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">387</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">388</td><td class="code-line">  return select;</td></tr>
+<tr><td class="ln">389</td><td class="code-line">end</td></tr>
+<tr><td class="ln">390</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">391</td><td class="code-line">function getTableConfig_count()</td></tr>
+<tr><td class="ln">392</td><td class="code-line">  return "count(*)";</td></tr>
+<tr><td class="ln">393</td><td class="code-line">end</td></tr>
+<tr><td class="ln">394</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">395</td><td class="code-line">function getTableConfig_header()</td></tr>
+<tr><td class="ln">396</td><td class="code-line">  local headers = {};</td></tr>
+<tr><td class="ln">397</td><td class="code-line">  local totalHeader = getTableConfig();</td></tr>
+<tr><td class="ln">398</td><td class="code-line">  for i = 1, #totalHeader , 1 do</td></tr>
+<tr><td class="ln">399</td><td class="code-line">    local itemHeader = totalHeader[i];</td></tr>
+<tr><td class="ln">400</td><td class="code-line">    if itemHeader.show ~= nil and itemHeader.show == true then</td></tr>
+<tr><td class="ln">401</td><td class="code-line">      table.insert(headers ,itemHeader );</td></tr>
+<tr><td class="ln">402</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">403</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">404</td><td class="code-line">  return headers;</td></tr>
+<tr><td class="ln">405</td><td class="code-line">end</td></tr>
+<tr><td class="ln">406</td><td class="code-line">---------------------------------------------</td></tr>
+<tr><td class="ln">407</td><td class="code-line">function queryResultAcl(select_query,user_param)</td></tr>
+<tr><td class="ln">408</td><td class="code-line">  db.use_db("0000000")</td></tr>
+<tr><td class="ln">409</td><td class="code-line">  local params = {</td></tr>
+<tr><td class="ln">410</td><td class="code-line">    query = select_query,</td></tr>
+<tr><td class="ln">411</td><td class="code-line">    params = user_param</td></tr>
+<tr><td class="ln">412</td><td class="code-line">  }</td></tr>
+<tr><td class="ln">413</td><td class="code-line">  db.query(params);</td></tr>
+<tr><td class="ln">414</td><td class="code-line">  local res_text={};</td></tr>
+<tr><td class="ln">415</td><td class="code-line">  local record={};</td></tr>
+<tr><td class="ln">416</td><td class="code-line">  while db.query_fetch(record) do</td></tr>
+<tr><td class="ln">417</td><td class="code-line">    local tmp=record;</td></tr>
+<tr><td class="ln">418</td><td class="code-line">    table.insert(res_text, {id = record[1], name = record[2], type =1});</td></tr>
+<tr><td class="ln">419</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">420</td><td class="code-line">  db.query_free();</td></tr>
+<tr><td class="ln">421</td><td class="code-line">  return res_text;</td></tr>
+<tr><td class="ln">422</td><td class="code-line">end</td></tr>
+<tr><td class="ln">423</td><td class="code-line">----------------------</td></tr>
+<tr><td class="ln">424</td><td class="code-line">function catAcl(data)</td></tr>
+<tr><td class="ln">425</td><td class="code-line">  local section_id = data.section;</td></tr>
+<tr><td class="ln">426</td><td class="code-line">  local query_param = [[ select c.PROFILE_ID ,concat(s.SECTION_NAME,'/',c.name) from crm_classify_person c inner join crm_section s on s.id=c.section_id  ]]</td></tr>
+<tr><td class="ln">427</td><td class="code-line">  if data.search ~= nil and #data.search &gt; 0 then</td></tr>
+<tr><td class="ln">428</td><td class="code-line">    query_param = query_param..[[  and c.name like N'%]]..data.search..[[%'  or  s.SECTION_NAME like N'%]]..data.search..[[%'  ]]</td></tr>
+<tr><td class="ln">429</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">430</td><td class="code-line">  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   </td></tr>
+<tr><td class="ln">431</td><td class="code-line">  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));</td></tr>
+<tr><td class="ln">432</td><td class="code-line">end</td></tr>
+<tr><td class="ln">433</td><td class="code-line">----------------------</td></tr>
+<tr><td class="ln">434</td><td class="code-line">function crmAcl(data)</td></tr>
+<tr><td class="ln">435</td><td class="code-line">  local org_id = data.org_id;</td></tr>
+<tr><td class="ln">436</td><td class="code-line">  local query_param = [[ select id,name from pa_client where org_id=]]..org_id</td></tr>
+<tr><td class="ln">437</td><td class="code-line">  if data.search ~= nil and #data.search &gt; 0 then</td></tr>
+<tr><td class="ln">438</td><td class="code-line">    query_param = query_param..[[  and name like N'%]]..data.search..[[%'  or  id like N'%]]..data.search..[[%'  ]]</td></tr>
+<tr><td class="ln">439</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">440</td><td class="code-line">  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   </td></tr>
+<tr><td class="ln">441</td><td class="code-line">  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));</td></tr>
+<tr><td class="ln">442</td><td class="code-line">end</td></tr>
+<tr><td class="ln">443</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">444</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">445</td><td class="code-line">----------------------</td></tr>
+<tr><td class="ln">446</td><td class="code-line">function ctypeAcl(data)</td></tr>
+<tr><td class="ln">447</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">448</td><td class="code-line">  local table = {</td></tr>
+<tr><td class="ln">449</td><td class="code-line">    {id =3,name=translateWord("REAL")},</td></tr>
+<tr><td class="ln">450</td><td class="code-line">    {id =4,name=translateWord("LEGAL")},</td></tr>
+<tr><td class="ln">451</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">452</td><td class="code-line">  }</td></tr>
+<tr><td class="ln">453</td><td class="code-line">  teamyar.write_result(json.encode(table));</td></tr>
+<tr><td class="ln">454</td><td class="code-line">end </td></tr>
+<tr><td class="ln">455</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">456</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">457</td><td class="code-line">--- Report</td></tr>
+<tr><td class="ln">458</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">459</td><td class="code-line">function report()</td></tr>
+<tr><td class="ln">460</td><td class="code-line">  local data= getTableSectionOne()</td></tr>
+<tr><td class="ln">461</td><td class="code-line">  local report = {</td></tr>
+<tr><td class="ln">462</td><td class="code-line">    {</td></tr>
+<tr><td class="ln">463</td><td class="code-line">      name = "table" ,</td></tr>
+<tr><td class="ln">464</td><td class="code-line">      title = "table" ,</td></tr>
+<tr><td class="ln">465</td><td class="code-line">      report = data</td></tr>
+<tr><td class="ln">466</td><td class="code-line">    }</td></tr>
+<tr><td class="ln">467</td><td class="code-line">  }</td></tr>
+<tr><td class="ln">468</td><td class="code-line">  return report;</td></tr>
+<tr><td class="ln">469</td><td class="code-line">end</td></tr>
+<tr><td class="ln">470</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">471</td><td class="code-line">function getTableSectionOne()</td></tr>
+<tr><td class="ln">472</td><td class="code-line">  local repId = getInput("rep_id");</td></tr>
+<tr><td class="ln">473</td><td class="code-line">  local headers = getTableConfig_header();</td></tr>
+<tr><td class="ln">474</td><td class="code-line">  local from = getInput("page");</td></tr>
+<tr><td class="ln">475</td><td class="code-line">  local values  = getData(_QUERY_TYPE._TYPE_PAGE_REPORT , from , _PAR_PAGE);</td></tr>
+<tr><td class="ln">476</td><td class="code-line">  local total  = getData(_QUERY_TYPE._TYPE_TOTAL_COUNT);</td></tr>
+<tr><td class="ln">477</td><td class="code-line">  --local sums  = getData(_QUERY_TYPE._TYPE_TOTAL_SUM , from , _PAR_PAGE);</td></tr>
+<tr><td class="ln">478</td><td class="code-line">  return install_res.resTable(repId , headers , values  , total , _PAR_PAGE , from,sums );</td></tr>
+<tr><td class="ln">479</td><td class="code-line">end</td></tr>
+<tr><td class="ln">480</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">481</td><td class="code-line">--- excel</td></tr>
+<tr><td class="ln">482</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">483</td><td class="code-line">function excel()</td></tr>
+<tr><td class="ln">484</td><td class="code-line">  local excelFileName = getInput("excel_file_name");</td></tr>
+<tr><td class="ln">485</td><td class="code-line">  local excelFormPage = getInput("excel_from_page");</td></tr>
+<tr><td class="ln">486</td><td class="code-line">  local excelToPage = getInput("excel_to_page");</td></tr>
+<tr><td class="ln">487</td><td class="code-line">  local excelPerPage = getInput("excel_per_page");</td></tr>
+<tr><td class="ln">488</td><td class="code-line">  local headers = getTableConfig_header();</td></tr>
+<tr><td class="ln">489</td><td class="code-line">  local values = getData(_QUERY_TYPE._TYPE_PAGE_EXCEL ,  excelFormPage , excelPerPage , excelToPage)</td></tr>
+<tr><td class="ln">490</td><td class="code-line">  return install_res.resExcel( headers , values , excelFileName);</td></tr>
+<tr><td class="ln">491</td><td class="code-line">end</td></tr>
+<tr><td class="ln">492</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">493</td><td class="code-line">--- print</td></tr>
+<tr><td class="ln">494</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">495</td><td class="code-line">function print()</td></tr>
+<tr><td class="ln">496</td><td class="code-line">  local headers = getTableConfig_header();</td></tr>
+<tr><td class="ln">497</td><td class="code-line">  local values = getData(_QUERY_TYPE._TYPE_PAGE_PRINT)</td></tr>
+<tr><td class="ln">498</td><td class="code-line">  return install_res.resPrint( headers , values);</td></tr>
+<tr><td class="ln">499</td><td class="code-line">end</td></tr>
+<tr><td class="ln">500</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">501</td><td class="code-line">--- manager</td></tr>
+<tr><td class="ln">502</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">503</td><td class="code-line">function confirmTodo(tid)</td></tr>
+<tr><td class="ln">504</td><td class="code-line">  teamyar.write_log("tttttttt---"..tid)</td></tr>
+<tr><td class="ln">505</td><td class="code-line">  local js={confirm=1}</td></tr>
+<tr><td class="ln">506</td><td class="code-line">  local info =	{</td></tr>
+<tr><td class="ln">507</td><td class="code-line">    id= tid,</td></tr>
+<tr><td class="ln">508</td><td class="code-line">    type= 5,</td></tr>
+<tr><td class="ln">509</td><td class="code-line">    form_data=json.encode(js)</td></tr>
+<tr><td class="ln">510</td><td class="code-line">  }</td></tr>
+<tr><td class="ln">511</td><td class="code-line">  teamyar.write_log(json.encode(info))</td></tr>
+<tr><td class="ln">512</td><td class="code-line">  local   res = teamyar.call_api(8, '/api/todo/customform/update', info);</td></tr>
+<tr><td class="ln">513</td><td class="code-line">  teamyar.write_log(json.encode(res))</td></tr>
+<tr><td class="ln">514</td><td class="code-line">  return json.encode(res)</td></tr>
+<tr><td class="ln">515</td><td class="code-line">end</td></tr>
+<tr><td class="ln">516</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">517</td><td class="code-line">function getAclOrg(data)</td></tr>
+<tr><td class="ln">518</td><td class="code-line">  local query_param = [[  select id,name from org_info ]]</td></tr>
+<tr><td class="ln">519</td><td class="code-line">  if data.search ~= nil and #data.search &gt; 0 then</td></tr>
+<tr><td class="ln">520</td><td class="code-line">    query_param = query_param..[[  where name like N'%]]..data.search..[[%' ]]</td></tr>
+<tr><td class="ln">521</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">522</td><td class="code-line">  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   </td></tr>
+<tr><td class="ln">523</td><td class="code-line">  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));</td></tr>
+<tr><td class="ln">524</td><td class="code-line">end</td></tr>
+<tr><td class="ln">525</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">526</td><td class="code-line">-------------------------------------------</td></tr>
+<tr><td class="ln">527</td><td class="code-line">function queryResultcrm(select_query,user_param)</td></tr>
+<tr><td class="ln">528</td><td class="code-line">  db.use_db("0000000")</td></tr>
+<tr><td class="ln">529</td><td class="code-line">  local params = {</td></tr>
+<tr><td class="ln">530</td><td class="code-line">    query = select_query,</td></tr>
+<tr><td class="ln">531</td><td class="code-line">    params = user_param</td></tr>
+<tr><td class="ln">532</td><td class="code-line">  }</td></tr>
+<tr><td class="ln">533</td><td class="code-line">  db.query(params);</td></tr>
+<tr><td class="ln">534</td><td class="code-line">  local res_text = {};</td></tr>
+<tr><td class="ln">535</td><td class="code-line">  local record = {};</td></tr>
+<tr><td class="ln">536</td><td class="code-line">  while db.query_fetch(record) do</td></tr>
+<tr><td class="ln">537</td><td class="code-line">    table.insert(res_text, {name = record[1], farsidate = record[2], gender = record[3]});</td></tr>
+<tr><td class="ln">538</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">539</td><td class="code-line">  db.query_free();</td></tr>
+<tr><td class="ln">540</td><td class="code-line">  return res_text;</td></tr>
+<tr><td class="ln">541</td><td class="code-line">end</td></tr>
+<tr><td class="ln">542</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">543</td><td class="code-line">function sendSms(crm_id,segment,box_id,txt)</td></tr>
+<tr><td class="ln">544</td><td class="code-line">  local res_str=""</td></tr>
+<tr><td class="ln">545</td><td class="code-line">  local q = [[select p.fullname,(select jndate from report_dimdate where ]]..currentdate..[[ </td></tr>
+<tr><td class="ln">546</td><td class="code-line">  between datekey and datekey+(60*60*24*10000000)-(60*10000000)) dd,(case when uf.sex=2 then 'خانم' else 'آقا' end) gender </td></tr>
+<tr><td class="ln">547</td><td class="code-line">  from profile_main p inner join profile_user_info uf on uf.id=p.id where p.id=]]..crm_id</td></tr>
+<tr><td class="ln">548</td><td class="code-line">  teamyar.write_log(q)</td></tr>
+<tr><td class="ln">549</td><td class="code-line">  local data = queryResultcrm(q, {})</td></tr>
+<tr><td class="ln">550</td><td class="code-line">    teamyar.write_log(json.encode(data))</td></tr>
+<tr><td class="ln">551</td><td class="code-line">  txt = string.gsub(txt, "{{name}}", data[1].name);</td></tr>
+<tr><td class="ln">552</td><td class="code-line">  txt = string.gsub(txt, "{{date}}", data[1].farsidate);</td></tr>
+<tr><td class="ln">553</td><td class="code-line">  txt = string.gsub(txt, "{{gender}}", data[1].gender);</td></tr>
+<tr><td class="ln">554</td><td class="code-line">  local info =	{box_id = box_id,messages = {{content = txt, send_to = {profile_ids = {crm_id}}}}, module_id = 26}</td></tr>
+<tr><td class="ln">555</td><td class="code-line">  teamyar.write_log("info----"..json.encode(info))</td></tr>
+<tr><td class="ln">556</td><td class="code-line">  local   res = teamyar.call_api(16, '/api/sms/send', info);</td></tr>
+<tr><td class="ln">557</td><td class="code-line">  teamyar.write_log("res----"..json.encode(res))</td></tr>
+<tr><td class="ln">558</td><td class="code-line">  if res.success ==true then </td></tr>
+<tr><td class="ln">559</td><td class="code-line">    res_str="&lt;div style='color:green;'&gt;".."ارسال پیامک برای کاربر :  "..crm_id.." ،  شناسه پیامک :"..res.data.message_ids[1].."&lt;/div&gt;"</td></tr>
+<tr><td class="ln">560</td><td class="code-line">  else </td></tr>
+<tr><td class="ln">561</td><td class="code-line">    res_str="&lt;div style='color:red;'&gt;".."خطا در ارسال پیامک :  "..res.error.message.."&lt;div&gt;"</td></tr>
+<tr><td class="ln">562</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">563</td><td class="code-line">  end </td></tr>
+<tr><td class="ln">564</td><td class="code-line">  return res_str</td></tr>
+<tr><td class="ln">565</td><td class="code-line">end</td></tr>
+<tr><td class="ln">566</td><td class="code-line">------------</td></tr>
+<tr><td class="ln">567</td><td class="code-line">function split(str, delimiter)</td></tr>
+<tr><td class="ln">568</td><td class="code-line">  local result = {}</td></tr>
+<tr><td class="ln">569</td><td class="code-line">  local pattern = "(.-)" .. delimiter .. "()"</td></tr>
+<tr><td class="ln">570</td><td class="code-line">  local lastPos = 1</td></tr>
+<tr><td class="ln">571</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">572</td><td class="code-line">  for part, pos in string.gmatch(str .. delimiter, pattern) do</td></tr>
+<tr><td class="ln">573</td><td class="code-line">    table.insert(result, part)</td></tr>
+<tr><td class="ln">574</td><td class="code-line">    lastPos = pos</td></tr>
+<tr><td class="ln">575</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">576</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">577</td><td class="code-line">  return result</td></tr>
+<tr><td class="ln">578</td><td class="code-line">end</td></tr>
+<tr><td class="ln">579</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">580</td><td class="code-line">local type = getInput("type");</td></tr>
+<tr><td class="ln">581</td><td class="code-line">if type ~= nil and type == 100 then</td></tr>
+<tr><td class="ln">582</td><td class="code-line">  local result = report()</td></tr>
+<tr><td class="ln">583</td><td class="code-line">  teamyar.write_result(json.encode(result));</td></tr>
+<tr><td class="ln">584</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">585</td><td class="code-line">elseif type ~= nil and type == 9 then</td></tr>
+<tr><td class="ln">586</td><td class="code-line">  catAcl(teamyar.get_input().data)  </td></tr>
+<tr><td class="ln">587</td><td class="code-line">elseif type ~= nil and type == 8 then</td></tr>
+<tr><td class="ln">588</td><td class="code-line">  ctypeAcl(teamyar.get_input().data)</td></tr>
+<tr><td class="ln">589</td><td class="code-line">elseif type ~= nil and type == 7 then</td></tr>
+<tr><td class="ln">590</td><td class="code-line">  crmAcl(teamyar.get_input().data)</td></tr>
+<tr><td class="ln">591</td><td class="code-line">elseif type ~= nil and type == 6 then</td></tr>
+<tr><td class="ln">592</td><td class="code-line">  getAclOrg(teamyar.get_input().data)</td></tr>
+<tr><td class="ln">593</td><td class="code-line">elseif type ~= nil and type == 10 then</td></tr>
+<tr><td class="ln">594</td><td class="code-line">  local input = teamyar.get_input()</td></tr>
+<tr><td class="ln">595</td><td class="code-line">  local res_str = sendSms(input.data.crm_id,input.data.segment,input.data.box_id, input.data.txt)</td></tr>
+<tr><td class="ln">596</td><td class="code-line">  local res_data = {msg = res_str}</td></tr>
+<tr><td class="ln">597</td><td class="code-line">  teamyar.write_result(json.encode(res_data))</td></tr>
+<tr><td class="ln">598</td><td class="code-line">elseif type ~= nil and type == 11 then</td></tr>
+<tr><td class="ln">599</td><td class="code-line">  local input = teamyar.get_input()</td></tr>
+<tr><td class="ln">600</td><td class="code-line">  local data = input.data</td></tr>
+<tr><td class="ln">601</td><td class="code-line">  local crms = split(data.crms, ',')</td></tr>
+<tr><td class="ln">602</td><td class="code-line">  local res_str = ""</td></tr>
+<tr><td class="ln">603</td><td class="code-line">  local count_send = 0</td></tr>
+<tr><td class="ln">604</td><td class="code-line">  for i,v in ipairs (crms) do </td></tr>
+<tr><td class="ln">605</td><td class="code-line">    local crm_id_in = string.sub(v, 0, #v-3)</td></tr>
+<tr><td class="ln">606</td><td class="code-line">    local segment_in = string.sub(v, #v-3, #v)</td></tr>
+<tr><td class="ln">607</td><td class="code-line">    sendSms(crm_id_in, segment_in, data.box_id, data.txt)</td></tr>
+<tr><td class="ln">608</td><td class="code-line">    count_send = count_send+1</td></tr>
+<tr><td class="ln">609</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">610</td><td class="code-line">  res_str = " تعداد  "..count_send.." پیامک ارسال شد ."</td></tr>
+<tr><td class="ln">611</td><td class="code-line">  local res_data={msg=res_str}</td></tr>
+<tr><td class="ln">612</td><td class="code-line">  teamyar.write_result(json.encode(res_data))</td></tr>
+<tr><td class="ln">613</td><td class="code-line">elseif type ~= nil and type == 101 then</td></tr>
+<tr><td class="ln">614</td><td class="code-line">  local result = excel()</td></tr>
+<tr><td class="ln">615</td><td class="code-line">  teamyar.write_result(json.encode(result));</td></tr>
+<tr><td class="ln">616</td><td class="code-line">elseif type ~= nil and type == 102 then</td></tr>
+<tr><td class="ln">617</td><td class="code-line">  local result = print()</td></tr>
+<tr><td class="ln">618</td><td class="code-line">  teamyar.write_result(json.encode(result));</td></tr>
+<tr><td class="ln">619</td><td class="code-line">else</td></tr>
+<tr><td class="ln">620</td><td class="code-line">  local responseResReport = install_res.resReport(getTableConfig());</td></tr>
+<tr><td class="ln">621</td><td class="code-line">  teamyar.write_result(responseResReport);</td></tr>
+<tr><td class="ln">622</td><td class="code-line">end</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="note">
+    این صفحه فقط برای مشاهده و کپی کد است — چیزی از اینجا اجرا یا ذخیره نمی‌شود.
+  </footer>
+</div>
+
+<textarea id="raw-source" readonly>﻿-- تحلیل و ایجاد توسط سینا مقدم 09121011778
+-- Last Edit = 1405/05/27 01:47
+
+-- botName = Sum Workdays And Sales Params
+-- creator = zmo
+-- date = 02/25/2025
+-- version= 1.4 (فیلتر سازمان + alias/joinهای مرده + مرتب‌سازی کل دیتاست + فیلتر بازهٔ درآمد)
+--
+-- تغییرات این نسخه (طبق درخواست کاربر، فقط ۳ باگ زیر؛ بقیهٔ کد عیناً بات ۵۰۱ باقی مانده):
+--   ۱و۳) ستون‌های R/F/M و فرمول سگمنت: f_nummber/m_nummber هر دو به‌اشتباه از cdata.rnumber
+--        خوانده می‌شدند (کپی/پیست) — یعنی وزن ورودی F و M همیشه نادیده گرفته می‌شد و fd/md/rfm/segment
+--        همه فقط با وزن R محاسبه می‌شدند، نه با اعدادی که واقعاً برای F و M وارد شده بود. اصلاح شد:
+--        هرکدام از فیلد پیکربندی خودش (cdata.fnumber / cdata.mnumber) می‌خواند.
+--   ۲) Monetary/Frequency/Days فیلتر تاریخ را نادیده می‌گرفتند: چون data.txt نوع datef/datet را
+--      "number" declare کرده، مقدار ست‌نشده را خود فریم‌ورک بی‌صدا به 0 تبدیل می‌کند (نه nil) —
+--      چک قبلی فقط "== nil" بود که هرگز true نمی‌شد، پس {{datef}}/{{datet}} با 0 (معادل تاریخ
+--      سال ۱۶۰۱ میلادی/شروع FILETIME) جایگزین می‌شد و بازهٔ "between 0 and {{datet}}" عملاً کل
+--      تاریخچهٔ فاکتورها را می‌گرفت. اصلاح شد: "&lt;= 0" هم چک می‌شود و پیش‌فرض به «امروز» تغییر کرد
+--      (بدون فیلتر انتخابی، بازهٔ خالی/تقریباً خالی نشان می‌دهد که سیگنال واضحی است، نه کل تاریخچه
+--      به‌شکل گمراه‌کننده). همین اصلاح روی بات ۶۰۰ تأیید شده است.
+--   ۴) مبنای Recency/Days (طبق تأیید کاربر پس از مشورت): قبلاً همیشه با «امروز» واقعی سیستم حساب
+--      می‌شد، حتی وقتی کاربر بازهٔ تاریخی گذشته را فیلتر کرده بود. اصلاح شد که مبنا «انتهای بازهٔ
+--      فیلترشده» (datet) باشد — چون datet خودش وقتی خالی است پیش‌فرض «امروز» می‌گیرد (بند ۲)، رفتار
+--      حالت بدون فیلتر تغییری نمی‌کند.
+--
+-- تغییرات این نسخه (۱۴۰۵/۰۵/۲۷ — دور دوم، طبق درخواست بعدی کاربر):
+--   ۵) فیلتر «سازمان» اصلاح شد: data.js فیلد ACL سازمان را با name="org" ارسال می‌کند ولی
+--      data.txt فقط کلید "org_id" را declare کرده بود؛ چون getInput فقط کلیدهای declare‌شده در
+--      data.txt را می‌خواند، getInput("org") همیشه خالی برمی‌گشت و فیلتر سازمان همیشه نادیده گرفته
+--      می‌شد (این کد Lua از اول روی "org" درست بود). کلید data.txt به "org" تغییر کرد (پیوست جدا
+--      فرستاده شد، چون آپلود پیوست از راه API ممکن نیست). ورودی «crm» هم به همین بیماری دچار بود
+--      (در data.js با name="crm" ارسال می‌شود ولی اصلاً در data.txt declare نشده بود) — همان‌جا
+--      کلید "crm" هم اضافه شد.
+--   ۶) دو باگ کد مردهٔ دیگر که موقع بررسی فیلتر سازمان دیده شد: فیلتر "cat" به alias نامعتبر
+--      c.id ارجاع می‌داد (در FROM فقط alias «p» برای pa_client هست) — اصلاح شد به p.id. فیلتر
+--      "ctype"/"crm" به ui.USER_TYPE ارجاع می‌داد بدون اینکه profile_user_info جایی با alias ui
+--      join شده باشد — LEFT JOIN profile_user_info ui ON ui.id = p.REFFERE_ID به پیوست
+--      query_list_invoice.txt اضافه شد. مقادیر id همهٔ فیلترهای ACL (cat/ctype/crm/org) هم قبل
+--      از concat با tonumber() اعتبارسنجی می‌شوند.
+--   ۷) مرتب‌سازی روی کل دیتاست (نه فقط صفحهٔ فعلی): چون $.Teamyar.table() یک ویجت هسته‌ای پلتفرم
+--      است (نه چیزی در attachment این بات)، کلیک-روی-ستون واقعی قابل اضافه‌کردن امن نیست؛ به‌جایش
+--      دو ورودی جدید sort_key/sort_dir به فرم فیلتر اضافه شد (کنار تاریخ/سازمان/...، از طبق کاربر
+--      برای Excel/Report/Print) — این‌ها ORDER BY را مستقیماً داخل خودِ کوئری SQL عوض می‌کنند
+--      (قبل از LIMIT/OFFSET صفحه‌بندی)، پس کل دیتاست مرتب می‌شود نه فقط ردیف‌های همان صفحه. کلید
+--      sort_key فقط از یک whitelist ثابت (_SORT_COLUMNS) عبور می‌کند — هرگز مستقیم داخل SQL
+--      نمی‌رود؛ خالی/نامعتبر = رفتار پیش‌فرض قبلی (order by rfm desc).
+--
+-- تغییرات این نسخه (۱۴۰۵/۰۵/۲۷ — دور سوم، طبق درخواست بعدی کاربر):
+--   ۸) فیلتر «بازهٔ درآمد» (Monetary min/max) اضافه شد: دو ورودی جدید monetary_min/monetary_max
+--      به فرم فیلتر اضافه شدند. چون Monetary یک sum() تجمیعی به‌ازای هر مشتری است (نه ستون خام هر
+--      فاکتور)، فیلترش با HAVING روی CTE «crm_factor» پیاده شد نه WHERE (در HAVING، برخلاف WHERE،
+--      ارجاع به alias ستون Monetary مجاز است). چون این فیلتر قبل از محاسبهٔ ntile (رتبهٔ R/F/M) در
+--      CTE بعدی اعمال می‌شود، مثل بقیهٔ فیلترها (سازمان/رده/...) رتبه‌ها هم فقط نسبت به همان
+--      زیرمجموعهٔ فیلترشده حساب می‌شوند — نه فیلتر پس از رتبه‌بندی روی کل مشتریان. مقادیر با
+--      tonumber() اعتبارسنجی می‌شوند و هرکدام که خالی/نامعتبر باشد نادیده گرفته می‌شود (نه خطا).
+
+--
+--------------------------------------------
+--- CONFIG DATA
+--------------------------------------------
+local day = time.get_day(time.current());
+local month = time.get_month(time.current());
+local year = time.get_year(time.current());
+local hour = time.get_hour(time.current());
+local min = time.get_minute (time.current());
+local sec = time.get_second(time.current());
+local currentdate_time = time.get_filetime([[{"year":]]..year..[[,"month":]]..month..[[,"day":]]..day..[[,"hour":]]..hour..[[,"minute":]]..min..[[,"second":]]..sec..[[}]])
+local temp_time = time.get_filetime([[{"year":]]..year..[[,"month":]]..month..[[,"day":]]..day..[[,"hour":0,"minute":0,"second":0}]])
+local currentdate = string.format("%18.0f" ,temp_time);
+----------------------------
+local _PAR_PAGE = 25
+local _QUERY_TYPE = {
+  _TYPE_TOTAL_SUM = 1 ,
+  _TYPE_TOTAL_COUNT = 2 ,
+  _TYPE_PAGE_REPORT = 3 ,
+  _TYPE_PAGE_EXCEL = 4 ,
+  _TYPE_PAGE_PRINT = 5 ,
+}
+-- مرتب‌سازی کل دیتاست (نه فقط صفحهٔ نمایش‌داده‌شده): چون ORDER BY داخل خودِ کوئری SQL اعمال
+-- می‌شود (قبل از LIMIT/OFFSET صفحه‌بندی)، خروجی صفحه/اکسل/پرینت هر سه روی کل نتایج فیلترشده
+-- مرتب می‌شوند. کلید ورودی sort_key فقط باید یکی از کلیدهای زیر باشد (whitelist — هرگز مستقیم
+-- داخل SQL قرار نمی‌گیرد)؛ برای Customer از ستون خام (بدون تگ &lt;a&gt;) مرتب می‌شود چون ستون نمایشی
+-- Customer با لینک HTML پیچیده شده و مرتب‌سازی متنی روی آن اشتباه بود. "segment" چون از rfm
+-- مشتق می‌شود، بر اساس همان rfm مرتب می‌شود (هم‌ترازِ منطقی سگمنت‌ها).
+local _SORT_COLUMNS = {
+  Customer   = "CustomerSort",
+  Days       = "Days",
+  LastRunDate= "LastRunDate",
+  Frequency  = "Frequency",
+  Monetary   = "Monetary",
+  rd         = "rd",
+  fd         = "fd",
+  md         = "md",
+  rfm        = "rfm",
+  segment    = "rfm",
+}
+-------------------------------------------
+--- install [RES]
+--------------------------------------------
+local _BAT_RES_PATH = "2/res_v2";
+function readyCodes()
+  local data = teamyar.get_input();
+  data["res_type"] = "codes"
+  data["config"] = json.decode(teamyar.get_attachment("data.txt"))
+  local responseRes = teamyar.run_command(_BAT_RES_PATH , data);
+  if responseRes ~= nil then
+    responseRes = json.decode(responseRes)
+    for i = 1 , #responseRes, 1 do
+      local loadedFunction, errorMessage = load(responseRes[i])
+      if loadedFunction then
+        loadedFunction();
+      else
+        teamyar.write_log("Error: " .. errorMessage);
+      end
+    end
+  end
+end
+readyCodes();
+--------------------------------------------
+--- data
+--------------------------------------------
+function getData(queryType , pageFrom , perPage , pageTo )
+  ---- init Query
+  local dataQuery = {
+    query = teamyar.get_attachment("query_list_invoice.txt") ,
+    params = {}
+  };
+  ---- Select
+  local config = teamyar.get_config()
+  local cdata={}
+  local r_nummber = 0
+  local f_nummber = 0
+  local m_nummber = 0
+  local c_count_out = 0
+
+  if config ~= nil then 
+    cdata = config.data
+
+    -- باگ اصلاح‌شده: قبلاً f_nummber/m_nummber هم از cdata.rnumber می‌خواندند (کپی/پیست) —
+    -- ستون‌های F/M و فرمول سگمنت واقعاً از اعداد ورودی F/M استفاده نمی‌کردند.
+    r_nummber = cdata.rnumber
+    f_nummber = cdata.fnumber
+    m_nummber = cdata.mnumber
+
+  end
+ -- teamyar.write_log(c_box_id.."uuuuu")
+
+
+  local user_info = teamyar.get_user_info()
+  local time_zone = user_info.timezone
+  local ctype = getInput("ctype");
+  local cat = getInput("cat");
+  local crm = getInput("crm");
+  local org = getInput("org");
+  local datef = getInput("datef");
+  local datet = getInput("datet");
+  local sort_key = getInput("sort_key");
+  local sort_dir = getInput("sort_dir");
+  local monetary_min = getInput("monetary_min");
+  local monetary_max = getInput("monetary_max");
+  local qs = getQuery_select(queryType)
+  local inp = teamyar.get_input()
+  ---- invoice Filter
+  local where_str=" 1=1 "
+  dataQuery.query , dataQuery.params  = queryTools.where:init({where_str})
+  -- :addIn("ORG_ID", org)
+
+
+  .run( dataQuery.query ,  dataQuery.params , "{{whereInvoice}}");
+  local where_op_transfer = ""
+
+  ---- page Number Query
+  dataQuery.query = string.gsub(dataQuery.query,"{{slicePageNumber}}", getQuery_page(queryType , pageFrom , perPage , pageTo));
+  dataQuery.query = string.gsub(dataQuery.query,"{{select}}",qs);
+
+  local where_cat = ""
+  local where_ctype= ""
+  local where_crm= ""
+  local where_org = ""
+  -- باگ اصلاح‌شده: فیلتر "cat" به alias نامعتبر c.id ارجاع می‌داد — در FROM پیوست SQL فقط
+  -- alias «p» برای pa_client وجود دارد (c.id هیچ‌جا تعریف نشده، کد مرده/همیشه با خطا می‌شکست).
+  -- + مقدار id قبل از concat با tonumber() اعتبارسنجی می‌شود (اگر عددی نبود، فیلتر نادیده گرفته
+  -- می‌شود به‌جای اینکه کوئری با متن نامعتبر بشکند).
+  if cat ~= nil and cat[1] ~= nil and tonumber(cat[1].id) ~= nil then
+    where_cat = where_cat.. [[ and p.id in (select CLIENT_ID from crm_cross where REFERE_ID =]]..tonumber(cat[1].id)..[[ )]]
+  end
+  -- فیلتر "ctype"/"crm" نیازمند LEFT JOIN profile_user_info ui ON ui.id = p.REFFERE_ID در پیوست
+  -- query_list_invoice.txt است (کد مرده بدون آن) — این join به پیوست اضافه شد.
+  if ctype ~= nil and ctype[1] ~= nil and tonumber(ctype[1].id) ~= nil then
+    where_ctype = where_ctype.. [[ and ui.USER_TYPE=]]..tonumber(ctype[1].id)
+  end
+
+  if crm ~= nil and crm[1] ~= nil and tonumber(crm[1].id) ~= nil then
+    where_crm = where_crm.. [[ and ui.USER_TYPE=]]..tonumber(crm[1].id)
+  end
+  if org ~= nil and org[1] ~= nil and tonumber(org[1].id) ~= nil then
+    -- باگ اصلاح‌شده (فیلتر سازمان): data.js فیلد را با name="org" می‌فرستد ولی data.txt فقط
+    -- "org_id" را declare کرده بود -&gt; getInput("org") همیشه خالی برمی‌گشت. کلید data.txt به
+    -- "org" تغییر کرد (پیوست جدا). کد Lua از قبل روی "org" درست بود، دست‌نخورده ماند.
+    where_org = where_org.. [[ and s.org_id=]]..tonumber(org[1].id)..[[ and p.org_id=]]..tonumber(org[1].id)
+  end
+  ---- فیلتر «بازهٔ درآمد» (Monetary min/max): چون Monetary یک sum() تجمیعی به‌ازای هر مشتری است
+  ---- (نه ستون خام هر فاکتور)، فیلترش باید با HAVING روی همان CTE crm_factor باشد نه WHERE — در
+  ---- HAVING، برخلاف WHERE، ارجاع به alias ستون‌های SELECT (اینجا Monetary) در MySQL مجاز است.
+  ---- با HAVING به‌جای فیلتر روی نتیجهٔ نهایی: جمعیت مشتریان قبل از محاسبهٔ ntile (رتبهٔ R/F/M)
+  ---- محدود می‌شود، یعنی رتبه‌ها هم‌مثل فیلترهای سازمان/رده فقط نسبت به همین زیرمجموعه حساب می‌شوند
+  ---- (سازگار با رفتار بقیهٔ فیلترها). مقادیر با tonumber() اعتبارسنجی می‌شوند.
+  local where_monetary = ""
+  if tonumber(monetary_min) ~= nil then
+    where_monetary = where_monetary.. [[ and Monetary &gt;= ]]..tonumber(monetary_min)
+  end
+  if tonumber(monetary_max) ~= nil then
+    where_monetary = where_monetary.. [[ and Monetary &lt;= ]]..tonumber(monetary_max)
+  end
+  -- باگ اصلاح‌شده: data.txt نوع datef/datet را "number" declare کرده، پس مقدار نامعتبر/خالی را
+  -- خود فریم‌ورک بی‌صدا به 0 تبدیل می‌کند نه nil — چک تنها "== nil" هرگز true نمی‌شد، در نتیجه
+  -- "between 0 and {{datet}}" عملاً کل تاریخچهٔ فاکتورها را برمی‌گرداند (نه فقط بازهٔ انتخابی).
+  -- با "&lt;= 0" هم مقدار nil‌شده و هم صفرشده گرفته می‌شود؛ پیش‌فرض به «امروز» تغییر کرد.
+  if tonumber(datet) == nil or tonumber(datet) &lt;= 0 then
+    datet = currentdate
+  end
+  if tonumber(datef) == nil or tonumber(datef) &lt;= 0 then
+    datef = currentdate
+  end
+  dataQuery.query = string.gsub(dataQuery.query,"{{datet}}",datet);
+  dataQuery.query = string.gsub(dataQuery.query,"{{datef}}",datef);
+  -- طبق تأیید کاربر: مبنای Recency/Days باید «انتهای بازهٔ فیلترشده» (datet) باشد، نه امروز واقعی —
+  -- وقتی فیلتر خالی است datet خودش پیش‌فرض «امروز» گرفته (فیکس بالا)، پس رفتار بدون فیلتر عوض نمی‌شود؛
+  -- وقتی بازهٔ گذشته فیلتر شود (مثلاً کل سال ۱۴۰۴)، Days نسبت به پایان همان بازه حساب می‌شود نه امروز.
+  dataQuery.query = string.gsub(dataQuery.query,"{{current_date}}",datet);
+  dataQuery.query = string.gsub(dataQuery.query,"{{where_cat}}",where_cat);
+  dataQuery.query = string.gsub(dataQuery.query,"{{where_crm}}",where_crm);
+  dataQuery.query = string.gsub(dataQuery.query,"{{where_ctype}}",where_ctype);
+  dataQuery.query = string.gsub(dataQuery.query,"{{where_org}}",where_org);
+  dataQuery.query = string.gsub(dataQuery.query,"{{where_monetary}}",where_monetary);
+  dataQuery.query = string.gsub(dataQuery.query,"{{r_number}}",r_nummber);
+    dataQuery.query = string.gsub(dataQuery.query,"{{f_number}}",f_nummber);
+ dataQuery.query = string.gsub(dataQuery.query,"{{m_number}}",m_nummber);
+
+  ---- مرتب‌سازی کل دیتاست: sort_key/sort_dir همیشه از whitelist بالا عبور می‌کنند، هرگز مستقیم
+  ---- (raw) داخل SQL نمی‌روند — اگر ورودی نامعتبر/خالی باشد به همان رفتار پیش‌فرض قبلی
+  ---- (order by rfm desc) برمی‌گردد.
+  local sort_col = _SORT_COLUMNS[sort_key] or "rfm"
+  local sort_direction = "desc"
+  if sort_dir ~= nil and string.lower(tostring(sort_dir)) == "asc" then
+    sort_direction = "asc"
+  end
+  dataQuery.query = string.gsub(dataQuery.query,"{{sort_col}}",sort_col);
+  dataQuery.query = string.gsub(dataQuery.query,"{{sort_dir}}",sort_direction);
+  ---- Execute Query
+  teamyar.write_log(dataQuery.query)
+  return getQuery_result(queryType , dataQuery);
+end
+
+--------------------------------------------
+
+function getQuery_select(queryType)
+  if queryType == _QUERY_TYPE._TYPE_TOTAL_SUM then
+    return getTableConfig_sum()
+  elseif queryType == _QUERY_TYPE._TYPE_TOTAL_COUNT then
+    return getTableConfig_count()
+  else
+    return getTableConfig_select();
+  end
+end
+--------------------------------------------
+function getQuery_page(queryType , pageFrom , perPage , pageTo)
+  local slicePageNumber = "";
+  if queryType == _QUERY_TYPE._TYPE_PAGE_REPORT then
+    local limit = tonumber(perPage);
+    local offset = tonumber(pageFrom) ;
+    slicePageNumber = "LIMIT "..limit .. " OFFSET "..offset;
+  elseif queryType == _QUERY_TYPE._TYPE_PAGE_EXCEL then
+    local limit = tonumber(perPage)*(tonumber(pageTo)  - tonumber(pageFrom) + 1) ;
+    local offset = tonumber(perPage) *(tonumber(pageFrom) - 1);
+    slicePageNumber = "LIMIT "..limit.." OFFSET "..offset;
+  end
+  return slicePageNumber;
+end
+--------------------------------------------
+function getQuery_result(queryType , dataQuery)
+  local resultExp = nil;
+
+  db.query(dataQuery)
+  local record={};
+  if queryType == _QUERY_TYPE._TYPE_TOTAL_COUNT then
+    record = db.query_fetch();
+    resultExp = record[1];
+  elseif queryType == _QUERY_TYPE._TYPE_TOTAL_SUM then
+    local columnsSelected = {};
+    local columns = getTableConfig();
+    for i = 1, #columns , 1 do
+      local itemColumns = columns[i];
+      if itemColumns.key ~= nil and itemColumns.sum ~= nil and itemColumns.sum == true then
+        table.insert(columnsSelected , itemColumns.key)
+      end
+    end
+    if #columns &gt; 0 then
+      resultExp = {};
+      record = db.query_fetch();
+      for i = 1, #columnsSelected , 1 do
+        resultExp[columnsSelected[i]] = record[i];
+      end
+    end
+  else
+    resultExp = {};
+    while db.query_fetch(record) do
+      local itemRow = {};
+      local columns = getTableConfig();
+      for i = 1, #columns , 1 do
+        local itemColumns = columns[i];
+        if itemColumns.key ~= nil then
+          itemRow[itemColumns.key] = record[i];
+        end
+      end
+      table.insert(resultExp, itemRow)
+    end
+  end
+  db.query_free();
+
+  return resultExp;
+end
+
+--------------------------------------------
+function getTableConfig()
+  local cols = {
+
+
+    {show = true ,    key = "Customer"           , value= "Customer" } ,
+    {show = true ,    key = "mobile"           , value= "mobile" } ,
+    {show = true ,    key = "factor_link"           , value= "factor_link" } ,
+    {show = true ,    key = "Days"           , value= "Days" ,type="price"} ,
+    {show = true ,    key = "LastRunDate"           , value= "LastRunDate",type="date" } ,
+    {show = true ,   key = "Frequency"                  		 , value = "Frequency" } ,
+    {show = true ,   key = "Monetary"                  		 , value = "Monetary" ,type="price" } ,
+    {show = true ,   key = "rd"                  		 , value = "R" } ,
+    {show = true ,   key = "fd"                  		 , value = "F" } ,
+    {show = true ,   key = "md"                  		 , value = "M" } ,
+    {show = true ,   key = "rfm"                  		 , value = "RFM" } ,
+    {show = true ,   key = "segment"                  		 , value = "Segment" } ,
+    {show = true ,   key = [[concat("&lt;input type='checkbox' id='ch_save_",crm_id,"' name='ch_save' oninput='ty__main.onChangeCheckInput(",crm_id,")' &gt;")]]  , value ="" } ,
+    {show = true ,   key =  [[concat ( "&lt;button type='button' id='mdp_print_btn' style='float:left;'
+      class='btn ty-btn-default core_btn btnforsubmit core_btn_submit_Form core_btn_revers_change ty-btn-ok' 
+      onclick='ty__main.send_sms(",crm_id,")'&gt;Send SMS&lt;/button&gt;")]]                		 , value = "" } ,
+  };
+  --   teamyar.write_log("ffcols6"..json.encode(cols))
+  return cols
+end
+--------------------------------------------
+function getTableConfig_sum()
+  teamyar.write_log("summ --")
+  local columnsSelected = {};
+  local select = "";
+  local columns = getTableConfig();
+  for i = 1, #columns , 1 do
+    local itemColumns = columns[i];
+    if itemColumns.key ~= nil and itemColumns.sum ~= nil and itemColumns.sum == true then
+      table.insert(columnsSelected , itemColumns.key)
+    end
+  end
+  for i = 1, #columnsSelected , 1 do
+    local itemColumnsSelected = columnsSelected[i];
+    select = select .."sum("..itemColumnsSelected..")"
+    if i &lt; #columnsSelected   then
+      select = select..",";
+    end
+  end
+  return select;
+end
+--------------------------------------------
+function getTableConfig_select()
+  local columnsSelected = {};
+  local select = "";
+  local columns = getTableConfig();
+  for i = 1, #columns , 1 do
+    local itemColumns = columns[i];
+    if itemColumns.key ~= nil then
+      table.insert(columnsSelected , itemColumns.key)
+    end
+  end
+  for i = 1, #columnsSelected , 1 do
+    local itemColumns = columnsSelected[i];
+    select = select..itemColumns;
+    if i &lt; #columns   then
+      select = select.. ",";
+    end
+  end
+  return select;
+end
+--------------------------------------------
+function getTableConfig_count()
+  return "count(*)";
+end
+--------------------------------------------
+function getTableConfig_header()
+  local headers = {};
+  local totalHeader = getTableConfig();
+  for i = 1, #totalHeader , 1 do
+    local itemHeader = totalHeader[i];
+    if itemHeader.show ~= nil and itemHeader.show == true then
+      table.insert(headers ,itemHeader );
+    end
+  end
+  return headers;
+end
+---------------------------------------------
+function queryResultAcl(select_query,user_param)
+  db.use_db("0000000")
+  local params = {
+    query = select_query,
+    params = user_param
+  }
+  db.query(params);
+  local res_text={};
+  local record={};
+  while db.query_fetch(record) do
+    local tmp=record;
+    table.insert(res_text, {id = record[1], name = record[2], type =1});
+  end
+  db.query_free();
+  return res_text;
+end
+----------------------
+function catAcl(data)
+  local section_id = data.section;
+  local query_param = [[ select c.PROFILE_ID ,concat(s.SECTION_NAME,'/',c.name) from crm_classify_person c inner join crm_section s on s.id=c.section_id  ]]
+  if data.search ~= nil and #data.search &gt; 0 then
+    query_param = query_param..[[  and c.name like N'%]]..data.search..[[%'  or  s.SECTION_NAME like N'%]]..data.search..[[%'  ]]
+  end
+  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   
+  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));
+end
+----------------------
+function crmAcl(data)
+  local org_id = data.org_id;
+  local query_param = [[ select id,name from pa_client where org_id=]]..org_id
+  if data.search ~= nil and #data.search &gt; 0 then
+    query_param = query_param..[[  and name like N'%]]..data.search..[[%'  or  id like N'%]]..data.search..[[%'  ]]
+  end
+  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   
+  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));
+end
+
+
+----------------------
+function ctypeAcl(data)
+
+  local table = {
+    {id =3,name=translateWord("REAL")},
+    {id =4,name=translateWord("LEGAL")},
+
+  }
+  teamyar.write_result(json.encode(table));
+end 
+
+--------------------------------------------
+--- Report
+--------------------------------------------
+function report()
+  local data= getTableSectionOne()
+  local report = {
+    {
+      name = "table" ,
+      title = "table" ,
+      report = data
+    }
+  }
+  return report;
+end
+--------------------------------------------
+function getTableSectionOne()
+  local repId = getInput("rep_id");
+  local headers = getTableConfig_header();
+  local from = getInput("page");
+  local values  = getData(_QUERY_TYPE._TYPE_PAGE_REPORT , from , _PAR_PAGE);
+  local total  = getData(_QUERY_TYPE._TYPE_TOTAL_COUNT);
+  --local sums  = getData(_QUERY_TYPE._TYPE_TOTAL_SUM , from , _PAR_PAGE);
+  return install_res.resTable(repId , headers , values  , total , _PAR_PAGE , from,sums );
+end
+--------------------------------------------
+--- excel
+--------------------------------------------
+function excel()
+  local excelFileName = getInput("excel_file_name");
+  local excelFormPage = getInput("excel_from_page");
+  local excelToPage = getInput("excel_to_page");
+  local excelPerPage = getInput("excel_per_page");
+  local headers = getTableConfig_header();
+  local values = getData(_QUERY_TYPE._TYPE_PAGE_EXCEL ,  excelFormPage , excelPerPage , excelToPage)
+  return install_res.resExcel( headers , values , excelFileName);
+end
+--------------------------------------------
+--- print
+--------------------------------------------
+function print()
+  local headers = getTableConfig_header();
+  local values = getData(_QUERY_TYPE._TYPE_PAGE_PRINT)
+  return install_res.resPrint( headers , values);
+end
+--------------------------------------------
+--- manager
+--------------------------------------------
+function confirmTodo(tid)
+  teamyar.write_log("tttttttt---"..tid)
+  local js={confirm=1}
+  local info =	{
+    id= tid,
+    type= 5,
+    form_data=json.encode(js)
+  }
+  teamyar.write_log(json.encode(info))
+  local   res = teamyar.call_api(8, '/api/todo/customform/update', info);
+  teamyar.write_log(json.encode(res))
+  return json.encode(res)
+end
+--------------------------------------------
+function getAclOrg(data)
+  local query_param = [[  select id,name from org_info ]]
+  if data.search ~= nil and #data.search &gt; 0 then
+    query_param = query_param..[[  where name like N'%]]..data.search..[[%' ]]
+  end
+  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   
+  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));
+end
+
+-------------------------------------------
+function queryResultcrm(select_query,user_param)
+  db.use_db("0000000")
+  local params = {
+    query = select_query,
+    params = user_param
+  }
+  db.query(params);
+  local res_text = {};
+  local record = {};
+  while db.query_fetch(record) do
+    table.insert(res_text, {name = record[1], farsidate = record[2], gender = record[3]});
+  end
+  db.query_free();
+  return res_text;
+end
+--------------------------------------------
+function sendSms(crm_id,segment,box_id,txt)
+  local res_str=""
+  local q = [[select p.fullname,(select jndate from report_dimdate where ]]..currentdate..[[ 
+  between datekey and datekey+(60*60*24*10000000)-(60*10000000)) dd,(case when uf.sex=2 then 'خانم' else 'آقا' end) gender 
+  from profile_main p inner join profile_user_info uf on uf.id=p.id where p.id=]]..crm_id
+  teamyar.write_log(q)
+  local data = queryResultcrm(q, {})
+    teamyar.write_log(json.encode(data))
+  txt = string.gsub(txt, "{{name}}", data[1].name);
+  txt = string.gsub(txt, "{{date}}", data[1].farsidate);
+  txt = string.gsub(txt, "{{gender}}", data[1].gender);
+  local info =	{box_id = box_id,messages = {{content = txt, send_to = {profile_ids = {crm_id}}}}, module_id = 26}
+  teamyar.write_log("info----"..json.encode(info))
+  local   res = teamyar.call_api(16, '/api/sms/send', info);
+  teamyar.write_log("res----"..json.encode(res))
+  if res.success ==true then 
+    res_str="&lt;div style='color:green;'&gt;".."ارسال پیامک برای کاربر :  "..crm_id.." ،  شناسه پیامک :"..res.data.message_ids[1].."&lt;/div&gt;"
+  else 
+    res_str="&lt;div style='color:red;'&gt;".."خطا در ارسال پیامک :  "..res.error.message.."&lt;div&gt;"
+
+  end 
+  return res_str
+end
+------------
+function split(str, delimiter)
+  local result = {}
+  local pattern = "(.-)" .. delimiter .. "()"
+  local lastPos = 1
+
+  for part, pos in string.gmatch(str .. delimiter, pattern) do
+    table.insert(result, part)
+    lastPos = pos
+  end
+
+  return result
+end
+--------------------------------------------
+local type = getInput("type");
+if type ~= nil and type == 100 then
+  local result = report()
+  teamyar.write_result(json.encode(result));
+
+elseif type ~= nil and type == 9 then
+  catAcl(teamyar.get_input().data)  
+elseif type ~= nil and type == 8 then
+  ctypeAcl(teamyar.get_input().data)
+elseif type ~= nil and type == 7 then
+  crmAcl(teamyar.get_input().data)
+elseif type ~= nil and type == 6 then
+  getAclOrg(teamyar.get_input().data)
+elseif type ~= nil and type == 10 then
+  local input = teamyar.get_input()
+  local res_str = sendSms(input.data.crm_id,input.data.segment,input.data.box_id, input.data.txt)
+  local res_data = {msg = res_str}
+  teamyar.write_result(json.encode(res_data))
+elseif type ~= nil and type == 11 then
+  local input = teamyar.get_input()
+  local data = input.data
+  local crms = split(data.crms, ',')
+  local res_str = ""
+  local count_send = 0
+  for i,v in ipairs (crms) do 
+    local crm_id_in = string.sub(v, 0, #v-3)
+    local segment_in = string.sub(v, #v-3, #v)
+    sendSms(crm_id_in, segment_in, data.box_id, data.txt)
+    count_send = count_send+1
+  end
+  res_str = " تعداد  "..count_send.." پیامک ارسال شد ."
+  local res_data={msg=res_str}
+  teamyar.write_result(json.encode(res_data))
+elseif type ~= nil and type == 101 then
+  local result = excel()
+  teamyar.write_result(json.encode(result));
+elseif type ~= nil and type == 102 then
+  local result = print()
+  teamyar.write_result(json.encode(result));
+else
+  local responseResReport = install_res.resReport(getTableConfig());
+  teamyar.write_result(responseResReport);
+end
+
+
+
+
+
+</textarea>
+
+<script>
+  document.getElementById('copyBtn').addEventListener('click', async function () {
+    var ta = document.getElementById('raw-source');
+    var text = ta.value;
+    var btn = this;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (e) {
+      ta.style.opacity = 1;
+      ta.style.pointerEvents = 'auto';
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      ta.style.opacity = 0;
+      ta.style.pointerEvents = 'none';
+    }
+    var original = btn.textContent;
+    btn.textContent = 'کپی شد ✓';
+    btn.classList.add('copied');
+    setTimeout(function () {
+      btn.textContent = original;
+      btn.classList.remove('copied');
+    }, 1800);
+  });
+</script>
