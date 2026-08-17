@@ -1,10 +1,10 @@
 ﻿-- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/27 01:29
+-- Last Edit = 1405/05/27 01:40
 
 -- botName = Sum Workdays And Sales Params
 -- creator = zmo
 -- date = 02/25/2025
--- version= 1.2 (اصلاح باگ‌های getData: وزن F/M در سگمنت + پیش‌فرض تاریخ + مبنای Recency=datet)
+-- version= 1.3 (فیلتر سازمان + alias/joinهای مرده + مرتب‌سازی کل دیتاست روی همهٔ ستون‌ها)
 --
 -- تغییرات این نسخه (طبق درخواست کاربر، فقط ۳ باگ زیر؛ بقیهٔ کد عیناً بات ۵۰۱ باقی مانده):
 --   ۱و۳) ستون‌های R/F/M و فرمول سگمنت: f_nummber/m_nummber هر دو به‌اشتباه از cdata.rnumber
@@ -22,6 +22,28 @@
 --      می‌شد، حتی وقتی کاربر بازهٔ تاریخی گذشته را فیلتر کرده بود. اصلاح شد که مبنا «انتهای بازهٔ
 --      فیلترشده» (datet) باشد — چون datet خودش وقتی خالی است پیش‌فرض «امروز» می‌گیرد (بند ۲)، رفتار
 --      حالت بدون فیلتر تغییری نمی‌کند.
+--
+-- تغییرات این نسخه (۱۴۰۵/۰۵/۲۷ — دور دوم، طبق درخواست بعدی کاربر):
+--   ۵) فیلتر «سازمان» اصلاح شد: data.js فیلد ACL سازمان را با name="org" ارسال می‌کند ولی
+--      data.txt فقط کلید "org_id" را declare کرده بود؛ چون getInput فقط کلیدهای declare‌شده در
+--      data.txt را می‌خواند، getInput("org") همیشه خالی برمی‌گشت و فیلتر سازمان همیشه نادیده گرفته
+--      می‌شد (این کد Lua از اول روی "org" درست بود). کلید data.txt به "org" تغییر کرد (پیوست جدا
+--      فرستاده شد، چون آپلود پیوست از راه API ممکن نیست). ورودی «crm» هم به همین بیماری دچار بود
+--      (در data.js با name="crm" ارسال می‌شود ولی اصلاً در data.txt declare نشده بود) — همان‌جا
+--      کلید "crm" هم اضافه شد.
+--   ۶) دو باگ کد مردهٔ دیگر که موقع بررسی فیلتر سازمان دیده شد: فیلتر "cat" به alias نامعتبر
+--      c.id ارجاع می‌داد (در FROM فقط alias «p» برای pa_client هست) — اصلاح شد به p.id. فیلتر
+--      "ctype"/"crm" به ui.USER_TYPE ارجاع می‌داد بدون اینکه profile_user_info جایی با alias ui
+--      join شده باشد — LEFT JOIN profile_user_info ui ON ui.id = p.REFFERE_ID به پیوست
+--      query_list_invoice.txt اضافه شد. مقادیر id همهٔ فیلترهای ACL (cat/ctype/crm/org) هم قبل
+--      از concat با tonumber() اعتبارسنجی می‌شوند.
+--   ۷) مرتب‌سازی روی کل دیتاست (نه فقط صفحهٔ فعلی): چون $.Teamyar.table() یک ویجت هسته‌ای پلتفرم
+--      است (نه چیزی در attachment این بات)، کلیک-روی-ستون واقعی قابل اضافه‌کردن امن نیست؛ به‌جایش
+--      دو ورودی جدید sort_key/sort_dir به فرم فیلتر اضافه شد (کنار تاریخ/سازمان/...، از طبق کاربر
+--      برای Excel/Report/Print) — این‌ها ORDER BY را مستقیماً داخل خودِ کوئری SQL عوض می‌کنند
+--      (قبل از LIMIT/OFFSET صفحه‌بندی)، پس کل دیتاست مرتب می‌شود نه فقط ردیف‌های همان صفحه. کلید
+--      sort_key فقط از یک whitelist ثابت (_SORT_COLUMNS) عبور می‌کند — هرگز مستقیم داخل SQL
+--      نمی‌رود؛ خالی/نامعتبر = رفتار پیش‌فرض قبلی (order by rfm desc).
 
 --
 --------------------------------------------
@@ -44,6 +66,24 @@ local _QUERY_TYPE = {
   _TYPE_PAGE_REPORT = 3 ,
   _TYPE_PAGE_EXCEL = 4 ,
   _TYPE_PAGE_PRINT = 5 ,
+}
+-- مرتب‌سازی کل دیتاست (نه فقط صفحهٔ نمایش‌داده‌شده): چون ORDER BY داخل خودِ کوئری SQL اعمال
+-- می‌شود (قبل از LIMIT/OFFSET صفحه‌بندی)، خروجی صفحه/اکسل/پرینت هر سه روی کل نتایج فیلترشده
+-- مرتب می‌شوند. کلید ورودی sort_key فقط باید یکی از کلیدهای زیر باشد (whitelist — هرگز مستقیم
+-- داخل SQL قرار نمی‌گیرد)؛ برای Customer از ستون خام (بدون تگ <a>) مرتب می‌شود چون ستون نمایشی
+-- Customer با لینک HTML پیچیده شده و مرتب‌سازی متنی روی آن اشتباه بود. "segment" چون از rfm
+-- مشتق می‌شود، بر اساس همان rfm مرتب می‌شود (هم‌ترازِ منطقی سگمنت‌ها).
+local _SORT_COLUMNS = {
+  Customer   = "CustomerSort",
+  Days       = "Days",
+  LastRunDate= "LastRunDate",
+  Frequency  = "Frequency",
+  Monetary   = "Monetary",
+  rd         = "rd",
+  fd         = "fd",
+  md         = "md",
+  rfm        = "rfm",
+  segment    = "rfm",
 }
 -------------------------------------------
 --- install [RES]
@@ -105,6 +145,8 @@ function getData(queryType , pageFrom , perPage , pageTo )
   local org = getInput("org");
   local datef = getInput("datef");
   local datet = getInput("datet");
+  local sort_key = getInput("sort_key");
+  local sort_dir = getInput("sort_dir");
   local qs = getQuery_select(queryType)
   local inp = teamyar.get_input()
   ---- invoice Filter
@@ -124,19 +166,28 @@ function getData(queryType , pageFrom , perPage , pageTo )
   local where_ctype= ""
   local where_crm= ""
   local where_org = ""
-  if cat ~= nil and cat[1] ~= nil then 
-    where_cat = where_cat.. [[ and c.id in (select CLIENT_ID from crm_cross where REFERE_ID =]]..cat[1].id..[[ )]]
-  end 
-  if ctype ~= nil and ctype[1] ~= nil then 
-    where_ctype = where_ctype.. [[ and ui.USER_TYPE=]]..ctype[1].id
-  end 
+  -- باگ اصلاح‌شده: فیلتر "cat" به alias نامعتبر c.id ارجاع می‌داد — در FROM پیوست SQL فقط
+  -- alias «p» برای pa_client وجود دارد (c.id هیچ‌جا تعریف نشده، کد مرده/همیشه با خطا می‌شکست).
+  -- + مقدار id قبل از concat با tonumber() اعتبارسنجی می‌شود (اگر عددی نبود، فیلتر نادیده گرفته
+  -- می‌شود به‌جای اینکه کوئری با متن نامعتبر بشکند).
+  if cat ~= nil and cat[1] ~= nil and tonumber(cat[1].id) ~= nil then
+    where_cat = where_cat.. [[ and p.id in (select CLIENT_ID from crm_cross where REFERE_ID =]]..tonumber(cat[1].id)..[[ )]]
+  end
+  -- فیلتر "ctype"/"crm" نیازمند LEFT JOIN profile_user_info ui ON ui.id = p.REFFERE_ID در پیوست
+  -- query_list_invoice.txt است (کد مرده بدون آن) — این join به پیوست اضافه شد.
+  if ctype ~= nil and ctype[1] ~= nil and tonumber(ctype[1].id) ~= nil then
+    where_ctype = where_ctype.. [[ and ui.USER_TYPE=]]..tonumber(ctype[1].id)
+  end
 
-  if crm ~= nil and crm[1] ~= nil then 
-    where_crm = where_crm.. [[ and ui.USER_TYPE=]]..crm[1].id
-  end 
-  if org ~= nil and org[1] ~= nil then 
-    where_org = where_org.. [[ and s.org_id=]]..org[1].id..[[ and p.org_id=]]..org[1].id
-  end 
+  if crm ~= nil and crm[1] ~= nil and tonumber(crm[1].id) ~= nil then
+    where_crm = where_crm.. [[ and ui.USER_TYPE=]]..tonumber(crm[1].id)
+  end
+  if org ~= nil and org[1] ~= nil and tonumber(org[1].id) ~= nil then
+    -- باگ اصلاح‌شده (فیلتر سازمان): data.js فیلد را با name="org" می‌فرستد ولی data.txt فقط
+    -- "org_id" را declare کرده بود -> getInput("org") همیشه خالی برمی‌گشت. کلید data.txt به
+    -- "org" تغییر کرد (پیوست جدا). کد Lua از قبل روی "org" درست بود، دست‌نخورده ماند.
+    where_org = where_org.. [[ and s.org_id=]]..tonumber(org[1].id)..[[ and p.org_id=]]..tonumber(org[1].id)
+  end
   -- باگ اصلاح‌شده: data.txt نوع datef/datet را "number" declare کرده، پس مقدار نامعتبر/خالی را
   -- خود فریم‌ورک بی‌صدا به 0 تبدیل می‌کند نه nil — چک تنها "== nil" هرگز true نمی‌شد، در نتیجه
   -- "between 0 and {{datet}}" عملاً کل تاریخچهٔ فاکتورها را برمی‌گرداند (نه فقط بازهٔ انتخابی).
@@ -160,6 +211,17 @@ function getData(queryType , pageFrom , perPage , pageTo )
   dataQuery.query = string.gsub(dataQuery.query,"{{r_number}}",r_nummber);
     dataQuery.query = string.gsub(dataQuery.query,"{{f_number}}",f_nummber);
  dataQuery.query = string.gsub(dataQuery.query,"{{m_number}}",m_nummber);
+
+  ---- مرتب‌سازی کل دیتاست: sort_key/sort_dir همیشه از whitelist بالا عبور می‌کنند، هرگز مستقیم
+  ---- (raw) داخل SQL نمی‌روند — اگر ورودی نامعتبر/خالی باشد به همان رفتار پیش‌فرض قبلی
+  ---- (order by rfm desc) برمی‌گردد.
+  local sort_col = _SORT_COLUMNS[sort_key] or "rfm"
+  local sort_direction = "desc"
+  if sort_dir ~= nil and string.lower(tostring(sort_dir)) == "asc" then
+    sort_direction = "asc"
+  end
+  dataQuery.query = string.gsub(dataQuery.query,"{{sort_col}}",sort_col);
+  dataQuery.query = string.gsub(dataQuery.query,"{{sort_dir}}",sort_direction);
   ---- Execute Query
   teamyar.write_log(dataQuery.query)
   return getQuery_result(queryType , dataQuery);
