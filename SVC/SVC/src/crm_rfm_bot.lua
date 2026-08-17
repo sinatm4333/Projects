@@ -1,10 +1,10 @@
 ﻿-- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/27 01:40
+-- Last Edit = 1405/05/27 01:47
 
 -- botName = Sum Workdays And Sales Params
 -- creator = zmo
 -- date = 02/25/2025
--- version= 1.3 (فیلتر سازمان + alias/joinهای مرده + مرتب‌سازی کل دیتاست روی همهٔ ستون‌ها)
+-- version= 1.4 (فیلتر سازمان + alias/joinهای مرده + مرتب‌سازی کل دیتاست + فیلتر بازهٔ درآمد)
 --
 -- تغییرات این نسخه (طبق درخواست کاربر، فقط ۳ باگ زیر؛ بقیهٔ کد عیناً بات ۵۰۱ باقی مانده):
 --   ۱و۳) ستون‌های R/F/M و فرمول سگمنت: f_nummber/m_nummber هر دو به‌اشتباه از cdata.rnumber
@@ -44,6 +44,15 @@
 --      (قبل از LIMIT/OFFSET صفحه‌بندی)، پس کل دیتاست مرتب می‌شود نه فقط ردیف‌های همان صفحه. کلید
 --      sort_key فقط از یک whitelist ثابت (_SORT_COLUMNS) عبور می‌کند — هرگز مستقیم داخل SQL
 --      نمی‌رود؛ خالی/نامعتبر = رفتار پیش‌فرض قبلی (order by rfm desc).
+--
+-- تغییرات این نسخه (۱۴۰۵/۰۵/۲۷ — دور سوم، طبق درخواست بعدی کاربر):
+--   ۸) فیلتر «بازهٔ درآمد» (Monetary min/max) اضافه شد: دو ورودی جدید monetary_min/monetary_max
+--      به فرم فیلتر اضافه شدند. چون Monetary یک sum() تجمیعی به‌ازای هر مشتری است (نه ستون خام هر
+--      فاکتور)، فیلترش با HAVING روی CTE «crm_factor» پیاده شد نه WHERE (در HAVING، برخلاف WHERE،
+--      ارجاع به alias ستون Monetary مجاز است). چون این فیلتر قبل از محاسبهٔ ntile (رتبهٔ R/F/M) در
+--      CTE بعدی اعمال می‌شود، مثل بقیهٔ فیلترها (سازمان/رده/...) رتبه‌ها هم فقط نسبت به همان
+--      زیرمجموعهٔ فیلترشده حساب می‌شوند — نه فیلتر پس از رتبه‌بندی روی کل مشتریان. مقادیر با
+--      tonumber() اعتبارسنجی می‌شوند و هرکدام که خالی/نامعتبر باشد نادیده گرفته می‌شود (نه خطا).
 
 --
 --------------------------------------------
@@ -147,6 +156,8 @@ function getData(queryType , pageFrom , perPage , pageTo )
   local datet = getInput("datet");
   local sort_key = getInput("sort_key");
   local sort_dir = getInput("sort_dir");
+  local monetary_min = getInput("monetary_min");
+  local monetary_max = getInput("monetary_max");
   local qs = getQuery_select(queryType)
   local inp = teamyar.get_input()
   ---- invoice Filter
@@ -188,6 +199,19 @@ function getData(queryType , pageFrom , perPage , pageTo )
     -- "org" تغییر کرد (پیوست جدا). کد Lua از قبل روی "org" درست بود، دست‌نخورده ماند.
     where_org = where_org.. [[ and s.org_id=]]..tonumber(org[1].id)..[[ and p.org_id=]]..tonumber(org[1].id)
   end
+  ---- فیلتر «بازهٔ درآمد» (Monetary min/max): چون Monetary یک sum() تجمیعی به‌ازای هر مشتری است
+  ---- (نه ستون خام هر فاکتور)، فیلترش باید با HAVING روی همان CTE crm_factor باشد نه WHERE — در
+  ---- HAVING، برخلاف WHERE، ارجاع به alias ستون‌های SELECT (اینجا Monetary) در MySQL مجاز است.
+  ---- با HAVING به‌جای فیلتر روی نتیجهٔ نهایی: جمعیت مشتریان قبل از محاسبهٔ ntile (رتبهٔ R/F/M)
+  ---- محدود می‌شود، یعنی رتبه‌ها هم‌مثل فیلترهای سازمان/رده فقط نسبت به همین زیرمجموعه حساب می‌شوند
+  ---- (سازگار با رفتار بقیهٔ فیلترها). مقادیر با tonumber() اعتبارسنجی می‌شوند.
+  local where_monetary = ""
+  if tonumber(monetary_min) ~= nil then
+    where_monetary = where_monetary.. [[ and Monetary >= ]]..tonumber(monetary_min)
+  end
+  if tonumber(monetary_max) ~= nil then
+    where_monetary = where_monetary.. [[ and Monetary <= ]]..tonumber(monetary_max)
+  end
   -- باگ اصلاح‌شده: data.txt نوع datef/datet را "number" declare کرده، پس مقدار نامعتبر/خالی را
   -- خود فریم‌ورک بی‌صدا به 0 تبدیل می‌کند نه nil — چک تنها "== nil" هرگز true نمی‌شد، در نتیجه
   -- "between 0 and {{datet}}" عملاً کل تاریخچهٔ فاکتورها را برمی‌گرداند (نه فقط بازهٔ انتخابی).
@@ -208,6 +232,7 @@ function getData(queryType , pageFrom , perPage , pageTo )
   dataQuery.query = string.gsub(dataQuery.query,"{{where_crm}}",where_crm);
   dataQuery.query = string.gsub(dataQuery.query,"{{where_ctype}}",where_ctype);
   dataQuery.query = string.gsub(dataQuery.query,"{{where_org}}",where_org);
+  dataQuery.query = string.gsub(dataQuery.query,"{{where_monetary}}",where_monetary);
   dataQuery.query = string.gsub(dataQuery.query,"{{r_number}}",r_nummber);
     dataQuery.query = string.gsub(dataQuery.query,"{{f_number}}",f_nummber);
  dataQuery.query = string.gsub(dataQuery.query,"{{m_number}}",m_nummber);

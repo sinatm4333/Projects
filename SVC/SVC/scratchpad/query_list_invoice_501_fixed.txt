@@ -32,6 +32,7 @@
             {{where_org}}
             {{where_cat}}
             GROUP BY p.REFFERE_ID, p.NAME,s.client_id
+            HAVING 1=1 {{where_monetary}}
     ),rfm_data as( select crm_id,mobile,Customer,factor_link,Days,LastRunDate,Frequency,Monetary,
 
  ntile(5)over(order by days desc)r ,ntile(5)over(order by Frequency )f,ntile(5)over(order by monetary )m from crm_factor),

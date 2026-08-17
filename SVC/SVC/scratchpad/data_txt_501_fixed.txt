@@ -41,7 +41,9 @@
               "default" : null
               },
               "sort_key" : {"type": "text" , "default" : null},
-              "sort_dir" : {"type": "text" , "default" : null}
+              "sort_dir" : {"type": "text" , "default" : null},
+              "monetary_min" : {"type": "number" , "default" : null},
+              "monetary_max" : {"type": "number" , "default" : null}
 
 } ,
 
@@ -87,7 +89,9 @@
           "REAL":"حقیقی",
           "ORG_ID":"شعبه",
           "SORT_KEY":"مرتب‌سازی بر اساس (Customer, Days, LastRunDate, Frequency, Monetary, rd, fd, md, rfm, segment)",
-          "SORT_DIR":"جهت مرتب‌سازی (asc یا desc - پیش‌فرض desc)"
+          "SORT_DIR":"جهت مرتب‌سازی (asc یا desc - پیش‌فرض desc)",
+          "MONETARY_MIN":"حداقل درآمد",
+          "MONETARY_MAX":"حداکثر درآمد"
 },
       "en": {
 

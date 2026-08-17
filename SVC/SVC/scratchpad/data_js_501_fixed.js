@@ -92,6 +92,22 @@ report[reportPath].getFilters = function () {
       type: "text",
     }),
     $.Teamyar.input.text({
+      id: "monetary_min",
+      name: "monetary_min",
+      value: report[reportPath].getCash("monetary_min"),
+      title: report[reportPath].translateWord("MONETARY_MIN"),
+      format: "input",
+      type: "number",
+    }),
+    $.Teamyar.input.text({
+      id: "monetary_max",
+      name: "monetary_max",
+      value: report[reportPath].getCash("monetary_max"),
+      title: report[reportPath].translateWord("MONETARY_MAX"),
+      format: "input",
+      type: "number",
+    }),
+    $.Teamyar.input.text({
       id: "box_id",
       name: "box_id",   
 
