@@ -1,7 +1,8 @@
-﻿-- botName = send group 
+﻿-- botName = send group
 -- creator = zmo
 -- date = 02/25/2025
 -- version= 1.0
+-- Last Edit = 1405/05/26 23:00
 
 --
 --------------------------------------------
@@ -270,6 +271,14 @@ function getAllData(org_id,datef,datet,crm_id,kcrm_id,tag_id,product_id,stock_id
   if send_status ~= nil and send_status[1] ~= nil then 
     where_send_status = where_send_status.. [[ and moadian_status=]]..send_status[1].id
   end  
+  -- گارد نوع تاریخ (مشابه getData) — بدون این، وقتی save_all/inquery_all بدون تاریخ صدا زده
+  -- شود datef/datet مقدار nil دارند و string.gsub با آرگومان nil خطای Lua می‌دهد
+  if type(datet) ~= "number" then
+    datet = 0
+  end
+  if type(datef) ~= "number" then
+    datef = 0
+  end
   aquery = string.gsub(aquery,"{{select}}","*");
   aquery = string.gsub(aquery,"{{whereInvoice}}","");
   aquery = string.gsub(aquery,"{{slicePageNumber}}","");
@@ -460,6 +469,13 @@ end
 ----------------------
 function productAcl(data)
   local geted_org_id = data.org_id;
+  -- شعبه هنوز انتخاب نشده (فرم تازه باز شده) — بدون این گارد، ]] ..nil.. concat خطای Lua
+  -- می‌دهد و چون این AJAX با block_holder:'body' صداشده، کل صفحه روی لودینگ گیر می‌کند
+  -- و بقیه‌ی فیلترها هم رندر نمی‌شوند.
+  if geted_org_id == nil then
+    teamyar.write_result(json.encode({}));
+    return
+  end
   local query_param = [[select id,concat(full_code,'_',name)name from wh_product  where voucher_allow=1  and org_id=]]..geted_org_id
   if data.search ~= nil and #data.search > 0 then
     query_param = query_param..[[  and  (name like N'%]]..data.search..[[%' or  full_code like N'%]]..data.search..[[%') ]]
@@ -470,6 +486,11 @@ end
 ----------------------
 function StockAcl(data)
   local geted_org_id = data.org_id;
+  -- همان گارد productAcl — شعبه هنوز انتخاب نشده باشد یعنی nil..concat خطا می‌دهد
+  if geted_org_id == nil then
+    teamyar.write_result(json.encode({}));
+    return
+  end
   local query_param = [[select id,concat(full_code,'_',name)name from wh_stock  where  org_id=]]..geted_org_id
   if data.search ~= nil and #data.search > 0 then
     query_param = query_param..[[  and  (name like N'%]]..data.search..[[%' or  full_code like N'%]]..data.search..[[%') ]]
@@ -480,6 +501,11 @@ end
 ----------------------
 function crmAcl(data)
   local geted_org_id = data.org_id;
+  -- همان گارد productAcl/StockAcl — شعبه هنوز انتخاب نشده باشد یعنی nil..concat خطا می‌دهد
+  if geted_org_id == nil then
+    teamyar.write_result(json.encode({}));
+    return
+  end
   local query_param = [[select id,name from pa_client where  org_id= ]]..geted_org_id
   if data.search ~= nil and #data.search > 0 then
     query_param = query_param..[[  and  name like N'%]]..data.search..[[%' ]]
