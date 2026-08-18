@@ -1,10 +1,10 @@
 ﻿-- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/27 01:58
+-- Last Edit = 1405/05/27 07:49
 
 -- botName = Sum Workdays And Sales Params
 -- creator = zmo
 -- date = 02/25/2025
--- version= 1.5 (فیلتر سازمان + alias/joinهای مرده + مرتب‌سازی کل دیتاست + بازهٔ درآمد + مرکز درآمد)
+-- version= 1.6 (رفع باگ «بات خروجی نمی‌دهد»: بازهٔ تاریخ پیش‌فرض با پهنای صفر + org scoping مرکز درآمد)
 --
 -- تغییرات این نسخه (طبق درخواست کاربر، فقط ۳ باگ زیر؛ بقیهٔ کد عیناً بات ۵۰۱ باقی مانده):
 --   ۱و۳) ستون‌های R/F/M و فرمول سگمنت: f_nummber/m_nummber هر دو به‌اشتباه از cdata.rnumber
@@ -66,6 +66,22 @@
 --      data.txt — چون data.js این بات یک getFilters() اختصاصی دارد که کلاً آن مسیر عمومی را
 --      نادیده می‌گیرد؛ برای همین ادامهٔ همان الگوی موجود درست‌ترین راه بود)، با type=12 جدید در
 --      dispatch و تابع centerAcl(data) که pa_center را کوئری می‌کند.
+--
+-- تغییرات این نسخه (۱۴۰۵/۰۵/۲۷ — دور پنجم، گزارش باگ زنده از کاربر پس از تست دور چهارم):
+--   ۱۰) باگ اصلی («بات خروجی نمی‌دهد» + «انتخاب سازمان فرقی نمی‌کند»): با شبیه‌سازی محلی
+--       getData() (هارنس Lua، بدون نیاز به دیتابیس واقعی) پیدا شد — در دور اول/سوم، وقتی
+--       datef/datet خالی بودند، هر دو به همان یک متغیر currentdate (نیمه‌شب امروز) پیش‌فرض
+--       می‌گرفتند؛ نتیجه‌اش "s.RUN_DATE between X and X" بود، یعنی بازه‌ای با پهنای صفر که هیچ
+--       فاکتوری را برنمی‌گرداند — نه فقط دادهٔ امروز، هیچ‌چیز. چون نتیجهٔ پایه از قبل همیشه خالی
+--       بود، انتخاب/عدم‌انتخاب سازمان (یا هر فیلتر دیگر) طبیعتاً هیچ فرقی نمی‌کرد. اصلاح شد: datet
+--       اکنون به currentdate_time_str (لحظهٔ واقعی الان، نه نیمه‌شب) پیش‌فرض می‌گیرد — بازهٔ
+--       پیش‌فرض حالا واقعاً «از نیمه‌شب امروز تا الان» است، نه یک لحظهٔ صفر-پهنا.
+--   ۱۱) فیلتر «مرکز درآمد» خالی بود: pa_center مثل pa_client یک جدول per-org است (شاهد کد:
+--       pa_center.ORG_ID در warranty_branch_expense_detail_report_bot.lua با
+--       ce.ORG_ID = vr.ORG_ID فیلتر می‌شود) — centerAcl قبلی بدون فیلتر org_id کوئری می‌زد.
+--       اصلاح شد مثل crmAcl با data.org_id فیلتر شود (که GetDataACL مشترک در data.js همیشه از
+--       مقدار فعلی ویجت «سازمان» می‌فرستد)، ولی چون سازمان یک فیلتر اختیاری این گزارش است، وقتی
+--       هنوز انتخاب نشده باشد فیلتر نادیده گرفته می‌شود نه اینکه کوئری بشکند.
 
 --
 --------------------------------------------
@@ -80,6 +96,13 @@ local sec = time.get_second(time.current());
 local currentdate_time = time.get_filetime([[{"year":]]..year..[[,"month":]]..month..[[,"day":]]..day..[[,"hour":]]..hour..[[,"minute":]]..min..[[,"second":]]..sec..[[}]])
 local temp_time = time.get_filetime([[{"year":]]..year..[[,"month":]]..month..[[,"day":]]..day..[[,"hour":0,"minute":0,"second":0}]])
 local currentdate = string.format("%18.0f" ,temp_time);
+-- باگ اصلاح‌شده («بات خروجی نمی‌دهد»): وقتی datef/datet خالی بودند هر دو به همین یک متغیر
+-- (currentdate = نیمه‌شب امروز) پیش‌فرض می‌گرفتند -> "between X and X" یعنی بازهٔ با پهنای صفر،
+-- که عملاً هیچ فاکتوری را برنمی‌گرداند (نه فقط داده‌های امروز، هیچ‌چیز) — دقیقاً همان چیزی که با
+-- «بات خروجی نمی‌دهد» و «انتخاب سازمان فرقی نمی‌کند» گزارش شد (چون نتیجهٔ پایه از قبل خالی بود،
+-- هیچ فیلتری روی آن اثر نداشت). با currentdate_time (لحظهٔ واقعی الان، نه نیمه‌شب) به‌عنوان پیش‌فرض
+-- datet، بازهٔ پیش‌فرض حالا «از نیمه‌شب امروز تا همین الان» است — یک بازهٔ واقعی با پهنای غیرصفر.
+local currentdate_time_str = string.format("%18.0f" ,currentdate_time);
 ----------------------------
 local _PAR_PAGE = 25
 local _QUERY_TYPE = {
@@ -237,9 +260,13 @@ function getData(queryType , pageFrom , perPage , pageTo )
   -- باگ اصلاح‌شده: data.txt نوع datef/datet را "number" declare کرده، پس مقدار نامعتبر/خالی را
   -- خود فریم‌ورک بی‌صدا به 0 تبدیل می‌کند نه nil — چک تنها "== nil" هرگز true نمی‌شد، در نتیجه
   -- "between 0 and {{datet}}" عملاً کل تاریخچهٔ فاکتورها را برمی‌گرداند (نه فقط بازهٔ انتخابی).
-  -- با "<= 0" هم مقدار nil‌شده و هم صفرشده گرفته می‌شود؛ پیش‌فرض به «امروز» تغییر کرد.
+  -- با "<= 0" هم مقدار nil‌شده و هم صفرشده گرفته می‌شود.
+  -- باگ دیگر که همین‌جا پیدا و اصلاح شد («بات خروجی نمی‌دهد»): قبلاً هر دو (datef و datet) به
+  -- همان یک مقدار currentdate (نیمه‌شب امروز) پیش‌فرض می‌گرفتند -> "between X and X" یعنی بازهٔ
+  -- با پهنای صفر که هیچ فاکتوری را برنمی‌گرداند، نه فقط دادهٔ امروز را. حالا datet به
+  -- currentdate_time_str (لحظهٔ واقعی الان) پیش‌فرض می‌گیرد، پس بازهٔ پیش‌فرض «از نیمه‌شب امروز تا الان» است.
   if tonumber(datet) == nil or tonumber(datet) <= 0 then
-    datet = currentdate
+    datet = currentdate_time_str
   end
   if tonumber(datef) == nil or tonumber(datef) <= 0 then
     datef = currentdate
@@ -480,9 +507,21 @@ end
 -- فیلتر «مرکز درآمد»: جست‌وجوی ACL روی pa_center (همان جدولی که sales_invoice.SALES_CENTER به
 -- آن ارجاع می‌دهد؛ در بات‌های دیگر این پروژه «مرکز فروش» نامیده می‌شود).
 function centerAcl(data)
+  -- باگ اصلاح‌شده: pa_center مثل pa_client یک جدول per-org است (شاهد کد: pa_center.ORG_ID در
+  -- warranty_branch_expense_detail_report_bot.lua با ce.ORG_ID = vr.ORG_ID فیلتر می‌شود) — بدون
+  -- فیلتر org_id ممکن است سطرهای سازمان‌های دیگر هم برگردد یا (بسته به داده) لیست گمراه‌کننده/خالی
+  -- به‌نظر برسد. GetDataACL (مشترک بین همهٔ فیلترهای ACL در data.js) همیشه data.org_id را از مقدار
+  -- فعلی ویجت «سازمان» می‌فرستد؛ اینجا هم مثل crmAcl همان را استفاده می‌کنیم، ولی چون سازمان یک
+  -- فیلتر اختیاری این گزارش است (نه اجباری)، وقتی هنوز انتخاب نشده (org_id نامعتبر) فیلتر را نادیده
+  -- می‌گیریم به‌جای اینکه با رشتهٔ خالی/نامعتبر کوئری را بشکنیم.
   local query_param = [[ select id,name from pa_center ]]
+  local has_where = false
+  if tonumber(data.org_id) ~= nil then
+    query_param = query_param..[[ where org_id=]]..tonumber(data.org_id)..[[ ]]
+    has_where = true
+  end
   if data.search ~= nil and #data.search > 0 then
-    query_param = query_param..[[  where name like N'%]]..data.search..[[%'  or  id like N'%]]..data.search..[[%'  ]]
+    query_param = query_param..(has_where and [[ and ]] or [[ where ]])..[[ (name like N'%]]..data.search..[[%'  or  id like N'%]]..data.search..[[%') ]]
   end
   query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);
   teamyar.write_result(json.encode(queryResultAcl(query_param, {})));
