@@ -1,10 +1,10 @@
 ﻿-- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/27 07:49
+-- Last Edit = 1405/05/27 09:01
 
 -- botName = Sum Workdays And Sales Params
 -- creator = zmo
 -- date = 02/25/2025
--- version= 1.6 (رفع باگ «بات خروجی نمی‌دهد»: بازهٔ تاریخ پیش‌فرض با پهنای صفر + org scoping مرکز درآمد)
+-- version= 1.7 (لاگ تشخیصی centerAcl: هنوز خالی بودن لیست مرکز درآمد پس از دور قبل)
 --
 -- تغییرات این نسخه (طبق درخواست کاربر، فقط ۳ باگ زیر؛ بقیهٔ کد عیناً بات ۵۰۱ باقی مانده):
 --   ۱و۳) ستون‌های R/F/M و فرمول سگمنت: f_nummber/m_nummber هر دو به‌اشتباه از cdata.rnumber
@@ -82,6 +82,15 @@
 --       اصلاح شد مثل crmAcl با data.org_id فیلتر شود (که GetDataACL مشترک در data.js همیشه از
 --       مقدار فعلی ویجت «سازمان» می‌فرستد)، ولی چون سازمان یک فیلتر اختیاری این گزارش است، وقتی
 --       هنوز انتخاب نشده باشد فیلتر نادیده گرفته می‌شود نه اینکه کوئری بشکند.
+--
+-- تغییرات این نسخه (۱۴۰۵/۰۵/۲۷ — دور ششم: لیست «مرکز درآمد» هنوز خالی بود، حتی پس از فیکس org scoping):
+--   ۱۲) بدون دسترسی زنده به دیتابیس/پنل دیباگ بات، نمی‌شود مطمئن شد مشکل کجاست (pa_center واقعاً
+--       ردیف ندارد؟ نام ستون فرق دارد؟ خطای SQL دیگری؟). به‌جای حدس بعدی، centerAcl لاگ تشخیصی
+--       گرفت: متن دقیق کوئری همیشه با teamyar.write_log ثبت می‌شود، و اجرای queryResultAcl داخل
+--       pcall قرار گرفت — اگر کوئری با خطا شکست (مثلاً نام ستون اشتباه)، آن خطا هم لاگ می‌شود
+--       (به‌جای شکستن بی‌صدا/گیر کردن دیالوگ روی خالی) و دیالوگ به‌جای کرش، فقط خالی برمی‌گردد.
+--       این‌ها را می‌شود در تب Log اجرای بات (پنل مدیریت Teamyar) بعد از باز کردن یک‌بار دیالوگ
+--       «مرکز درآمد» دید.
 
 --
 --------------------------------------------
@@ -524,7 +533,16 @@ function centerAcl(data)
     query_param = query_param..(has_where and [[ and ]] or [[ where ]])..[[ (name like N'%]]..data.search..[[%'  or  id like N'%]]..data.search..[[%') ]]
   end
   query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);
-  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));
+  -- لاگ تشخیصی: اگر باز هم لیست خالی بود، از طریق پنل دیباگ بات (تب Log اجرای بات) متن این
+  -- کوئری و هر خطای SQL آن قابل مشاهده است، بدون نیاز به دور دیگری از حدس‌وگمان.
+  teamyar.write_log("centerAcl query: "..query_param)
+  local ok, result = pcall(queryResultAcl, query_param, {})
+  if ok then
+    teamyar.write_result(json.encode(result));
+  else
+    teamyar.write_log("centerAcl ERROR: "..tostring(result))
+    teamyar.write_result(json.encode({}));
+  end
 end
 
 --------------------------------------------
