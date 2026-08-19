@@ -1,0 +1,15 @@
+---
+description: Lightweight DB context for Teamyar bots
+alwaysApply: true
+---
+
+# Database Context
+
+Schema `0000000`. Bot workflow: see rule `teamyar-bots`.
+
+- Catalog: `docs/context/TeamyarBotsCatalog.md`
+- Bot schema: `docs/context/BotSchema.md`
+- Examples: `src/*_bot.lua`
+- Ad-hoc schema: `db_schema_json_bot.lua`
+
+Do not index or read `docs/context/DatabaseSchema.md`.

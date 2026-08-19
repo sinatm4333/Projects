@@ -1,0 +1,49 @@
+---
+description: Security development rules for Blazor, .NET, APIs, Database and Enterprise applications
+globs:
+  - "**/*.cs"
+  - "**/*.razor"
+  - "**/*.sql"
+  - "**/*.json"
+  - "**/*.config"
+alwaysApply: true
+---
+
+# Security Development Rules
+
+## General Security Principles
+
+- Security must be implemented by design.
+- Never trust client-side input.
+- Always validate data on the server side.
+- Never expose sensitive information.
+- Follow least privilege principles.
+- Never bypass authorization checks.
+
+---
+
+# Authentication Rules
+
+Authentication must be handled centrally.
+
+Never:
+
+- Store passwords manually.
+- Implement custom authentication without security review.
+- Store plain text passwords.
+
+Use:
+
+- ASP.NET Core Identity
+- OAuth / OpenID Connect
+- JWT when required
+
+---
+
+# Password Security
+
+Never store:
+
+```text
+Plain Password
+Encrypted Password

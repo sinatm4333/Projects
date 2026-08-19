@@ -1,0 +1,109 @@
+   @font-face {
+       font-family: 'Zar';
+       src: url('bot/run/2/motor_doc_print/zar.woff2') format('woff2'), /* Super Modern Browsers */
+            url('bot/run/2/motor_doc_print/zar.woff') format('woff'),   /* Pretty Modern Browsers */
+            url('bot/run/2/motor_doc_print/zar.ttf') format('truetype'); /* Safari, Android, iOS */
+       font-weight: normal;
+       font-style: normal;
+   }
+
+.holder_box1 {
+   display: flex;
+   flex-direction: row;
+   margin: 0 -7.5px;
+           justify-content: center;
+   padding-top: 7.5px;
+   padding-bottom: 7.5px;
+   flex-wrap: wrap;
+ }
+   .each_holder1 {
+     width: 25%;
+     position: relative;
+   }
+
+   .each_holder1::before {
+     display: block;
+     padding-top: 25%;
+     content: '';
+   }
+
+   .each_holder_absolute1 {
+  display: flex; +
+  width: 100%; +
+  height: 100%; +
+  position: absolute; +
+  top: 0; +
+  right: 0px; +
+  padding: 7.5px; +
+   }
+
+    .holder_white1 {
+     width: 100%;
+     height: 100%;
+     background-color: #fff;
+     display: flex;
+     flex-direction: column;
+     justify-content: center;
+     align-items: center;
+     border-radius: 10px !important;
+     box-shadow: 0px 1px 5px 0px #00000026;
+     cursor: pointer;
+   }
+.label_title{
+  font-weight: bold;
+     width:300px;
+margin:3px;
+}
+
+.ty-active{
+  text-align:center !important;
+}
+.iconholder
+{
+text-align:center;
+  padding: 5px 0px;
+}
+.linkholder{
+}
+.datacontent{
+  width:300px;
+}
+.labelsdata{
+    width:60%;
+}
+.imageholder{
+  text-align:left;
+}
+.main_holder
+{
+text-align:center;
+}
+.info_holder{
+  text-align:center;
+
+}
+.txtr{text-align: right !important;}
+.img_class{
+  min-width: 75px;
+  width: 20%;
+margin-top: 10px;
+}
+.cs_btn{
+  padding: 10px;
+    background-color: #e1e8eb;
+    border-radius: 13px;
+    margin: 10px;
+    color: #082c27;
+    font-size: 17px;
+    font-weight: bold;
+    border: 3px solid #b4b9b770;
+      display: inline-block;
+    width: 8% !important;
+}
+.ths{
+border: 1px solid black;
+}
+.tds{
+border: 1px solid black;
+}
+.tx-center{text-align:center;}

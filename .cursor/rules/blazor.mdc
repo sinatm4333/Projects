@@ -1,0 +1,242 @@
+---
+description: Blazor Development Standards
+globs:
+  - "**/*.razor"
+  - "**/*.razor.cs"
+alwaysApply: true
+---
+
+# Blazor Standards
+
+This project uses:
+
+- .NET 9
+- Blazor Server
+- MudBlazor
+- Clean Architecture
+
+---
+
+# Component Design
+
+Prefer small reusable components.
+
+Avoid components larger than 300 lines.
+
+Move business logic out of Razor files.
+
+Use partial classes (.razor.cs) for complex components.
+
+Keep markup clean.
+
+Avoid duplicated UI.
+
+---
+
+# State Management
+
+Prefer local component state.
+
+Use cascading parameters only when necessary.
+
+Avoid static state.
+
+Avoid singleton state unless explicitly required.
+
+---
+
+# Dependency Injection
+
+Use @inject only for services.
+
+Never resolve services manually.
+
+Never use IServiceProvider.
+
+Constructor injection is preferred in .razor.cs.
+
+---
+
+# Data Loading
+
+Always use async/await.
+
+Support CancellationToken whenever possible.
+
+Avoid synchronous calls.
+
+Use OnInitializedAsync.
+
+Use OnParametersSetAsync only when parameters affect loading.
+
+Never perform long-running work inside rendering.
+
+---
+
+# Rendering
+
+Minimize unnecessary StateHasChanged() calls.
+
+Do not call StateHasChanged() unless required.
+
+Avoid expensive LINQ expressions inside markup.
+
+Avoid creating objects inside Razor expressions.
+
+---
+
+# Parameters
+
+Use [Parameter] for external inputs.
+
+Use [EditorRequired] for mandatory parameters.
+
+Validate parameter values.
+
+Do not mutate parameter values directly.
+
+---
+
+# Events
+
+Prefer EventCallback<T>.
+
+Avoid Action delegates.
+
+Avoid anonymous lambdas when reusable methods exist.
+
+---
+
+# Forms
+
+Use MudForm.
+
+Use FluentValidation.
+
+Do not duplicate validation logic.
+
+Show user-friendly validation messages.
+
+---
+
+# Tables
+
+Prefer MudTable.
+
+Use ServerData for large datasets.
+
+Enable paging.
+
+Enable sorting.
+
+Enable filtering.
+
+Avoid loading all records.
+
+---
+
+# Dialogs
+
+Use MudDialog.
+
+Return strongly typed results.
+
+Avoid nested dialogs.
+
+---
+
+# Notifications
+
+Use ISnackbar.
+
+Use appropriate severity.
+
+Do not show technical exception messages.
+
+---
+
+# Error Handling
+
+Catch only expected exceptions.
+
+Log unexpected exceptions.
+
+Display friendly messages.
+
+Never swallow exceptions silently.
+
+---
+
+# Styling
+
+Prefer MudBlazor components.
+
+Avoid inline styles.
+
+Use CSS isolation when appropriate.
+
+Reuse existing theme variables.
+
+---
+
+# Performance
+
+Use @key where appropriate.
+
+Use Virtualize for large lists.
+
+Avoid unnecessary renders.
+
+Do not allocate objects during rendering.
+
+---
+
+# JavaScript
+
+Prefer Blazor APIs.
+
+Use JavaScript only when Blazor cannot solve the problem.
+
+Wrap JS Interop inside services.
+
+Never call JS directly from multiple components.
+
+---
+
+# Navigation
+
+Use NavigationManager.
+
+Avoid hardcoded URLs.
+
+Centralize route constants.
+
+---
+
+# File Structure
+
+MyComponent.razor
+
+MyComponent.razor.cs
+
+MyComponent.razor.css
+
+MyComponentTests.cs
+
+---
+
+# Output Expectations
+
+Generated components should be:
+
+- Clean
+- Reusable
+- Responsive
+- Async
+- Testable
+- Accessible
+- Production Ready
+
+Always follow MudBlazor best practices.
+
+Never generate quick-and-dirty components.

@@ -1,0 +1,104 @@
+with DecimalDigits as (
+  select po.ORG_ID,
+         ps.DECIMAL_COUNT DecimalCount,
+         (CASE WHEN COALESCE(ps.FEE_DECIMAL,0) = 0 THEN COALESCE(ps.DECIMAL_COUNT,0) ELSE COALESCE(ps.FEE_DECIMAL,0) END) DigitFee
+  from pa_organizations po
+  join pa_symbols ps on (po.BASE_CURRENCY = ps.ID and po.ORG_ID = ps.ORG_ID)
+),
+cte_org as (
+  SELECT i.id as INVOICE_ID,
+         d.DECIMAL_COUNT Digit,
+         CASE WHEN COALESCE(d.DECIMAL_COUNT,0) <> 0 THEN COALESCE(d.DECIMAL_COUNT,0) ELSE COALESCE(d.FEE_DECIMAL,0) END DigitFee
+  FROM PA_ORGANIZATIONS c
+  join SALES_INVOICE i on i.org_id = c.org_id
+  INNER JOIN PA_SYMBOLS d ON (d.ID = c.BASE_CURRENCY AND d.ORG_ID = c.ORG_ID)
+),
+cte_product as (
+  select o.INVOICE_ID,
+         if(Coalesce(d.QUANTITY_CONFIRMED,0) > 0, Coalesce(d.QUANTITY_CONFIRMED,0), Coalesce(d.QUANTITY,0)) as quantity,
+         Coalesce(c.DECIMAL_NUM,0) as dec_quantity,
+         Coalesce(d.BASE_SYMBOL_FEE,0) AS BASE_SYMBOL_FEE,
+         Coalesce(o.DigitFee,0) AS DigitFee,
+         Coalesce(o.Digit,0) AS Digit,
+         Coalesce(d.BASE_SYMBOL_DISCOUNT,0) AS BASE_SYMBOL_DISCOUNT,
+         Coalesce(d.BASE_SYM_VALUE_ADDED,0) AS BASE_SYM_VALUE_ADDED,
+         Coalesce(d.BASE_SYMBOL_TAX,0) AS BASE_SYMBOL_TAX,
+         Coalesce(d.BASE_SYMBOL_TOLL,0) AS BASE_SYMBOL_TOLL
+  from sales_invoice_product d
+  join wh_product p on d.product_id = p.id
+  join wh_stock_capacity c on p.CAPACITY_ID = c.ID
+  join cte_org o on d.INVOICE_ID = o.INVOICE_ID
+),
+CTE_ADDITION as (
+  SELECT o.INVOICE_ID,
+         SUM(ROUND(CASE WHEN (a.EFFECT = 1 OR a.EFFECT = 3) THEN (Coalesce(a.QUANTITY,0)/POWER(10,Coalesce(o.Digit,0)))*(-1)
+                        WHEN (a.EFFECT = 2 OR a.EFFECT = 4) THEN (Coalesce(a.QUANTITY,0)/POWER(10,Coalesce(o.Digit,0)))
+                        ELSE 0 END)) AS ADDITION
+  FROM SALES_INVOICE_ADDITIONS a
+  JOIN cte_org o ON a.INVOICE_ID = o.INVOICE_ID
+  group by o.INVOICE_ID
+),
+CTE_AMOUNT_PRODUCTS as (
+  select INVOICE_ID,
+         SUM(ROUND((quantity/power(10,dec_quantity) * (BASE_SYMBOL_FEE/power(10,DigitFee)))
+             - BASE_SYMBOL_DISCOUNT/power(10,Digit)
+             + BASE_SYM_VALUE_ADDED/power(10,Digit)
+             + BASE_SYMBOL_TAX/power(10,Digit)
+             + BASE_SYMBOL_TOLL/power(10,Digit))) as AMOUNT
+  from cte_product
+  group by INVOICE_ID
+),
+amonts as (
+  SELECT ROUND(p.AMOUNT + Coalesce(a.ADDITION,0)) iamont, i.id id
+  from CTE_AMOUNT_PRODUCTS p
+  LEFT JOIN CTE_ADDITION a ON p.INVOICE_ID = a.INVOICE_ID
+  JOIN SALES_INVOICE i on i.ID = p.INVOICE_ID
+  LEFT JOIN PA_CLIENT c on c.id = i.client_id and c.org_id = i.org_id
+),
+data as (
+  select distinct
+    '' as row_checkbox,
+    i.id invoice_id,
+    concat('<a target="_blank" href="/?page=/sales/invoice/view_invoice/',i.id,'">','#',i.id,' _ ',i.INVOICE_CODE,'</a>')  as invoice_link,
+    i.RUN_DATE as run_date,
+    (select iamont from amonts where id = i.id) as amount,
+    ps.SHORT_NAME as symbol_name,
+       cl.name as client_name,
+    cl.code as client_code,
+    cl.id as client_id,
+    cl.TYPE as client_type,
+    i.TITLE as invoice_title,
+    i.STATUS as invoice_status,
+    ps.id as symbol_id,
+    ps.FEE_DECIMAL as fee_decimal,
+    ps.SYMBOL_RATE as symbol_rate,
+    fl.code as float_code,
+    prj.code as project_code,
+    cn.code as center_code,
+
+    '' as settle_button
+  from sales_invoice i
+
+  inner join pa_symbols ps on ps.id = i.SYMBOL_ID and ps.org_id = i.org_id
+  left join DecimalDigits dd on (i.ORG_ID = dd.ORG_ID)
+  left join pa_client cl on cl.id = i.client_id and i.client_id > 0
+  left join pa_floating fl on fl.id = i.FLOATING_ID
+  left join pa_center cn on cn.id = i.SALES_CENTER
+  left join pa_project prj on prj.id = i.project_id
+  where i.org_id = {{org_id}}
+    and ps.org_id = {{org_id}}
+    and i.id not in (select INVOICE_ID from sales_invoice_settlement)
+    and i.type = 1
+    and i.deleted= 0
+    and i.RUN_DATE >= {{from_date}} and i.RUN_DATE <= {{to_date}}
+    {{whereStatus}}
+    {{where_inv_id}}
+    {{whereClient}}
+    {{whereProduct}}
+    {{whereWarehouse}}
+)
+select {{select}}
+from data
+{{whereInvoice}}
+order by run_date desc
+{{slicePageNumber}}

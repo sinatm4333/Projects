@@ -1,0 +1,62 @@
+
+is the single source of truth for warehouse database structure.
+
+Never:
+
+- Invent warehouse tables.
+- Invent columns.
+- Assume relationships.
+- Create duplicate inventory structures.
+- Modify warehouse logic without schema review.
+
+---
+
+# Warehouse Domain Scope
+
+Warehouse domain may include:
+
+- Warehouses
+- Branch warehouses
+- Products
+- Categories
+- Inventory balances
+- Stock movements
+- Receipts
+- Deliveries
+- Transfers
+- Returns
+- Serial numbers
+- Batch numbers
+- Inventory adjustments
+- Warehouse locations
+
+Always follow the existing schema.
+
+---
+
+# Entity Generation Rules
+
+When generating warehouse entities:
+
+- Match table names exactly.
+- Match column names exactly.
+- Preserve data types.
+- Preserve nullable definitions.
+- Create relationships based on relations.json.
+- Apply constraints from schema.
+
+---
+
+# EF Core Mapping Rules
+
+Always configure warehouse entities explicitly.
+
+Example:
+
+```csharp
+builder.ToTable("InventoryTransactions");
+
+builder.HasKey(x => x.Id);
+
+builder.Property(x => x.Quantity)
+       .HasColumnType("decimal(18,3)");
