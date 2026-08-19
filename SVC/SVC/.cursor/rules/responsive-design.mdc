@@ -1,0 +1,305 @@
+---
+description: Mandatory Responsive Design Standard for all HTML dashboards/reports
+globs:
+  - "**/*.html"
+  - "src/*_bot.lua"
+  - "**/*.razor"
+  - "**/*.css"
+alwaysApply: true
+---
+
+# Responsive Design Standard (mandatory)
+
+Added 1405/05/26. This is the full mobile/tablet/desktop responsive standard for **all** HTML
+dashboards, reports, cards, charts, tables, and forms produced in this project. It supersedes
+the shorter inline "Mobile-responsive output" note that used to live in `CLAUDE.md`'s HTML
+report styling section — that section now just points here.
+
+## Scope exception — RES-based Teamyar bots
+
+**Do not apply this standard to RES-based bots** (bots that bootstrap via `2/res_v2`/`2/res_v3`,
+e.g. RFM CRM bots 501/600 — see the "RES-framework bots" section in `CLAUDE.md`). Their table
+markup is rendered by Teamyar's own core JS widget (`$.Teamyar.table`) via
+`template_report.html`/`template_table.html`, not by the bot's own HTML — this project does not
+control that markup and must not try to restructure it (confirmed via source read, out of scope,
+never touch Teamyar core). A RES-based bot may still carry its own `data.css`/`data.js` for
+unrelated styling hooks (mandatory font/palette, help button), but the table itself is exempt
+from every rule below.
+
+Everything below applies to: self-contained (`bot_customform`) Lua bots that emit their own
+`result_type=HTML` markup, Blazor/.NET pages, and any other standalone HTML dashboard/report
+produced in this project.
+
+## ۱. رویکرد اصلی طراحی
+
+- طراحی را به روش `Mobile First` انجام بده؛ ابتدا ساختار مناسب موبایل را پیاده‌سازی کن و سپس با Media Query آن را برای تبلت و دسکتاپ توسعه بده.
+- صفحه باید در تمام عرض‌های متداول، بدون شکستن Layout و بدون ایجاد اسکرول افقی در سطح `body` و `html` نمایش داده شود.
+- هیچ بخش، کارت، جدول یا نموداری نباید باعث شود عرض کل صفحه از عرض Viewport بیشتر شود.
+- مخفی‌کردن خطا با `overflow-x: hidden` روی `body` به‌تنهایی ممنوع است؛ علت اصلی سرریز باید اصلاح شود.
+- حتماً Meta Viewport زیر در صفحه وجود داشته باشد:
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1">
+```
+
+## ۲. استاندارد عمومی ابعاد
+
+برای همه عناصر از مدل اندازه‌گیری زیر استفاده کن:
+
+```css
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}
+```
+
+- از عرض‌های ثابت مانند `width: 1200px` برای ساختار صفحه، کارت‌ها و جداول استفاده نکن.
+- به‌جای عرض ثابت از موارد زیر استفاده کن:
+
+```css
+width: 100%;
+max-width: 100%;
+min-width: 0;
+```
+
+- برای Container اصلی صفحه از الگوی زیر استفاده کن:
+
+```css
+.dashboard-container {
+  width: min(100% - 32px, 1440px);
+  margin-inline: auto;
+}
+```
+
+- در موبایل فاصله افقی Container بین `12px` تا `16px` و در دسکتاپ بین `24px` تا `32px` باشد.
+- تمام فرزندان Grid و Flex باید `min-width: 0` داشته باشند تا محتوای داخلی باعث افزایش عرض ستون نشود.
+
+## ۳. استاندارد دسکتاپ
+
+- در دسکتاپ، تمام بخش‌های اصلی صفحه باید داخل یک Container مشترک و هم‌عرض قرار بگیرند.
+- کارت‌ها، جداول بالا و پایین، نمودارها و بخش‌های گزارش نباید Containerهای اصلی با عرض متفاوت داشته باشند.
+- حداکثر عرض پیشنهادی داشبورد بین `1280px` تا `1440px` باشد.
+- Gridها با ساختار منعطف ساخته شوند:
+
+```css
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+}
+```
+
+- عرض هر بخش از طریق تعداد ستون‌های Grid مشخص شود، نه با Pixel ثابت.
+- هیچ جدول یا کارت پایینی نباید از عرض Container مشترک داشبورد بزرگ‌تر شود.
+- در مانیتورهای عریض، محتوا نباید بی‌دلیل کشیده شود؛ با `max-width` در مرکز صفحه قرار گیرد.
+- اعداد مالی در ستون‌های مشخص، با تراز ثابت و ترجیحاً با ویژگی زیر نمایش داده شوند:
+
+```css
+font-variant-numeric: tabular-nums;
+```
+
+## ۴. استاندارد موبایل
+
+در عرض‌های کمتر از `768px`:
+
+- تمام Gridهای چندستونه به یک ستون تبدیل شوند.
+- کارت‌ها، نمودارها و جداول دارای `width: 100%` و `min-width: 0` باشند.
+- Padding کارت‌ها کاهش پیدا کند، اما حداقل فاصله داخلی `12px` حفظ شود.
+- تیتر، فیلترها، دکمه‌ها و KPIها Wrap شوند و از صفحه خارج نشوند.
+- دکمه‌های عملیاتی حداقل ارتفاع لمسی `44px` داشته باشند.
+- متن‌ها و اعداد طولانی باید با توجه به نوع داده Wrap، کوتاه یا Ellipsis شوند.
+- هیچ متن، لینک، عدد، نمودار یا کنترل فرمی نباید عرض Viewport را افزایش دهد.
+- اندازه فونت فیلدهای ورودی حداقل `16px` باشد تا مرورگر موبایل هنگام Focus زوم نکند.
+
+## ۵. استاندارد جداول Responsive
+
+جدول‌ها مهم‌ترین عامل ایجاد سرریز هستند. برای تمام جداول یکی از دو راهکار زیر را براساس اهمیت داده انتخاب کن:
+
+### روش اول: تبدیل جدول به کارت در موبایل
+
+این روش برای جداول مدیریتی با تعداد ستون متوسط، راهکار ترجیحی است (فقط برای بات‌های خودساخته/self-contained و صفحات غیر-RES — نگاه کن به «Scope exception» بالا).
+
+- در دسکتاپ جدول عادی نمایش داده شود.
+- در موبایل هر ردیف به یک کارت مستقل تبدیل شود.
+- عنوان هر ستون کنار مقدار آن نمایش داده شود.
+- ستون‌های مهم مانند نام، مبلغ، تعداد، وضعیت و عملیات حفظ شوند.
+- اطلاعات فرعی در بخش «جزئیات بیشتر» قرار گیرند.
+
+### روش دوم: اسکرول داخلی کنترل‌شده
+
+اگر حفظ تمام ستون‌ها ضروری است، یا بات RES-based است (تنها روش قابل‌اجرا برای آن‌ها، از طریق `data.css` خودِ بات):
+
+- فقط Wrapper خود جدول دارای اسکرول افقی باشد؛ نه کل صفحه.
+- جدول داخل ساختار زیر قرار گیرد:
+
+```html
+<div class="table-responsive">
+  <table>...</table>
+</div>
+```
+
+```css
+.table-responsive {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+  width: 100%;
+  border-collapse: collapse;
+}
+```
+
+- استفاده از `min-width` برای جدول فقط زمانی مجاز است که همه ستون‌ها واقعاً باید حفظ شوند.
+- اگر جدول `min-width` دارد، این عرض باید فقط داخل Wrapper اسکرول شود و نباید عرض والد یا صفحه را افزایش دهد.
+- ستون عملیات یا ستون اول مهم می‌تواند در موبایل Sticky شود.
+- ستون‌های کم‌اهمیت در موبایل مخفی یا وارد بخش جزئیات شوند.
+- عنوان ستون‌ها نباید به شکلی Wrap شوند که خوانایی جدول از بین برود.
+- عددهای مالی نباید شکسته شوند:
+
+```css
+.amount-cell {
+  white-space: nowrap;
+}
+```
+
+- برای همه جداول صفحه، عرض Wrapper باید دقیقاً تابع عرض Container مشترک باشد.
+- هیچ جدول پایین صفحه نباید به علت تعداد ستون بیشتر، عرض کل داشبورد را تغییر دهد.
+
+> برای گزارش‌های `result_type=HTML` این پروژه (بات‌های self-contained)، این روش با قوانین موجود «HTML report styling rules» در `CLAUDE.md` (`white-space: nowrap`, `table { width: auto }`, `td,th { width: 1% }`) سازگار است — همان قوانین دست‌نخورده می‌مانند، فقط داخل `.table-responsive` قرار می‌گیرند.
+
+## ۶. مدیریت متن و محتوای طولانی
+
+برای جلوگیری از افزایش عرض عناصر، حسب کاربرد از این قواعد استفاده کن:
+
+```css
+.text-wrap {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+```
+
+- برای اعداد، مبالغ، شناسه‌ها و تاریخ‌ها از `white-space: nowrap` استفاده کن.
+- برای توضیحات و نام‌های طولانی از Wrap یا Ellipsis استفاده کن.
+- هیچ عنصر داخلی نباید با `white-space: nowrap` باعث افزایش عرض کل کارت یا صفحه شود.
+
+## ۷. نمودارها و تصاویر
+
+- Canvas، SVG، تصویر و نمودار باید Responsive باشند:
+
+```css
+img,
+svg,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+```
+
+- نمودارها باید داخل Wrapper با `width: 100%` قرار بگیرند.
+- اگر از Chart.js استفاده می‌شود:
+
+```javascript
+responsive: true,
+maintainAspectRatio: false
+```
+
+- ارتفاع نمودار در موبایل و دسکتاپ با Media Query تنظیم شود.
+- Legend نمودار در موبایل Wrap یا جمع‌شونده باشد.
+
+## ۸. نقاط شکست استاندارد
+
+حداقل Breakpointهای زیر بررسی شوند:
+
+```css
+/* Mobile */
+@media (max-width: 767px) {}
+
+/* Tablet */
+@media (min-width: 768px) and (max-width: 1023px) {}
+
+/* Desktop */
+@media (min-width: 1024px) {}
+
+/* Large Desktop */
+@media (min-width: 1440px) {}
+```
+
+Breakpoint باید براساس شکستن واقعی محتوا نیز تنظیم شود، نه صرفاً نوع دستگاه.
+
+## ۹. استاندارد راست‌چین
+
+- صفحه فارسی با ساختار زیر پیاده‌سازی شود:
+
+```html
+<html lang="fa" dir="rtl">
+```
+
+- برای فاصله‌ها به‌جای `left` و `right` تا حد امکان از ویژگی‌های منطقی استفاده کن:
+
+```css
+margin-inline;
+padding-inline;
+inset-inline-start;
+border-inline-start;
+text-align: start;
+```
+
+- RTL نباید باعث جابه‌جایی اشتباه ستون‌ها، اسکرول اولیه از وسط جدول یا پنهان‌شدن ستون اول شود.
+
+## ۱۰. کنترل کیفیت اجباری
+
+قبل از تحویل، صفحه را حداقل در عرض‌های زیر تست کن:
+
+- `320px`
+- `360px`
+- `390px`
+- `412px`
+- `768px`
+- `1024px`
+- `1366px`
+- `1440px`
+
+در تمام ابعاد بالا باید موارد زیر تأیید شوند:
+
+1. `document.documentElement.scrollWidth` از `window.innerWidth` بیشتر نباشد.
+2. صفحه در سطح کلی اسکرول افقی نداشته باشد.
+3. تمام جداول داخل محدوده Container قرار داشته باشند.
+4. جدول بزرگ فقط در Wrapper خودش اسکرول شود.
+5. کارت‌ها و نمودارها از Viewport خارج نشوند.
+6. محتوا روی هم قرار نگیرد.
+7. متن فارسی، اعداد و دکمه‌ها خوانا باقی بمانند.
+8. نسخه دسکتاپ بیش از حد کشیده یا فشرده نباشد.
+9. عملکرد فیلترها، لینک‌ها، دکمه‌ها و مرتب‌سازی جدول بعد از Responsive‌سازی حفظ شود.
+
+برای شناسایی عنصر ایجادکننده سرریز، به‌صورت موقت تمام عناصر را بررسی کن و عنصری را که `getBoundingClientRect().right` یا عرض آن از Viewport عبور کرده پیدا کن. سپس همان عنصر را اصلاح کن؛ از پنهان‌کردن عمومی سرریز به‌عنوان راه‌حل اصلی استفاده نکن.
+
+## ۱۱. معیار نهایی تحویل
+
+خروجی زمانی قابل‌قبول است که:
+
+- یک HTML کامل، مستقل و قابل اجرا تحویل داده شود.
+- طراحی در موبایل و دسکتاپ ساختار حرفه‌ای و مدیریتی داشته باشد.
+- عرض تمام بخش‌ها از یک Container و Grid مشترک پیروی کند.
+- هیچ بخش پایینی به دلیل جدول بزرگ‌تر باعث جابه‌جایی چپ و راست کل صفحه نشود.
+- در موبایل، اولویت نمایش اطلاعات رعایت شود و صرفاً نسخه کوچک‌شده دسکتاپ ارائه نشود.
+- تغییرات Responsive هیچ‌یک از منطق‌های داده، Queryها، لینک‌ها یا عملکردهای موجود را مختل نکند.
+
+نکته کلیدی همین است: در موبایل نباید تلاش کند کل جدول دسکتاپ را صرفاً کوچک کند؛ یا باید ردیف‌ها را به کارت تبدیل کند، یا اسکرول را فقط داخل محدوده خود جدول نگه دارد.
