@@ -336,6 +336,9 @@ local function date_params()
 end
 
 -- ── KPI کلی سازمان ──────────────────────────────────────────────────────
+-- توجه (فیدبک مدیر کال‌سنتر): تماس داخلی (کارمند↔کارمند، هر دو سمت profile_main.TYPE=1) باید از
+-- «ورودی»/«خروجی» (که باید فقط ترافیک واقعی با مشتری/بیرون باشد) جدا شود، نه با آن‌ها جمع/همپوشان.
+-- Outbound خالص = کارمند تماس‌گیرنده و سمت مقابل کارمند نیست. Inbound خالص = برعکس. Internal = هر دو کارمند.
 local function fetch_kpi()
     local rows, err = fetch_rows(string.format([[
 SELECT
@@ -345,12 +348,13 @@ SELECT
     COUNT(DISTINCT CASE WHEN v.DialStatus = 4 THEN v.linkedid END) AS busy,
     COUNT(DISTINCT CASE WHEN v.DialStatus = 6 THEN v.linkedid END) AS cancel,
     COUNT(DISTINCT CASE WHEN v.DialStatus NOT IN (3,4,5,6) THEN v.linkedid END) AS other_status,
-    COUNT(DISTINCT CASE WHEN v.CallerProfileID IN %s THEN v.linkedid END) AS outbound_calls,
-    COUNT(DISTINCT CASE WHEN v.ConnectedLineProfileID IN %s THEN v.linkedid END) AS inbound_calls,
+    COUNT(DISTINCT CASE WHEN v.CallerProfileID IN %s AND v.ConnectedLineProfileID NOT IN %s THEN v.linkedid END) AS outbound_calls,
+    COUNT(DISTINCT CASE WHEN v.ConnectedLineProfileID IN %s AND v.CallerProfileID NOT IN %s THEN v.linkedid END) AS inbound_calls,
+    COUNT(DISTINCT CASE WHEN v.CallerProfileID IN %s AND v.ConnectedLineProfileID IN %s THEN v.linkedid END) AS internal_calls,
     COUNT(DISTINCT v.CallerProfileID) AS distinct_outbound_agents,
     COUNT(DISTINCT v.ConnectedLineProfileID) AS distinct_inbound_agents
 FROM %s
-]], AGENT_SUBQ, AGENT_SUBQ, VOIP_UNION), date_params())
+]], AGENT_SUBQ, AGENT_SUBQ, AGENT_SUBQ, AGENT_SUBQ, AGENT_SUBQ, AGENT_SUBQ, VOIP_UNION), date_params())
 
     -- مدت کل مکالمه: فقط Leg سمت کارمند هر تماس (نه هر دو Leg — جلوگیری از دوبرابرشدن مدت)
     local dur_rows = fetch_rows(string.format([[
@@ -364,7 +368,8 @@ SELECT SUM(agent_leg.dur) FROM (
 
     if rows == nil or #rows == 0 then
         return { total_calls = 0, answered = 0, no_answer = 0, busy = 0, cancel = 0, other_status = 0,
-            outbound_calls = 0, inbound_calls = 0, distinct_outbound_agents = 0, distinct_inbound_agents = 0,
+            outbound_calls = 0, inbound_calls = 0, internal_calls = 0,
+            distinct_outbound_agents = 0, distinct_inbound_agents = 0,
             duration_sum = 0 }, err
     end
     local r = rows[1]
@@ -373,8 +378,8 @@ SELECT SUM(agent_leg.dur) FROM (
     return {
         total_calls = tonumber(r[1]) or 0, answered = tonumber(r[2]) or 0, no_answer = tonumber(r[3]) or 0,
         busy = tonumber(r[4]) or 0, cancel = tonumber(r[5]) or 0, other_status = tonumber(r[6]) or 0,
-        outbound_calls = tonumber(r[7]) or 0, inbound_calls = tonumber(r[8]) or 0,
-        distinct_outbound_agents = tonumber(r[9]) or 0, distinct_inbound_agents = tonumber(r[10]) or 0,
+        outbound_calls = tonumber(r[7]) or 0, inbound_calls = tonumber(r[8]) or 0, internal_calls = tonumber(r[9]) or 0,
+        distinct_outbound_agents = tonumber(r[10]) or 0, distinct_inbound_agents = tonumber(r[11]) or 0,
         duration_sum = duration_sum,
     }, nil
 end
@@ -385,13 +390,13 @@ local function fetch_daily_trend()
 SELECT rd.DATEKEY, rd.JTDAY,
     COUNT(DISTINCT CASE WHEN v.DialStatus = 5 THEN v.linkedid END) AS answered,
     COUNT(DISTINCT CASE WHEN v.DialStatus IN (3,4,6) THEN v.linkedid END) AS failed,
-    COUNT(DISTINCT CASE WHEN v.CallerProfileID IN %s THEN v.linkedid END) AS outbound,
-    COUNT(DISTINCT CASE WHEN v.ConnectedLineProfileID IN %s THEN v.linkedid END) AS inbound
+    COUNT(DISTINCT CASE WHEN v.CallerProfileID IN %s AND v.ConnectedLineProfileID NOT IN %s THEN v.linkedid END) AS outbound,
+    COUNT(DISTINCT CASE WHEN v.ConnectedLineProfileID IN %s AND v.CallerProfileID NOT IN %s THEN v.linkedid END) AS inbound
 FROM %s
 LEFT JOIN report_dimdate rd ON rd.DATEKEY = v.Date - MOD(v.Date, %d)
 GROUP BY rd.DATEKEY, rd.JTDAY
 ORDER BY rd.DATEKEY
-]], AGENT_SUBQ, AGENT_SUBQ, VOIP_UNION, CONFIG.DAY_TICKS), date_params())
+]], AGENT_SUBQ, AGENT_SUBQ, AGENT_SUBQ, AGENT_SUBQ, VOIP_UNION, CONFIG.DAY_TICKS), date_params())
     local out = {}
     for _, r in ipairs(rows or {}) do
         table.insert(out, {
@@ -427,6 +432,8 @@ ORDER BY hour_of_day
 end
 
 -- ── رتبه‌بندی عملکردی کارمندان (خروجی + ورودی، ادغام‌شده) ──────────────
+-- خروجی/ورودی هر کارمند هم فقط ترافیک واقعی (سمت مقابل کارمند نباشد) — تماس داخلی این‌جا شمرده نمی‌شود،
+-- همان‌طور که در KPI کلی هم جدا شد (نگاه کنید به یادداشت بالای fetch_kpi)
 local function fetch_agent_leaderboard()
     local out_rows, out_err = fetch_rows(string.format([[
 SELECT v.CallerProfileID AS agent_id, pm.FULLNAME,
@@ -435,8 +442,9 @@ SELECT v.CallerProfileID AS agent_id, pm.FULLNAME,
     SUM(v.Duration) AS duration_sum
 FROM %s
 INNER JOIN profile_main pm ON pm.ID = v.CallerProfileID AND pm.TYPE = %d
+WHERE v.ConnectedLineProfileID NOT IN %s
 GROUP BY v.CallerProfileID, pm.FULLNAME
-]], VOIP_UNION, CONFIG.AGENT_TYPE), date_params())
+]], VOIP_UNION, CONFIG.AGENT_TYPE, AGENT_SUBQ), date_params())
 
     local in_rows, in_err = fetch_rows(string.format([[
 SELECT v.ConnectedLineProfileID AS agent_id, pm.FULLNAME,
@@ -445,8 +453,9 @@ SELECT v.ConnectedLineProfileID AS agent_id, pm.FULLNAME,
     SUM(v.Duration) AS duration_sum
 FROM %s
 INNER JOIN profile_main pm ON pm.ID = v.ConnectedLineProfileID AND pm.TYPE = %d
+WHERE v.CallerProfileID NOT IN %s
 GROUP BY v.ConnectedLineProfileID, pm.FULLNAME
-]], VOIP_UNION, CONFIG.AGENT_TYPE), date_params())
+]], VOIP_UNION, CONFIG.AGENT_TYPE, AGENT_SUBQ), date_params())
 
     local by_agent = {}
     local order = {}
@@ -655,10 +664,9 @@ local answer_rate_overall = fmt_pct(kpi.answered, kpi.total_calls)
 local aht_seconds = 0
 if kpi.answered > 0 then aht_seconds = kpi.duration_sum / kpi.answered end
 
--- تماس‌هایی که نه CallerProfileID و نه ConnectedLineProfileID‌شان به یک اپراتور واقعی وصل است —
--- تخمینی از «رهاشده در صف / بدون پاسخ اپراتور»، نه یک SLA دقیق (چون تماس داخلی کارمند-به-کارمند هم
--- در inbound_calls هم در outbound_calls شمرده می‌شود، پس این تفریق نباید منفی شود؛ clamp احتیاطی)
-local unassigned_calls = kpi.total_calls - kpi.inbound_calls - kpi.outbound_calls
+-- تماس‌هایی که نه ورودی خالص‌اند، نه خروجی خالص، نه داخلی — یعنی به هیچ اپراتوری وصل نشدند.
+-- تخمینی از «رهاشده در صف»، نه یک SLA دقیق (clamp احتیاطی در برابر خطای گرد کردن)
+local unassigned_calls = kpi.total_calls - kpi.inbound_calls - kpi.outbound_calls - kpi.internal_calls
 if unassigned_calls < 0 then unassigned_calls = 0 end
 
 local peak_hour_label, peak_hour_count = "—", 0
@@ -683,8 +691,9 @@ local kpi_html = table.concat({
     kpi_card("پاسخ‌داده‌شده", fmt_num(kpi.answered), fmt_dec1(fmt_pct(kpi.answered, kpi.total_calls)) .. "٪ از کل"),
     kpi_card("ناموفق", fmt_num(kpi.no_answer + kpi.busy + kpi.cancel),
         "بی‌پاسخ " .. fmt_num(kpi.no_answer) .. " / مشغول " .. fmt_num(kpi.busy) .. " / قطع " .. fmt_num(kpi.cancel)),
-    kpi_card("تماس‌های ورودی", fmt_num(kpi.inbound_calls), fmt_num(kpi.distinct_inbound_agents) .. " کارمند پاسخ‌گو"),
-    kpi_card("تماس‌های خروجی", fmt_num(kpi.outbound_calls), fmt_num(kpi.distinct_outbound_agents) .. " کارمند تماس‌گیرنده"),
+    kpi_card("تماس‌های ورودی", fmt_num(kpi.inbound_calls), "فقط مشتری/بیرون — بدون تماس داخلی"),
+    kpi_card("تماس‌های خروجی", fmt_num(kpi.outbound_calls), "فقط مشتری/بیرون — بدون تماس داخلی"),
+    kpi_card("تماس‌های داخلی", fmt_num(kpi.internal_calls), "کارمند به کارمند — جدا از ورودی/خروجی"),
     kpi_card("کل مدت مکالمه", fmt_duration(kpi.duration_sum), "ساعت:دقیقه:ثانیه"),
     kpi_card("نرخ پاسخ‌گویی", fmt_dec1(answer_rate_overall) .. "٪", "شاخص کلی سرویس‌دهی"),
     kpi_card("میانگین مدت مکالمه (AHT)", fmt_duration(aht_seconds), "به‌ازای هر تماس پاسخ‌داده‌شده"),
@@ -723,18 +732,26 @@ for _, a in ipairs(top_agents_by_calls) do
 end
 if #top_agents_bars == 0 then top_agents_bars = { '<div class="empty-msg">داده‌ای یافت نشد</div>' } end
 
+-- توزیع پاسخ‌گویی هر اپراتور (پاسخ در برابر ناموفق) — همون تاپ N، به‌صورت نمودار میله‌ای‌ستونی
+-- (fetch_daily_trend/fetch_hourly_trend هم همین chart_bars رو با answered/failed صدا می‌زنن)
+local agent_distribution_items = {}
+for _, a in ipairs(top_agents_by_calls) do
+    table.insert(agent_distribution_items, { label = a.name, answered = a.total_answered, failed = a.total_calls - a.total_answered })
+end
+local agent_distribution_chart_html = chart_bars(agent_distribution_items)
+
 local leaderboard_table_rows = {}
 for _, a in ipairs(leaderboard) do
     table.insert(leaderboard_table_rows, {
         name = a.name,
         out_calls = a.out_calls, out_answered = a.out_answered, out_duration_label = fmt_duration(a.out_duration),
         in_calls = a.in_calls, in_answered = a.in_answered, in_duration_label = fmt_duration(a.in_duration),
-        total_calls = a.total_calls, answer_rate_label = fmt_dec1(a.answer_rate) .. "٪",
+        total_calls = a.total_calls, total_answered = a.total_answered, answer_rate_label = fmt_dec1(a.answer_rate) .. "٪",
     })
 end
 local leaderboard_table = trend_table(leaderboard_table_rows,
-    { "name", "out_calls", "out_answered", "out_duration_label", "in_calls", "in_answered", "in_duration_label", "total_calls", "answer_rate_label" },
-    { "کارمند", "تماس خروجی", "پاسخ‌دادهٔ خروجی", "مدت خروجی", "تماس ورودی", "پاسخ‌دادهٔ ورودی", "مدت ورودی", "کل تماس", "نرخ پاسخ" })
+    { "name", "out_calls", "out_answered", "out_duration_label", "in_calls", "in_answered", "in_duration_label", "total_calls", "total_answered", "answer_rate_label" },
+    { "کارمند", "تماس خروجی", "پاسخ‌دادهٔ خروجی", "مدت خروجی", "تماس ورودی", "پاسخ‌دادهٔ ورودی", "مدت ورودی", "کل تماس", "کل پاسخ", "نرخ پاسخ" })
 
 local daily_table = trend_table(daily_trend, { "label", "answered", "failed", "inbound", "outbound" },
     { "روز", "پاسخ‌داده‌شده", "ناموفق", "ورودی", "خروجی" })
@@ -900,8 +917,14 @@ body{margin:0;background:var(--bg);color:var(--text);font-size:14px;overflow-x:h
 </section>
 
 <section id="agents" class="page">
-  <div class="card"><div class="title">جدول کامل عملکرد کارمندان (بازهٔ انتخاب‌شده)</div>
-    <div class="table-wrap">]] .. leaderboard_table .. [[</div>
+  <div class="grid">
+    <div class="card"><div class="title">توزیع پاسخ‌گویی اپراتورها (تاپ ]] .. CONFIG.TOP_N_LEADERBOARD_CHART .. [[، پاسخ در برابر ناموفق)</div>
+      <div class="chart">]] .. agent_distribution_chart_html .. [[</div>
+      <div class="legend-hint"><span><i class="dot" style="background:var(--accent);"></i>پاسخ</span><span><i class="dot" style="background:#b9c8dd;"></i>ناموفق</span></div>
+    </div>
+    <div class="card"><div class="title">جدول کامل عملکرد کارمندان (بازهٔ انتخاب‌شده)</div>
+      <div class="table-wrap">]] .. leaderboard_table .. [[</div>
+    </div>
   </div>
 </section>
 
@@ -911,13 +934,14 @@ body{margin:0;background:var(--bg);color:var(--text);font-size:14px;overflow-x:h
     <div class="help-modal-body">
       <p><strong>این داشبورد چیست؟</strong> نمای مدیریتی وضعیت تماس‌ها و عملکرد کارمندان کال‌سنتر، در بازهٔ تاریخ انتخابی («از تاریخ»/«تا تاریخ»).</p>
       <ul>
-        <li><b>نمای کلی</b> — ۱۱ کارت KPI (کل تماس، پاسخ، ناموفق، ورودی، خروجی، مدت کل، نرخ پاسخ‌گویی، میانگین مدت مکالمه/AHT، بدون اتصال به اپراتور، ساعت اوج تماس، میانگین تماس هر کارمند)، نمودار نتیجهٔ تماس و ورودی/خروجی، تاپ ۱۰ کارمند.</li>
+        <li><b>نمای کلی</b> — ۱۲ کارت KPI (کل تماس، پاسخ، ناموفق، ورودی، خروجی، داخلی، مدت کل، نرخ پاسخ‌گویی، میانگین مدت مکالمه/AHT، بدون اتصال به اپراتور، ساعت اوج تماس، میانگین تماس هر کارمند)، نمودار نتیجهٔ تماس و ورودی/خروجی، تاپ ۱۰ کارمند.</li>
         <li><b>روند تماس‌ها</b> — روند روزانه و ساعتی پاسخ در برابر ناموفق.</li>
-        <li><b>عملکرد کارمندان</b> — جدول کامل، قابل مرتب‌سازی با کلیک روی هدر ستون: تماس/پاسخ/مدت به تفکیک ورودی و خروجی برای هر کارمند.</li>
+        <li><b>عملکرد کارمندان</b> — نمودار توزیع پاسخ‌گویی تاپ اپراتورها + جدول کامل قابل مرتب‌سازی (کلیک روی هدر ستون): تماس/پاسخ/مدت به تفکیک ورودی و خروجی، و کل پاسخ/نرخ پاسخ برای هر کارمند.</li>
       </ul>
       <p><strong>وضعیت کارمندان یعنی چه؟</strong> این داشبورد وضعیت <b>عملکردی</b> کارمندان را نشان می‌دهد (نرخ پاسخ، تعداد تماس، مدت مکالمه) — نه وضعیت لحظه‌ای آنلاین/مشغول/آفلاین، چون چنین دادهٔ زنده‌ای در سیستم کال‌سنتر ثبت نمی‌شود.</p>
-      <p><strong>قرارداد ورودی/خروجی:</strong> اگر کارمند تماس‌گیرنده باشد = خروجی؛ اگر کارمند پاسخ‌دهنده باشد = ورودی. هر تماس فقط یک‌بار شمرده می‌شود (بدون دوبار شمردن Legهای فنی همان تماس).</p>
-      <p><strong>«بدون اتصال به اپراتور» یعنی چه؟</strong> تخمینی است، نه یک شاخص دقیق: تماس‌هایی که در بازهٔ انتخابی نه به‌عنوان ورودیِ هیچ اپراتوری و نه خروجیِ هیچ اپراتوری شمرده شدند — عمدتاً تماس‌های رهاشده در صف پیش از رسیدن به اپراتور، یا Legهای فنی/صف. اگر عدد آن بالاست، به معنی تماس‌های ازدست‌رفته/رهاشدهٔ واقعی است و ارزش پیگیری مدیریتی دارد.</p>
+      <p><strong>«تماس‌های تکراری حذف‌شده» یعنی چه؟</strong> هیچ تماس واقعی حذف نمی‌شود. هر تماس در جدول خام سیستم معمولاً ۲ ردیف/Leg فنی دارد (یکی سمت اپراتور، یکی Leg صف/ترانک) که هر دو یک شناسهٔ مشترک (linkedid) دارند. این داشبورد هرجا «تعداد تماس» می‌گوید، شناسهٔ یکتای هر تماس را یک‌بار می‌شمارد — وگرنه عدد تقریباً ۲برابر واقعی نشان داده می‌شد.</p>
+      <p><strong>قرارداد ورودی/خروجی/داخلی:</strong> اگر کارمند تماس‌گیرنده و سمت مقابل مشتری/بیرون باشد = خروجی؛ اگر کارمند پاسخ‌دهنده و سمت مقابل مشتری/بیرون باشد = ورودی؛ اگر هر دو سمت کارمند باشند = داخلی (جدا شمرده می‌شود، در ورودی/خروجی نمی‌آید).</p>
+      <p><strong>«بدون اتصال به اپراتور» یعنی چه؟</strong> تخمینی است، نه یک شاخص دقیق: تماس‌هایی که در بازهٔ انتخابی نه ورودی، نه خروجی و نه داخلی شمرده شدند — عمدتاً تماس‌های رهاشده در صف پیش از رسیدن به اپراتور، یا Legهای فنی/صف. اگر عدد آن بالاست، به معنی تماس‌های ازدست‌رفته/رهاشدهٔ واقعی است و ارزش پیگیری مدیریتی دارد.</p>
     </div>
   </div>
 </div>
