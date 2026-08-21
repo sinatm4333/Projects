@@ -56,6 +56,17 @@ local CONFIG = {
     DEFAULT_RANGE_DAYS = 7,
     AGENT_TYPE = 1, -- profile_main.TYPE=1 = کاربر واقعی سیستم (کارمند) — طبق قرارداد رایج این ریپو
     TOP_N_LEADERBOARD_CHART = 10,
+    -- فهرست دستی شناسهٔ کارمندان سابق/غیرفعال که باید از گزارش کنار گذاشته شوند.
+    -- چرا دستی: profile_main فقط ID/MASTER_MODULE/FULLNAME/TYPE/is_role دارد — هیچ ستون فعال/غیرفعال یا
+    -- تاریخ خروج ندارد (تایید‌شده با db_schema)، پس این بات نمی‌تواند خودش «کارمند سابق» را تشخیص دهد.
+    -- تایید‌شده ۱۴۰۵/۰۵/۳۰ (فیدبک مدیر کال‌سنتر روی دادهٔ زنده): آی‌دی ۳۶۵۲۰ («مهدی رستمی» در profile_main)
+    -- که حدود یک سال است دیگر همکار نیست، هنوز MAX(Date) تماس‌هایش کاملاً جدید است (دیروز) — یعنی این یک
+    -- مشکل نگاشت داخلی/extension سمت PBX/VOIP است (شمارهٔ او به یک کارمند فعلی دیگر متصل مانده)، نه باگ
+    -- فیلتر تاریخ این بات. راه‌حل ریشه‌ای باید سمت تیم VOIP/PBX (اصلاح voip_phone_extension یا مشابه)
+    -- انجام شود؛ این فهرست فقط Workaround نمایشی است تا آن اصلاح انجام شود.
+    EXCLUDED_AGENT_IDS = {
+        36520, -- مهدی رستمی (خارج از سازمان، طبق تایید کاربر ۱۴۰۵/۰۵/۳۰)
+    },
     PERSIAN_MONTHS = {
         "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
         "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
@@ -329,7 +340,21 @@ local VOIP_UNION = [[
 ) v
 ]]
 
-local AGENT_SUBQ = "(SELECT ID FROM profile_main WHERE TYPE = " .. CONFIG.AGENT_TYPE .. ")"
+-- CONFIG.EXCLUDED_AGENT_IDS -> رشتهٔ عددی امن برای NOT IN (اعتبارسنجی با tonumber/math.floor — این
+-- فهرست از کانفیگ ثابت می‌آید نه از ورودی کاربر، اما بازهم عددی‌سازی می‌شود تا تضمینی باشد؛ وقتی خالی
+-- است "(0)" می‌دهد که بی‌اثر است چون ID=0 هیچ‌وقت واقعی نیست)
+local function excluded_ids_sql()
+    local ids = {}
+    for _, id in ipairs(CONFIG.EXCLUDED_AGENT_IDS) do
+        local n = tonumber(id)
+        if n ~= nil then table.insert(ids, tostring(math.floor(n))) end
+    end
+    if #ids == 0 then return "(0)" end
+    return "(" .. table.concat(ids, ",") .. ")"
+end
+local EXCLUDED_IDS_SQL = excluded_ids_sql()
+local AGENT_SUBQ = "(SELECT ID FROM profile_main WHERE TYPE = " .. CONFIG.AGENT_TYPE ..
+    " AND ID NOT IN " .. EXCLUDED_IDS_SQL .. ")"
 
 local function date_params()
     return { filters.from_raw, filters.to_raw, filters.from_raw, filters.to_raw }
@@ -441,10 +466,10 @@ SELECT v.CallerProfileID AS agent_id, pm.FULLNAME,
     COUNT(DISTINCT CASE WHEN v.DialStatus = 5 THEN v.linkedid END) AS answered,
     SUM(v.Duration) AS duration_sum
 FROM %s
-INNER JOIN profile_main pm ON pm.ID = v.CallerProfileID AND pm.TYPE = %d
+INNER JOIN profile_main pm ON pm.ID = v.CallerProfileID AND pm.TYPE = %d AND pm.ID NOT IN %s
 WHERE v.ConnectedLineProfileID NOT IN %s
 GROUP BY v.CallerProfileID, pm.FULLNAME
-]], VOIP_UNION, CONFIG.AGENT_TYPE, AGENT_SUBQ), date_params())
+]], VOIP_UNION, CONFIG.AGENT_TYPE, EXCLUDED_IDS_SQL, AGENT_SUBQ), date_params())
 
     local in_rows, in_err = fetch_rows(string.format([[
 SELECT v.ConnectedLineProfileID AS agent_id, pm.FULLNAME,
@@ -452,10 +477,10 @@ SELECT v.ConnectedLineProfileID AS agent_id, pm.FULLNAME,
     COUNT(DISTINCT CASE WHEN v.DialStatus = 5 THEN v.linkedid END) AS answered,
     SUM(v.Duration) AS duration_sum
 FROM %s
-INNER JOIN profile_main pm ON pm.ID = v.ConnectedLineProfileID AND pm.TYPE = %d
+INNER JOIN profile_main pm ON pm.ID = v.ConnectedLineProfileID AND pm.TYPE = %d AND pm.ID NOT IN %s
 WHERE v.CallerProfileID NOT IN %s
 GROUP BY v.ConnectedLineProfileID, pm.FULLNAME
-]], VOIP_UNION, CONFIG.AGENT_TYPE, AGENT_SUBQ), date_params())
+]], VOIP_UNION, CONFIG.AGENT_TYPE, EXCLUDED_IDS_SQL, AGENT_SUBQ), date_params())
 
     local by_agent = {}
     local order = {}
@@ -942,6 +967,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-size:14px;overflow-x:h
       <p><strong>«تماس‌های تکراری حذف‌شده» یعنی چه؟</strong> هیچ تماس واقعی حذف نمی‌شود. هر تماس در جدول خام سیستم معمولاً ۲ ردیف/Leg فنی دارد (یکی سمت اپراتور، یکی Leg صف/ترانک) که هر دو یک شناسهٔ مشترک (linkedid) دارند. این داشبورد هرجا «تعداد تماس» می‌گوید، شناسهٔ یکتای هر تماس را یک‌بار می‌شمارد — وگرنه عدد تقریباً ۲برابر واقعی نشان داده می‌شد.</p>
       <p><strong>قرارداد ورودی/خروجی/داخلی:</strong> اگر کارمند تماس‌گیرنده و سمت مقابل مشتری/بیرون باشد = خروجی؛ اگر کارمند پاسخ‌دهنده و سمت مقابل مشتری/بیرون باشد = ورودی؛ اگر هر دو سمت کارمند باشند = داخلی (جدا شمرده می‌شود، در ورودی/خروجی نمی‌آید).</p>
       <p><strong>«بدون اتصال به اپراتور» یعنی چه؟</strong> تخمینی است، نه یک شاخص دقیق: تماس‌هایی که در بازهٔ انتخابی نه ورودی، نه خروجی و نه داخلی شمرده شدند — عمدتاً تماس‌های رهاشده در صف پیش از رسیدن به اپراتور، یا Legهای فنی/صف. اگر عدد آن بالاست، به معنی تماس‌های ازدست‌رفته/رهاشدهٔ واقعی است و ارزش پیگیری مدیریتی دارد.</p>
+      <p><strong>چرا کارمند سابق ممکن است در گزارش دیده شود؟</strong> این داشبورد نمی‌تواند «کارمند فعلی» را از «کارمند سابق» تشخیص دهد — جدول کاربران سیستم ستون فعال/غیرفعال یا تاریخ خروج ندارد. اگر شمارهٔ داخلی/اتصال یک کارمندِ رفته هنوز به تماس‌های واقعی وصل می‌شود، مشکل نگاشت داخلی سمت PBX/VOIP است، نه این گزارش. برای حذف موقت یک نفر از گزارش، شناسهٔ او را به فهرست <code>CONFIG.EXCLUDED_AGENT_IDS</code> در ابتدای کد بات اضافه کنید.</p>
     </div>
   </div>
 </div>
