@@ -1,7 +1,19 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/29 12:00
+-- Last Edit = 1405/05/29 14:20
 
 -- Bot: داشبورد مدیریتی Cash Flow / خزانه‌داری — v01
+-- اصلاحات پس از بازخورد کاربر روی نسخهٔ اول (این دور):
+--   ۱) اسکرول عرضی موبایل: Grid/Flex با ستون‌های خام «1fr» حداقل عرضشان min-content محتواست نه صفر —
+--      همه به minmax(0,1fr) / min-width:0 تغییر کردند (.grid-2/.grid-3/.daily-strip/.stacked-col) +
+--      یک لایهٔ ایمنی overflow-x:hidden روی html/body/#reportRoot.
+--   ۲) درخواست‌های خزانه‌داری معوق: KPI و برچسب جدید برای STATUS=1 (در انتظار تایید) با REQUEST_DATE
+--      (تاریخ مورد نیاز) گذشته از امروز — هم در Doughnut ترکیب تعهدات، هم در جدول درخواست‌ها، هم در
+--      جدول «سررسیدهای ۷ روز آینده» (که حالا معوق‌ها را هم نشان می‌دهد، نه فقط ۷ روز پیشِ رو).
+--      حین همین کار یک باگ واقعی هم پیدا و رفع شد: سه Query لیست چک/درخواست ستون‌های تاریخ خام
+--      FILETIME را مستقیم به‌عنوان رشتهٔ شمسی می‌فرستادند (بدون Join به report_dimdate) — الان مثل
+--      بقیهٔ Queryهای این فایل با BETWEEN DATEKEY.. به report_dimdate.JNDATE تبدیل می‌شوند.
+--   ۳) لیست چک‌ها: ستون‌های ذی‌نفع/بانک (متن طولانی) با کلاس wrap-cell به‌جای nowrap عمومی جدول Wrap
+--      می‌شوند تا جدول بیش از حد عریض نشود.
 -- هدف: نمای مدیریتی وضعیت نقدینگی و تعهدات کوتاه‌مدت (چک صادره/دریافتی، درخواست‌های خزانه‌داری،
 -- موجودی بانک/صندوق) بر پایهٔ دادهٔ زندهٔ Teamyar. هیچ Table/Column/Status/رابطهٔ JOIN در این فایل حدس
 -- زده نشده — همه از چند دور Query Discovery روی دادهٔ زنده (این گفتگو) و تأیید صریح کاربر (برای معنای
@@ -222,6 +234,8 @@ local issued_next7_cnt = to_num(cq[9]); local issued_next7_amt = to_num(cq[10])
 local issued_later_cnt = to_num(cq[11]); local issued_later_amt = to_num(cq[12])
 
 -- ---------- KPIهای درخواست خزانه‌داری ----------
+-- «معوق» طبق درخواست کاربر: درخواست STATUS=1 (در انتظار تایید، هنوز پرداخت نشده) که REQUEST_DATE آن
+-- (طبق تصمیم قبلی، همان «تاریخ مورد نیاز») از امروز گذشته باشد.
 local rq = fetch_row1([[
     SELECT
         SUM(CASE WHEN r.STATUS=3 THEN 1 ELSE 0 END) AS paid_cnt,
@@ -229,16 +243,20 @@ local rq = fetch_row1([[
         SUM(CASE WHEN r.STATUS=1 AND r.CANCELED=0 THEN 1 ELSE 0 END) AS pending_cnt,
         COALESCE(SUM(CASE WHEN r.STATUS=1 AND r.CANCELED=0 THEN d.AMOUNT ELSE 0 END),0) AS pending_amt,
         SUM(CASE WHEN r.STATUS=1 AND r.CANCELED=0 AND r.REQUEST_DATE BETWEEN ? AND ? THEN 1 ELSE 0 END) AS pending_next7_cnt,
-        COALESCE(SUM(CASE WHEN r.STATUS=1 AND r.CANCELED=0 AND r.REQUEST_DATE BETWEEN ? AND ? THEN d.AMOUNT ELSE 0 END),0) AS pending_next7_amt
+        COALESCE(SUM(CASE WHEN r.STATUS=1 AND r.CANCELED=0 AND r.REQUEST_DATE BETWEEN ? AND ? THEN d.AMOUNT ELSE 0 END),0) AS pending_next7_amt,
+        SUM(CASE WHEN r.STATUS=1 AND r.CANCELED=0 AND r.REQUEST_DATE < ? THEN 1 ELSE 0 END) AS overdue_cnt,
+        COALESCE(SUM(CASE WHEN r.STATUS=1 AND r.CANCELED=0 AND r.REQUEST_DATE < ? THEN d.AMOUNT ELSE 0 END),0) AS overdue_amt
     FROM pa_request r
     JOIN pa_request_record rr ON rr.REQUEST_ID = r.ID
     JOIN pa_request_record_det d ON d.REQUEST_RECORD_ID = rr.ID
     WHERE r.ORG_ID = ?
-]], { today_start, window_end, today_start, window_end, org_id }) or {}
+]], { today_start, window_end, today_start, window_end, today_start, today_start, org_id }) or {}
 
 local req_paid_cnt = to_num(rq[1]); local req_paid_amt = to_num(rq[2])
 local req_pending_cnt = to_num(rq[3]); local req_pending_amt = to_num(rq[4])
 local req_pending_next7_cnt = to_num(rq[5]); local req_pending_next7_amt = to_num(rq[6])
+local req_overdue_cnt = to_num(rq[7]); local req_overdue_amt = to_num(rq[8])
+local req_pending_not_overdue_amt = req_pending_amt - req_overdue_amt
 
 local total_next7_amt = issued_next7_amt + req_pending_next7_amt
 local total_next7_cnt = issued_next7_cnt + req_pending_next7_cnt
@@ -357,16 +375,22 @@ local mix_slices = {
     { name = "چک صادره سررسید گذشته", value = issued_overdue_amt },
     { name = "چک صادره سررسید تا ۷ روز آینده", value = issued_next7_amt },
     { name = "چک صادره سررسید بعد از ۷ روز", value = issued_later_amt },
-    { name = "درخواست خزانه‌داری در انتظار تایید", value = req_pending_amt },
+    { name = "درخواست خزانه‌داری معوق", value = req_overdue_amt },
+    { name = "درخواست خزانه‌داری در انتظار (سررسید نرسیده)", value = req_pending_not_overdue_amt },
 }
 
 -- ---------- جدول Drill-down: چک‌های صادرشده در جریان ----------
+-- توجه: EXPORT_DATE/DATE_ISSUE در pa_pdc جزء ساعت هم دارند (تست زنده تأیید کرد) — تبدیل شمسی از طریق
+-- Join دوباره به report_dimdate با BETWEEN انجام می‌شود، نه استفادهٔ مستقیم از عدد خام FILETIME.
 local issued_list_rows = fetch_rows([[
     SELECT p.ID, p.SERIAL, p.BANK_NAME, COALESCE(c.NAME, p.TRANSFEREE, p.PAY_TO, 'نامشخص') AS beneficiary,
-           p.EXPORT_DATE, p.DATE_ISSUE, p.AMOUNT, p.STATUS, COALESCE(u.UNIT_NAME,'—') AS unit_name
+           p.EXPORT_DATE, rd_exp.JNDATE, p.DATE_ISSUE, rd_due.JNDATE,
+           p.AMOUNT, p.STATUS, COALESCE(u.UNIT_NAME,'—') AS unit_name
     FROM pa_pdc p
     LEFT JOIN pa_client c ON c.ID = p.RECEIVER_CLIENT_ID AND c.ORG_ID = p.ORG_ID
     LEFT JOIN pa_pdc_units u ON u.ID = p.unit_id AND u.ORG_ID = p.ORG_ID
+    LEFT JOIN report_dimdate rd_exp ON p.EXPORT_DATE BETWEEN rd_exp.DATEKEY AND rd_exp.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
+    LEFT JOIN report_dimdate rd_due ON p.DATE_ISSUE BETWEEN rd_due.DATEKEY AND rd_due.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
     WHERE p.ORG_ID=? AND p.DELETED=0 AND p.TYPE=1 AND p.STATUS=1
     ORDER BY p.DATE_ISSUE ASC
 ]], { org_id }) or {}
@@ -374,17 +398,20 @@ local issued_list_rows = fetch_rows([[
 -- ---------- جدول Drill-down: چک‌های دریافتی در جریان ----------
 local received_list_rows = fetch_rows([[
     SELECT p.ID, p.SERIAL, p.BANK_NAME, COALESCE(c.NAME, p.TRANSFEREE, p.PAY_TO, 'نامشخص') AS payer,
-           p.EXPORT_DATE, p.DATE_ISSUE, p.AMOUNT, p.STATUS, COALESCE(u.UNIT_NAME,'—') AS unit_name
+           p.EXPORT_DATE, rd_exp.JNDATE, p.DATE_ISSUE, rd_due.JNDATE,
+           p.AMOUNT, p.STATUS, COALESCE(u.UNIT_NAME,'—') AS unit_name
     FROM pa_pdc p
     LEFT JOIN pa_client c ON c.ID = p.RECEIVER_CLIENT_ID AND c.ORG_ID = p.ORG_ID
     LEFT JOIN pa_pdc_units u ON u.ID = p.unit_id AND u.ORG_ID = p.ORG_ID
+    LEFT JOIN report_dimdate rd_exp ON p.EXPORT_DATE BETWEEN rd_exp.DATEKEY AND rd_exp.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
+    LEFT JOIN report_dimdate rd_due ON p.DATE_ISSUE BETWEEN rd_due.DATEKEY AND rd_due.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
     WHERE p.ORG_ID=? AND p.DELETED=0 AND p.TYPE=2 AND p.STATUS=1
     ORDER BY p.DATE_ISSUE ASC
 ]], { org_id }) or {}
 
 -- ---------- جدول Drill-down: درخواست‌های خزانه‌داری (در انتظار تایید + تایید/پرداخت‌شده، اخیر) ----------
 local requests_list_rows = fetch_rows([[
-    SELECT r.ID, r.REQUEST_NUMBER, r.REQUEST_DATE, r.STATUS,
+    SELECT r.ID, r.REQUEST_NUMBER, r.REQUEST_DATE, rd.JNDATE, r.STATUS,
            COALESCE(pm.fullname, 'نامشخص') AS requester_name,
            d.TYPE AS det_type, d.AMOUNT, COALESCE(c.NAME, d.DESCRIPTION, 'نامشخص') AS beneficiary
     FROM pa_request r
@@ -392,6 +419,7 @@ local requests_list_rows = fetch_rows([[
     JOIN pa_request_record_det d ON d.REQUEST_RECORD_ID = rr.ID
     LEFT JOIN profile_main pm ON pm.id = r.REQUESTER_ID
     LEFT JOIN pa_client c ON c.ID = d.CLIENT_ID AND c.ORG_ID = r.ORG_ID
+    LEFT JOIN report_dimdate rd ON r.REQUEST_DATE BETWEEN rd.DATEKEY AND rd.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
     WHERE r.ORG_ID=? AND r.CANCELED=0 AND r.STATUS IN (1,3)
     ORDER BY r.REQUEST_DATE DESC
     LIMIT ]] .. CONFIG.REQUESTS_LIST_LIMIT, { org_id }) or {}
@@ -403,8 +431,10 @@ local requests_list_rows = fetch_rows([[
 local function cheque_row_to_obj(r)
     return {
         id = r[1], serial = r[2] or "", bank = r[3] or "",
-        counterparty = r[4], export_jdate = r[5], due_jdate = r[6],
-        amount = to_num(r[7]), status = to_num(r[8]), unit_name = r[9],
+        counterparty = r[4],
+        export_raw = to_num(r[5]), export_jdate = r[6] or "—",
+        due_raw = to_num(r[7]), due_jdate = r[8] or "—",
+        amount = to_num(r[9]), status = to_num(r[10]), unit_name = r[11],
     }
 end
 
@@ -415,30 +445,37 @@ for _, r in ipairs(received_list_rows) do table.insert(received_list, cheque_row
 
 local requests_list = {}
 for _, r in ipairs(requests_list_rows) do
+    local request_raw = to_num(r[3])
     table.insert(requests_list, {
-        id = r[1], number = r[2], request_jdate = r[3], status = to_num(r[4]),
-        requester = r[5], det_type = to_num(r[6]), amount = to_num(r[7]), beneficiary = r[8],
+        id = r[1], number = r[2], request_raw = request_raw, request_jdate = r[4] or "—", status = to_num(r[5]),
+        requester = r[6], det_type = to_num(r[7]), amount = to_num(r[8]), beneficiary = r[9],
+        overdue = (to_num(r[5]) == 1 and request_raw > 0 and request_raw < today_start),
     })
 end
 
--- جدول یکپارچهٔ «سررسیدهای ۷ روز آینده» — از دو فهرست بالا فیلتر می‌شود (سمت کلاینت، چون داده همین‌جا
--- تعبیه شده و از قبل واکشی شده — نیازی به Query دیگر نیست)
+-- جدول یکپارچهٔ «سررسیدهای ۷ روز آینده» — طبق درخواست کاربر، معوق‌ها (سررسید گذشته) هم اینجا دیده
+-- می‌شوند نه فقط ۷ روز آینده (چون نیاز فوری‌تر از نیاز ۷ روز آینده دارند). فیلتر با مقدار خام
+-- FILETIME انجام می‌شود (نه رشتهٔ شمسی) — از دو فهرست بالا، سمت سرور، بدون Query اضافه.
 local next7_items = {}
 for _, c in ipairs(issued_list) do
-    if c.due_jdate ~= nil then
+    if c.due_raw > 0 and c.due_raw <= window_end then
+        local label = "در جریان (تا ۷ روز آینده)"
+        if c.due_raw < today_start then label = "معوق (سررسید گذشته)"
+        elseif c.due_raw <= today_end then label = "سررسید امروز" end
         table.insert(next7_items, {
             kind = "چک صادرشده", jdate = c.due_jdate, beneficiary = c.counterparty,
-            bank = c.bank, unit_name = c.unit_name, amount = c.amount, status_label = "در جریان",
-            record_id = c.id,
+            bank = c.bank, unit_name = c.unit_name, amount = c.amount, status_label = label,
+            overdue = (c.due_raw < today_start), record_id = c.id,
         })
     end
 end
 for _, r in ipairs(requests_list) do
-    if r.status == 1 then
+    if r.status == 1 and r.request_raw > 0 and r.request_raw <= window_end then
         table.insert(next7_items, {
             kind = "درخواست خزانه‌داری", jdate = r.request_jdate, beneficiary = r.beneficiary,
-            bank = "—", unit_name = "—", amount = r.amount, status_label = "در انتظار تایید",
-            record_id = r.id,
+            bank = "—", unit_name = "—", amount = r.amount,
+            status_label = r.overdue and "معوق (سررسید گذشته)" or "در انتظار تایید",
+            overdue = r.overdue, record_id = r.id,
         })
     end
 end
@@ -451,6 +488,7 @@ local dash_data = {
         issued_due_cnt = issued_due_cnt, issued_due_amt = issued_due_amt,
         req_paid_cnt = req_paid_cnt, req_paid_amt = req_paid_amt,
         req_pending_cnt = req_pending_cnt, req_pending_amt = req_pending_amt,
+        req_overdue_cnt = req_overdue_cnt, req_overdue_amt = req_overdue_amt,
         total_next7_amt = total_next7_amt, total_next7_cnt = total_next7_cnt,
         available_cash = available_cash, bank_balance = bank_balance, cash_balance = cash_balance,
         cash_gap = cash_gap,
@@ -486,8 +524,8 @@ local REPORT_CSS = [[
   --accent:#16509D; --accent-dark:#0e3a73; --accent-light:#5b85bc; --accent-lighter:#a9c2de;
   --border:#e3e6ea; --muted:#666; --zebra:#f5f5f5; --bg:#f4f6f9;
 }
-html,body{ margin:0; padding:0; background:var(--bg); color:#000; font-size:14px; direction:rtl; }
-#reportRoot{ max-width:1400px; margin:0 auto; padding:14px; }
+html,body{ margin:0; padding:0; background:var(--bg); color:#000; font-size:14px; direction:rtl; max-width:100%; overflow-x:hidden; }
+#reportRoot{ max-width:1400px; margin:0 auto; padding:14px; overflow-x:hidden; }
 #reportRoot.pseudo-fullscreen{ position:fixed; inset:0; z-index:9999; overflow-y:auto; background:var(--bg); max-width:100%; margin:0; }
 .toolbar{ display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
 .btn-toolbar{ background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:14px; font-weight:bold; cursor:pointer; }
@@ -518,20 +556,23 @@ header.hero .brand140-logo{ position:absolute; top:16px; left:20px; height:32px;
 .section-head h2{ font-size:15px; font-weight:bold; margin:0; }
 .section-head p{ margin:2px 0 0; font-size:14px; color:var(--muted); }
 .badge{ font-size:14px; padding:4px 10px; border-radius:20px; background:var(--zebra); color:var(--muted); }
-.grid-2{ display:grid; grid-template-columns:1.35fr .65fr; gap:14px; }
-.grid-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
-@media(max-width:1000px){ .grid-2, .grid-3{ grid-template-columns:1fr; } }
-.card{ border:1px solid var(--border); border-radius:12px; padding:14px; background:#fff; }
+.grid-2{ display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr); gap:14px; min-width:0; }
+.grid-3{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; min-width:0; }
+@media(max-width:1000px){ .grid-2, .grid-3{ grid-template-columns:minmax(0,1fr); } }
+.card{ border:1px solid var(--border); border-radius:12px; padding:14px; background:#fff; min-width:0; }
 .card h3{ font-size:15px; font-weight:bold; margin:0 0 4px; }
 .card .desc{ font-size:14px; color:var(--muted); margin-bottom:10px; }
-.chart-box{ position:relative; width:100%; }
-.daily-strip{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
-@media(max-width:900px){ .daily-strip{ grid-template-columns:repeat(4,1fr); } }
-@media(max-width:600px){ .daily-strip{ grid-template-columns:repeat(2,1fr); } }
-.day-card{ border:1px solid var(--border); border-radius:11px; padding:10px; text-align:center; background:#fff; cursor:pointer; }
+.chart-box{ position:relative; width:100%; min-width:0; }
+/* Grid tracks با فقط «1fr» حداقل عرضشان min-content محتواست، نه صفر — روی موبایل باعث
+   اسکرول عرضی کل صفحه می‌شد (باگ گزارش‌شده). minmax(0,1fr) این حداقل را صفر می‌کند تا Grid واقعاً
+   جمع شود، نه این‌که همهٔ ستون‌ها/صفحه را عریض نگه دارد. */
+.daily-strip{ display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; min-width:0; }
+@media(max-width:900px){ .daily-strip{ grid-template-columns:repeat(4,minmax(0,1fr)); } }
+@media(max-width:600px){ .daily-strip{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.day-card{ border:1px solid var(--border); border-radius:11px; padding:10px; text-align:center; background:#fff; cursor:pointer; min-width:0; }
 .day-card:hover{ border-color:var(--accent); }
-.day-card .d{ font-size:14px; color:var(--muted); }
-.day-card .a{ font-size:14px; font-weight:bold; margin:6px 0; color:var(--accent); }
+.day-card .d{ font-size:14px; color:var(--muted); overflow-wrap:anywhere; }
+.day-card .a{ font-size:14px; font-weight:bold; margin:6px 0; color:var(--accent); overflow-wrap:anywhere; }
 .day-card .mini{ height:6px; background:var(--zebra); border-radius:8px; overflow:hidden; }
 .day-card .mini span{ display:block; height:100%; background:var(--accent); }
 .alert-box{ background:#fff; border:1px solid var(--accent-lighter); border-radius:12px; padding:14px; font-size:14px; line-height:1.9; }
@@ -544,6 +585,9 @@ table.data-table thead th.sort-asc::after{ content:" ▲"; }
 table.data-table thead th.sort-desc::after{ content:" ▼"; }
 table.data-table tbody tr:nth-child(even){ background:var(--zebra); }
 .table-scroll{ overflow-x:auto; }
+/* طبق درخواست کاربر: ستون‌های ذی‌نفع/بانک در لیست چک‌ها متن طولانی دارند (مثلاً نام کامل شعبه بانک) —
+   این ستون‌ها به‌جای nowrap عمومی جدول، Wrap می‌شوند تا کل جدول بیش از حد عریض نشود. */
+table.data-table td.wrap-cell{ white-space:normal; max-width:260px; min-width:160px; overflow-wrap:break-word; }
 .tag{ display:inline-block; padding:3px 9px; border-radius:20px; font-size:14px; font-weight:bold; }
 .tag.accent{ background:var(--accent); color:#fff; }
 .tag.gray{ background:#eee; color:#000; }
@@ -575,8 +619,9 @@ footer{ text-align:center; font-size:14px; color:var(--muted); padding:14px 0; }
 .donut-legend .sw{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-inline-end:6px; vertical-align:middle; flex:none; }
 .donut-legend .ln{ flex:1; }
 .donut-legend .lv{ font-weight:bold; color:var(--accent); }
-.stacked-wrap{ display:flex; align-items:flex-end; gap:10px; height:220px; padding-top:10px; }
-.stacked-col{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; cursor:pointer; }
+.stacked-wrap{ display:flex; align-items:flex-end; gap:10px; height:220px; padding-top:10px; min-width:0; }
+/* min-width:0 لازم است — پیش‌فرض آیتم Flex حداقل عرضش محتواست (مثل Grid)، همان دلیل اسکرول عرضی موبایل */
+.stacked-col{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; cursor:pointer; }
 .stacked-bars{ width:100%; max-width:46px; display:flex; flex-direction:column-reverse; height:100%; border-radius:6px 6px 0 0; overflow:hidden; background:var(--zebra); }
 .stacked-seg{ width:100%; }
 .stacked-label{ font-size:14px; color:var(--muted); margin-top:6px; text-align:center; }
@@ -720,7 +765,7 @@ function renderBarChart(containerId, items, opts){
 function renderDonutChart(containerId, slices){
   var el = document.getElementById(containerId);
   if (!el) return;
-  var shades = ['#16509D', '#3068AE', '#5b85bc', '#a9c2de'];
+  var shades = ['#16509D', '#3068AE', '#5b85bc', '#8aa5c9', '#a9c2de'];
   var total = 0;
   for (var i = 0; i < slices.length; i++) total += slices[i].value;
   if (total <= 0) total = 1;
@@ -814,16 +859,16 @@ function detTypeLabel(code){ return code === 2 ? 'حسابداری' : ('کد ' +
 function buildNext7Rows(){
   var tbody = document.getElementById('next7Tbody');
   var rows = DASH.next7_items.map(function(it){
-    return '<tr><td>' + escapeHtml(it.jdate) + '</td><td>' + escapeHtml(it.kind) + '</td><td>' + escapeHtml(it.beneficiary) +
+    return '<tr><td>' + escapeHtml(it.jdate) + '</td><td>' + escapeHtml(it.kind) + '</td><td class="wrap-cell">' + escapeHtml(it.beneficiary) +
       '</td><td>' + escapeHtml(it.bank) + '</td><td>' + escapeHtml(it.unit_name) + '</td><td class="amount">' + fmtNum(it.amount) +
-      '</td><td><span class="tag accent">' + escapeHtml(it.status_label) + '</span></td><td>' + it.record_id + '</td></tr>';
+      '</td><td><span class="tag ' + (it.overdue ? 'accent' : 'gray') + '">' + escapeHtml(it.status_label) + '</span></td><td>' + it.record_id + '</td></tr>';
   });
   tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);">موردی نیست</td></tr>';
 }
 function buildChequeRows(list, tbodyId){
   var tbody = document.getElementById(tbodyId);
   var rows = list.map(function(c){
-    return '<tr><td>' + escapeHtml(c.serial || '—') + '</td><td>' + escapeHtml(c.bank || '—') + '</td><td>' + escapeHtml(c.counterparty) +
+    return '<tr><td>' + escapeHtml(c.serial || '—') + '</td><td class="wrap-cell">' + escapeHtml(c.bank || '—') + '</td><td class="wrap-cell">' + escapeHtml(c.counterparty) +
       '</td><td>' + escapeHtml(c.export_jdate || '—') + '</td><td>' + escapeHtml(c.due_jdate || '—') + '</td><td class="amount">' + fmtNum(c.amount) +
       '</td><td><span class="tag ' + (c.status === 1 ? 'accent' : 'gray') + '">' + escapeHtml(statusLabel('cheque', c.status)) + '</span></td><td>' + c.id + '</td></tr>';
   });
@@ -832,10 +877,11 @@ function buildChequeRows(list, tbodyId){
 function buildRequestRows(){
   var tbody = document.getElementById('requestsTbody');
   var rows = DASH.requests_list.map(function(r){
-    return '<tr><td>' + r.number + '</td><td>' + escapeHtml(r.requester) + '</td><td>' + escapeHtml(r.beneficiary) +
+    var label = r.status === 3 ? 'تایید/پرداخت‌شده' : (r.overdue ? 'معوق (سررسید گذشته)' : 'در انتظار تایید');
+    return '<tr><td>' + r.number + '</td><td>' + escapeHtml(r.requester) + '</td><td class="wrap-cell">' + escapeHtml(r.beneficiary) +
       '</td><td>' + escapeHtml(detTypeLabel(r.det_type)) + '</td><td>' + escapeHtml(r.request_jdate) + '</td><td>' + escapeHtml(r.request_jdate) +
-      '</td><td class="amount">' + fmtNum(r.amount) + '</td><td><span class="tag ' + (r.status === 1 ? 'accent' : 'gray') + '">' +
-      escapeHtml(statusLabel('request', r.status)) + '</span></td></tr>';
+      '</td><td class="amount">' + fmtNum(r.amount) + '</td><td><span class="tag ' + (r.overdue || r.status === 1 ? 'accent' : 'gray') + '">' +
+      escapeHtml(label) + '</span></td></tr>';
   });
   tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);">موردی نیست</td></tr>';
 }
@@ -903,6 +949,7 @@ local kpi_cards_html = table.concat({
     kpi_card("چک صادرشده سررسیدشده/گذشته", fmt_billion(issued_due_amt), fmt_num_lua(issued_due_cnt) .. " فقره — تا امروز", true, "issuedSection"),
     kpi_card("پرداخت نقدی از درخواست خزانه‌داری", fmt_billion(req_paid_amt), fmt_num_lua(req_paid_cnt) .. " درخواست تایید/پرداخت‌شده", false, "requestsSection"),
     kpi_card("درخواست‌های در انتظار تایید", fmt_billion(req_pending_amt), fmt_num_lua(req_pending_cnt) .. " درخواست", true, "requestsSection"),
+    kpi_card("درخواست‌های خزانه‌داری معوق", fmt_billion(req_overdue_amt), fmt_num_lua(req_overdue_cnt) .. " درخواست — سررسید گذشته و هنوز تایید/پرداخت نشده", true, "requestsSection"),
     kpi_card("نیاز نقدینگی ۷ روز آینده", fmt_billion(total_next7_amt), fmt_num_lua(total_next7_cnt) .. " مورد", true, "next7Section"),
     kpi_card("موجودی نقد و بانک", fmt_billion(available_cash), "بانک " .. fmt_billion(bank_balance) .. " + صندوق " .. fmt_billion(cash_balance), false, nil),
     kpi_card("مازاد/کسری نقدینگی (Cash Gap)", fmt_billion(cash_gap), cash_gap >= 0 and "مازاد نسبت به نیاز ۷ روز آینده" or "کسری نسبت به نیاز ۷ روز آینده", cash_gap < 0, nil),
@@ -993,12 +1040,14 @@ table.insert(html, [[
       <li><b>چک صادرشده سررسیدشده/گذشته:</b> از چک‌های در جریان، آن‌هایی که سررسیدشان امروز یا قبل از امروز است.</li>
       <li><b>پرداخت نقدی از درخواست خزانه‌داری:</b> درخواست‌هایی با وضعیت «تایید/پرداخت‌شده» (این دو حالت در دادهٔ فعلی یک کد مشترک دارند و از هم قابل‌تفکیک نیستند).</li>
       <li><b>درخواست‌های در انتظار تایید:</b> هنوز تایید/پرداخت نشده‌اند — نزدیک‌ترین معادل قابل‌اثبات به «تاییدشده ولی پرداخت‌نشده».</li>
+      <li><b>درخواست‌های خزانه‌داری معوق:</b> از همان درخواست‌های در انتظار تایید، آن‌هایی که تاریخ مورد نیازشان از امروز گذشته و هنوز تایید/پرداخت نشده‌اند.</li>
       <li><b>موجودی نقد و بانک:</b> مجموع مانده حساب معین «بانک‌های ریالی» (یک مانده تجمیعی برای همهٔ حساب‌های بانکی سازمان، نه تفکیک هر شماره حساب) و مانده صندوق نقدی.</li>
       <li><b>Cash Gap:</b> موجودی نقد و بانک منهای نیاز نقدینگی ۷ روز آینده.</li>
     </ul>
     <h4>تعامل‌ها</h4>
     <ul>
       <li>روی هر کارت KPI کلیک کنید تا به جدول Drill-down مرتبط اسکرول شود.</li>
+      <li>جدول «سررسیدهای ۷ روز آینده» موارد معوق (سررسید گذشته) را هم نشان می‌دهد، نه فقط ۷ روز پیشِ رو — با برچسب پررنگ (Accent) «معوق» مشخص شده‌اند.</li>
       <li>روی هدر هر جدول کلیک کنید تا صعودی/نزولی مرتب شود.</li>
       <li>«تمام صفحه» نمای صفحه را بزرگ می‌کند؛ «خروجی Excel» جدول فعال را CSV می‌گیرد.</li>
       <li>فیلتر سازمان از جدول واقعی org_info در Teamyar خوانده می‌شود.</li>
