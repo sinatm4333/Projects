@@ -647,6 +647,35 @@ local filter_bar_html = [[
 </form>
 ]]
 
+-- ── معیارهای مشتق‌شده — بدون کوئری جدید، فقط محاسبه روی دادهٔ همین بخش‌های بالا ──
+-- (درخواست مدیر کال‌سنتر: کارت‌های عملیاتی بیشتر از همین دادهٔ موجود)
+
+local answer_rate_overall = fmt_pct(kpi.answered, kpi.total_calls)
+
+local aht_seconds = 0
+if kpi.answered > 0 then aht_seconds = kpi.duration_sum / kpi.answered end
+
+-- تماس‌هایی که نه CallerProfileID و نه ConnectedLineProfileID‌شان به یک اپراتور واقعی وصل است —
+-- تخمینی از «رهاشده در صف / بدون پاسخ اپراتور»، نه یک SLA دقیق (چون تماس داخلی کارمند-به-کارمند هم
+-- در inbound_calls هم در outbound_calls شمرده می‌شود، پس این تفریق نباید منفی شود؛ clamp احتیاطی)
+local unassigned_calls = kpi.total_calls - kpi.inbound_calls - kpi.outbound_calls
+if unassigned_calls < 0 then unassigned_calls = 0 end
+
+local peak_hour_label, peak_hour_count = "—", 0
+for _, h in ipairs(hourly_trend) do
+    local total_h = h.answered + h.failed
+    if total_h > peak_hour_count then
+        peak_hour_count = total_h
+        peak_hour_label = h.label .. ":00"
+    end
+end
+
+local active_agent_count = #leaderboard
+local avg_calls_per_agent = 0
+if active_agent_count > 0 then
+    avg_calls_per_agent = (kpi.inbound_calls + kpi.outbound_calls) / active_agent_count
+end
+
 -- ── محتوای بخش‌ها ────────────────────────────────────────────────────────
 
 local kpi_html = table.concat({
@@ -657,6 +686,11 @@ local kpi_html = table.concat({
     kpi_card("تماس‌های ورودی", fmt_num(kpi.inbound_calls), fmt_num(kpi.distinct_inbound_agents) .. " کارمند پاسخ‌گو"),
     kpi_card("تماس‌های خروجی", fmt_num(kpi.outbound_calls), fmt_num(kpi.distinct_outbound_agents) .. " کارمند تماس‌گیرنده"),
     kpi_card("کل مدت مکالمه", fmt_duration(kpi.duration_sum), "ساعت:دقیقه:ثانیه"),
+    kpi_card("نرخ پاسخ‌گویی", fmt_dec1(answer_rate_overall) .. "٪", "شاخص کلی سرویس‌دهی"),
+    kpi_card("میانگین مدت مکالمه (AHT)", fmt_duration(aht_seconds), "به‌ازای هر تماس پاسخ‌داده‌شده"),
+    kpi_card("بدون اتصال به اپراتور", fmt_num(unassigned_calls), "تخمینی — رهاشده در صف/فنی"),
+    kpi_card("ساعت اوج تماس", peak_hour_label, fmt_num(peak_hour_count) .. " تماس در آن ساعت"),
+    kpi_card("میانگین تماس هر کارمند", fmt_dec1(avg_calls_per_agent), fmt_num(active_agent_count) .. " کارمند فعال"),
 })
 
 local status_donut_css, status_donut_legend = build_donut({
@@ -730,9 +764,10 @@ local html_head = [[<!DOCTYPE html>
     font-weight: 700; font-style: normal; font-display: swap;
 }
 :root{--bg:#f4f7fb;--card:#fff;--text:#000;--muted:#666;--line:#e5eaf2;--accent:#16509D;--accent-dark:#0e3c73}
-*{box-sizing:border-box}
+*{box-sizing:border-box;min-width:0}
+html{overflow-x:hidden;max-width:100%}
 body,body *{font-family:"PeydaReport","Peyda","IRANSans","Tahoma","Arial",sans-serif !important}
-body{margin:0;background:var(--bg);color:var(--text);font-size:14px}
+body{margin:0;background:var(--bg);color:var(--text);font-size:14px;overflow-x:hidden;max-width:100vw}
 
 /* ── موبایل (پیش‌فرض) ── */
 .header{background:var(--accent);color:#fff;padding:14px 14px 10px;position:sticky;top:0;z-index:10}
@@ -747,9 +782,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-size:14px}
 .page{display:none}.page.active{display:block}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 2px 10px #00000009}
-.kpi .label{font-size:14px;color:var(--muted)}
-.kpi .value{font-size:20px;font-weight:800;margin:6px 0;color:var(--accent)}
-.kpi .delta{font-size:14px;color:var(--muted)}
+.kpi .label{font-size:14px;color:var(--muted);overflow-wrap:break-word}
+.kpi .value{font-size:20px;font-weight:800;margin:6px 0;color:var(--accent);overflow-wrap:break-word}
+.kpi .delta{font-size:14px;color:var(--muted);overflow-wrap:break-word}
 .grid{display:grid;gap:12px;margin-top:12px}
 .title{font-weight:bold;font-size:15px;margin-bottom:12px;color:var(--accent)}
 .donut{width:150px;height:150px;border-radius:50%;margin:8px auto;position:relative}
@@ -765,11 +800,11 @@ body{margin:0;background:var(--bg);color:var(--text);font-size:14px}
 .bar-col-label{position:absolute;bottom:-22px;right:50%;transform:translateX(50%);font-size:14px;color:var(--muted);white-space:nowrap}
 .legend-hint{font-size:14px;color:var(--muted);display:flex;gap:14px;justify-content:center;margin-top:22px;flex-wrap:wrap}
 .legend-hint span{display:flex;align-items:center;gap:5px}
-.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:9px}
-.bar-label{width:110px;flex-shrink:0;text-align:right;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bar-track{flex:1;height:20px;background:#f5f5f5;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.bar-row{display:flex;align-items:center;gap:6px;margin-bottom:9px;max-width:100%}
+.bar-label{width:84px;flex-shrink:0;text-align:right;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:20px;background:#f5f5f5;border-radius:6px;overflow:hidden;border:1px solid var(--line);min-width:24px}
 .bar-fill{height:100%;background:var(--accent);border-radius:6px}
-.bar-value{width:auto;flex-shrink:0;text-align:left;font-size:13px;font-weight:bold;white-space:nowrap}
+.bar-value{flex-shrink:0;text-align:left;font-size:12px;font-weight:bold;white-space:nowrap;max-width:38vw;overflow:hidden;text-overflow:ellipsis}
 .table-wrap{overflow:auto;max-height:420px;border:1px solid var(--muted);border-radius:8px}
 .data-table{width:auto;min-width:100%;border-collapse:collapse}
 .data-table th{background:var(--accent);color:#fff;padding:10px 8px;text-align:center;font-size:15px;font-weight:bold;border:1px dashed #666;white-space:nowrap;width:1%;position:sticky;top:0;cursor:pointer;user-select:none}
@@ -782,8 +817,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-size:14px}
 .filter-bar{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
 .filter-grid{display:grid;grid-template-columns:1fr;gap:10px}
 .filter-field label{display:block;font-size:14px;color:var(--muted);margin-bottom:5px}
-.jdate-group{display:flex;gap:6px}
-.jdate-group select{flex:1;padding:8px 4px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:#fff}
+.jdate-group{display:flex;gap:4px;max-width:100%}
+.jdate-group select{flex:1;min-width:0;padding:8px 2px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;background:#fff}
 .filter-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .btn-action{background:var(--accent);color:#fff;border:2px solid var(--accent);border-radius:9px;padding:9px 14px;font-size:14px;font-weight:bold;cursor:pointer;font-family:inherit}
 .btn-action:hover{background:var(--accent-dark)}
@@ -876,12 +911,13 @@ body{margin:0;background:var(--bg);color:var(--text);font-size:14px}
     <div class="help-modal-body">
       <p><strong>این داشبورد چیست؟</strong> نمای مدیریتی وضعیت تماس‌ها و عملکرد کارمندان کال‌سنتر، در بازهٔ تاریخ انتخابی («از تاریخ»/«تا تاریخ»).</p>
       <ul>
-        <li><b>نمای کلی</b> — KPIهای کل تماس/پاسخ/ناموفق/ورودی/خروجی/مدت مکالمه، نمودار نتیجهٔ تماس و ورودی/خروجی، تاپ ۱۰ کارمند.</li>
+        <li><b>نمای کلی</b> — ۱۱ کارت KPI (کل تماس، پاسخ، ناموفق، ورودی، خروجی، مدت کل، نرخ پاسخ‌گویی، میانگین مدت مکالمه/AHT، بدون اتصال به اپراتور، ساعت اوج تماس، میانگین تماس هر کارمند)، نمودار نتیجهٔ تماس و ورودی/خروجی، تاپ ۱۰ کارمند.</li>
         <li><b>روند تماس‌ها</b> — روند روزانه و ساعتی پاسخ در برابر ناموفق.</li>
         <li><b>عملکرد کارمندان</b> — جدول کامل، قابل مرتب‌سازی با کلیک روی هدر ستون: تماس/پاسخ/مدت به تفکیک ورودی و خروجی برای هر کارمند.</li>
       </ul>
       <p><strong>وضعیت کارمندان یعنی چه؟</strong> این داشبورد وضعیت <b>عملکردی</b> کارمندان را نشان می‌دهد (نرخ پاسخ، تعداد تماس، مدت مکالمه) — نه وضعیت لحظه‌ای آنلاین/مشغول/آفلاین، چون چنین دادهٔ زنده‌ای در سیستم کال‌سنتر ثبت نمی‌شود.</p>
       <p><strong>قرارداد ورودی/خروجی:</strong> اگر کارمند تماس‌گیرنده باشد = خروجی؛ اگر کارمند پاسخ‌دهنده باشد = ورودی. هر تماس فقط یک‌بار شمرده می‌شود (بدون دوبار شمردن Legهای فنی همان تماس).</p>
+      <p><strong>«بدون اتصال به اپراتور» یعنی چه؟</strong> تخمینی است، نه یک شاخص دقیق: تماس‌هایی که در بازهٔ انتخابی نه به‌عنوان ورودیِ هیچ اپراتوری و نه خروجیِ هیچ اپراتوری شمرده شدند — عمدتاً تماس‌های رهاشده در صف پیش از رسیدن به اپراتور، یا Legهای فنی/صف. اگر عدد آن بالاست، به معنی تماس‌های ازدست‌رفته/رهاشدهٔ واقعی است و ارزش پیگیری مدیریتی دارد.</p>
     </div>
   </div>
 </div>
