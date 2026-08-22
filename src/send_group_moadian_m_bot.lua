@@ -1,4 +1,7 @@
-﻿-- botName = send group 
+﻿-- تحلیل و ایجاد توسط سینا مقدم 09121011778
+-- Last Edit = 1405/05/31 21:01
+
+-- botName = send group
 -- creator = zmo
 -- date = 02/25/2025
 -- version= 1.0
@@ -261,12 +264,12 @@ function getAllData(org_id,datef,datet,crm_id,kcrm_id,tag_id,product_id,stock_id
   if tag_id ~= nil and tag_id ~= nil then 
     where_tag = where_tag.. [[ and t.TAG_ID=]]..tag_id
   end  
-  if moadian_code ~= nil and moadian_code ~= "" then 
+  if moadian_code ~= nil and type(moadian_code) == "string" and moadian_code ~= "" and tostring(moadian_code) ~= "0" and moadian_code ~= "null" and moadian_code ~= "nil" then
     where_moadian_code = where_moadian_code.. [[ and (select rf from m_factor_id where invoice_id=i.id order by id desc limit 1 ) like '%%]]..moadian_code..[[%%']]
-  end 
-  if factor_id ~= nil and factor_id ~= "" then 
+  end
+  if factor_id ~= nil and type(factor_id) == "number" and factor_id ~= "" and tostring(factor_id) ~= "0" and factor_id ~= "null" and factor_id ~= "nil" then
     where_factor_id = where_factor_id.. [[ and i.id=]]..factor_id
-  end 
+  end
   if send_status ~= nil and send_status[1] ~= nil then 
     where_send_status = where_send_status.. [[ and moadian_status=]]..send_status[1].id
   end  
@@ -363,7 +366,13 @@ function getTableConfig()
     {show= true ,   key = "link"                  		 , value = "link" } ,
     {show= true ,    key = "title"           , value= "title" } ,
     {show= true ,    key = "d"           , value= "d" ,type="date"} ,
+    {show= true ,    key = "fee"           , value= "fee" ,type="price"} ,
+    {show= true ,    key = "discount"           , value= "discount" ,type="price"} ,
+    {show= true ,    key = "value_added"           , value= "value_added" ,type="price"} ,
+    {show= true ,    key = "price_fact"           , value= "price_fact" ,type="price"} ,
     {show= true ,    key = "amont"           , value= "amont" ,type="price"} ,
+    {show= true ,    key = "bill_type"           , value= "bill_type" } ,
+    {show= true ,    key = "bill_template"           , value= "bill_template" } ,
     {show= true ,    key = "status"           , value= "status" } ,
     {show= true ,    key = "referenceNumber"           , value= "referenceNumber" } ,
     {show= true ,    key = "unic_id"           , value= "unic_id" } ,
@@ -470,7 +479,7 @@ end
 ----------------------
 function StockAcl(data)
   local geted_org_id = data.org_id;
-  local query_param = [[select id,concat(full_code,'_',name)name from wh_stock  where  org_id=]]..geted_org_id
+  local query_param = [[select id,concat(full_code,'_',name)name from wh_stock  where VOUCHER_ALLOW=1 and  org_id=]]..geted_org_id
   if data.search ~= nil and #data.search > 0 then
     query_param = query_param..[[  and  (name like N'%]]..data.search..[[%' or  full_code like N'%]]..data.search..[[%') ]]
   end

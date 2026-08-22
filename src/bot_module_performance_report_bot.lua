@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط مهدی جهانی 09125632329
--- Last Edit = 1405/05/22 00:00
+-- Last Edit = 1405/05/31 21:01
 
 -- Bot: داشبورد عملکرد ماژول باتی (Bot Module Performance Dashboard)
 -- Developer: Sina Taghavi Moghadam
@@ -148,14 +148,18 @@ local selected_bot_ids = parse_bot_ids(input)
 -- ============================================================
 
 local function escape_html(value)
-    if value == nil then
-        return ""
-    end
+    if value == nil then return "" end
+    local amp_entity = "&" .. "amp;"
+    local lt_entity = "&" .. "lt;"
+    local gt_entity = "&" .. "gt;"
+    local quot_entity = "&" .. "quot;"
+    local apos_entity = "&" .. "#39;"
     return tostring(value)
-        :gsub("&", "&amp;")
-        :gsub("<", "&lt;")
-        :gsub(">", "&gt;")
-        :gsub('"', "&quot;")
+        :gsub("&", amp_entity)
+        :gsub("<", lt_entity)
+        :gsub(">", gt_entity)
+        :gsub('"', quot_entity)
+        :gsub("'", apos_entity)
 end
 
 local function fmt_num(value)

@@ -1,3 +1,6 @@
+-- تحلیل و ایجاد توسط سینا مقدم 09121011778
+-- Last Edit = 1405/05/31 21:01
+
 local input = teamyar.get_input() or {}
 
 local days = tonumber(input["days"]) or 30
@@ -275,14 +278,18 @@ local function format_duration(filetime_diff)
 end
 
 local function escape_html(value)
-    if value == nil then
-        return ""
-    end
+    if value == nil then return "" end
+    local amp_entity = "&" .. "amp;"
+    local lt_entity = "&" .. "lt;"
+    local gt_entity = "&" .. "gt;"
+    local quot_entity = "&" .. "quot;"
+    local apos_entity = "&" .. "#39;"
     return tostring(value)
-        :gsub("&", "&amp;")
-        :gsub("<", "&lt;")
-        :gsub(">", "&gt;")
-        :gsub('"', "&quot;")
+        :gsub("&", amp_entity)
+        :gsub("<", lt_entity)
+        :gsub(">", gt_entity)
+        :gsub('"', quot_entity)
+        :gsub("'", apos_entity)
 end
 
 local function fmt_num(value)
