@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/31 21:09
+-- Last Edit = 1405/05/31 21:13
 -- botName = sales_settlement_selection_queue
 -- creator = Cascade (کپی بات 569/588 — بدون تغییر منطق سرور نسبت به آن‌ها)
 -- date = 1405/05/31
@@ -162,6 +162,10 @@ function getData(queryType, pageFrom, perPage, pageTo)
     local _, d2 = dateRangeFileTime();
     to_date = d2;
   end
+  -- تشخیص علت لودینگ بی‌پایان: مقادیر واقعی محاسبه‌شده (نه فقط ورودی خام) را لاگ کن
+  teamyar.write_log("queryType=" .. tostring(queryType) .. " orgId=" .. tostring(orgId)
+    .. " from_date=" .. tostring(from_date) .. " to_date=" .. tostring(to_date)
+    .. " rawFilterFromDate=" .. tostring(filterFromDate) .. " rawFilterToDate=" .. tostring(filterToDate));
 
   -- inner CTE filters (string-based, appended as "and ...")
   -- status filter (default: status=2 if not selected)
@@ -234,7 +238,7 @@ function getData(queryType, pageFrom, perPage, pageTo)
   dataQuery.query = string.gsub(dataQuery.query, "{{whereClient}}", whereClient);
   dataQuery.query = string.gsub(dataQuery.query, "{{whereProduct}}", whereProduct);
   dataQuery.query = string.gsub(dataQuery.query, "{{whereWarehouse}}", whereWarehouse);
--- teamyar.write_log(dataQuery.query)
+  teamyar.write_log("getData final SQL ---" .. dataQuery.query)
   local res1 = getQuery_result(queryType, dataQuery);
   return res1
 end
