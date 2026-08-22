@@ -1,4 +1,4 @@
-﻿local query = [[
+local query = [[
 SELECT
     bc.ID,
     bc.NAME,

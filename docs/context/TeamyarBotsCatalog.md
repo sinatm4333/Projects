@@ -105,6 +105,7 @@ Use when user says **Â«Ø´Ø¨ÛŒÙ‡ Ø¨Ø§Øª X Ø¨Ø³Ø§Ø²Â»**
 | 1023 | تراز آزمایشی چهارستونی | `trial_balance_report_bot.lua` | `/bot/run/258/trial_balance_report` |
 | 585 (cat_id=79) | DBSchema | `DBSchema_bot.lua` | `/bot/run/443/DBSchema` |
 | 586 (cat_id=79) | تعداد اقدام‌ها به تفکیک رده | `action_count_by_category_report_bot.lua` | `/bot/run/443/action_count_by_category_report` |
+| 587 (cat_id=79) | getallbots — فهرست کامل بات‌ها (id/name/description/source_code/run_count/disabled/open_source/source_version)، رده «آنالیزور بات»، خروجی JSON | `getallbots_bot.lua` | `/bot/run/443/getallbots` |
 | 569 (cat_id=79) | Factor Seteelment By Selection (تسویه گروهی، منبع اصلی) | `set_by_select_bot.lua` | `/bot/run/2/set_by_select` |
 | 588 (cat_id=79) | تسویه اتوماتیک گروهی (کپی بات ۵۶۹ — پیوست/کانفیگ هنوز دستی نصب نشده) | `sales_settlement_group_auto_report_bot.lua` | `/bot/run/443/sales_settlement_group_auto` |
 | 589 (cat_id=79) | کاوش ساختار جدول (v2) — کپی جدید از بات ۹۶۶ چون بات ۹۶۶ زیر این SID دیگر در دسترس نبود (view endpoint خروجی خالی/«[جدید]» می‌داد). نسخهٔ فعلی نسبت به بات ۹۶۶ دو Mode اضافه دارد: `mode=rawp` (Query پارامتری با `q`+`params` JSON) و `mode=simulate` (تست دقیق الگوی now_raw→Lua arithmetic→Query که برای پیدا کردن باگ فضای خالی گمشده در بات ۵۹۲ استفاده شد) | `src/schema_probe_json_bot.lua` (دیپلوی‌شده از نسخهٔ patch‌شده در Scratchpad، نه از فایل src بدون تغییر) | `/bot/run/443/schema_probe_v2` |
