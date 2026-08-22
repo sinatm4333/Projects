@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/31 20:54
+-- Last Edit = 1405/05/31 21:09
 -- botName = sales_settlement_selection_queue
 -- creator = Cascade (کپی بات 569/588 — بدون تغییر منطق سرور نسبت به آن‌ها)
 -- date = 1405/05/31
@@ -143,15 +143,20 @@ function getData(queryType, pageFrom, perPage, pageTo)
   end
 
   -- date range: filter overrides config day_befor
+  -- نکته: data.txt این دو فیلد را "type":"number" اعلام کرده؛ روی این پلتفرم مقدار
+  -- نامعتبر/خالی برای فیلد number به‌جای nil به عدد 0 تبدیل می‌شود (نه خطا، نه خالی) —
+  -- پس چک قبلی (`~= nil and ~= ""`) این حالت را رد نمی‌کرد و from_date="0" را به کوئری
+  -- می‌داد: i.RUN_DATE >= 0 یعنی عملاً بدون کران پایین روی کل جدول فاکتورها، که همان
+  -- علت لودینگ بی‌پایان گزارش‌شده بود. گارد `tonumber(...) > 0` این حالت را هم می‌گیرد.
   local filterFromDate = getInput("from_date");
   local filterToDate = getInput("to_date");
   local from_date, to_date;
-  if filterFromDate ~= nil and filterFromDate ~= "" then
+  if filterFromDate ~= nil and tonumber(filterFromDate) ~= nil and tonumber(filterFromDate) > 0 then
     from_date = tostring(filterFromDate);
   else
     from_date = dateRangeFileTime();
   end
-  if filterToDate ~= nil and filterToDate ~= "" then
+  if filterToDate ~= nil and tonumber(filterToDate) ~= nil and tonumber(filterToDate) > 0 then
     to_date = tostring(filterToDate);
   else
     local _, d2 = dateRangeFileTime();
