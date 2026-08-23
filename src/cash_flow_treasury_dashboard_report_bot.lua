@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/29 14:20
+-- Last Edit = 1405/05/29 16:05
 
 -- Bot: داشبورد مدیریتی Cash Flow / خزانه‌داری — v01
 -- اصلاحات پس از بازخورد کاربر روی نسخهٔ اول (این دور):
@@ -593,7 +593,11 @@ table.data-table td.wrap-cell{ white-space:normal; max-width:260px; min-width:16
 .tag.gray{ background:#eee; color:#000; }
 a.link{ color:var(--accent); text-decoration:none; font-weight:bold; }
 a.link:hover{ text-decoration:underline; }
-.amount{ font-weight:bold; direction:ltr; text-align:left; display:inline-block; }
+/* توجه: این کلاس مستقیم روی خودِ <td class="amount"> اعمال می‌شود (نه یک <span> داخلش) — هرگز
+   display را عوض نکنید (مثلاً inline-block)، چون display پیش‌فرض table-cell سلول را می‌شکند و باعث
+   می‌شود سلول از چیدمان جدول خارج و روی ستون کناری (واحد) هم‌پوشانی/سُر بخورد — دقیقاً همان باگ ظاهری
+   گزارش‌شدهٔ کاربر (اعداد مبلغ روی متن ستون واحد افتاده بودند). */
+.amount{ font-weight:bold; direction:ltr; text-align:left; }
 .tooltip-box{ position:fixed; background:#000; color:#fff; font-size:14px; padding:6px 10px; border-radius:6px; pointer-events:none; z-index:9999; display:none; white-space:nowrap; }
 footer{ text-align:center; font-size:14px; color:var(--muted); padding:14px 0; }
 .modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10000; align-items:center; justify-content:center; }
