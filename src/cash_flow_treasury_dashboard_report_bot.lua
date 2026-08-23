@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/29 16:05
+-- Last Edit = 1405/05/29 17:10
 
 -- Bot: داشبورد مدیریتی Cash Flow / خزانه‌داری — v01
 -- اصلاحات پس از بازخورد کاربر روی نسخهٔ اول (این دور):
@@ -984,8 +984,7 @@ table.insert(html, '<div class="toolbar">' ..
 
 table.insert(html, '<header class="hero"><img class="brand140-logo" alt="140" src="data:image/png;base64,' .. CONFIG.LOGO140_WHITE_B64 .. '">' ..
     '<h1>داشبورد مدیریتی جریان نقدینگی و خزانه‌داری</h1>' ..
-    '<p class="sub">نمای مدیریتی تعهدات کوتاه‌مدت، چک‌ها و درخواست‌های خزانه‌داری — سازمان: ' ..
-    escape_html((#org_rows > 0 and org_rows[1][2]) or ("#" .. org_id)) .. '</p></header>\n')
+    '<p class="sub">نمای مدیریتی تعهدات کوتاه‌مدت، چک‌ها و درخواست‌های خزانه‌داری</p></header>\n')
 
 table.insert(html, '<form method="get" class="filter-bar">' ..
     '<div class="filter-field"><label>سازمان</label><select name="org_id">' .. table.concat(org_options) .. '</select></div>' ..
@@ -1030,7 +1029,7 @@ table.insert(html, [[
 <th>شماره درخواست</th><th>درخواست‌کننده</th><th>ذی‌نفع</th><th>دستهٔ درخواست</th><th>تاریخ درخواست</th><th>تاریخ مورد نیاز</th><th>مبلغ</th><th>وضعیت</th>
 </tr></thead><tbody id="requestsTbody"></tbody></table></div></div>
 
-<footer>تولید شده توسط داشبورد Cash Flow — سازمان ]] .. escape_html((#org_rows > 0 and org_rows[1][2]) or ("#" .. org_id)) .. [[</footer>
+<footer>تولید شده توسط داشبورد Cash Flow</footer>
 ]])
 
 table.insert(html, [[
