@@ -1,9 +1,19 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/04 10:20
+-- Last Edit = 1405/06/04 13:05
 
 -- Bot: Voucher Signature Clear (پاک‌سازی امضای سند حسابداری فاکتور فروش)
 -- botName = voucher_signature_clear_report
--- version = v01
+-- version = v02
+--
+-- تغییر v02 (بعد از گزارش زندهٔ کاربر: «بعد از فیلتر یک صفحهٔ سفید ظاهر می‌شود»):
+--   v01 فرم فیلتر را با `method="get"` می‌فرستاد، یعنی ناوبری بومی مرورگر. داخل شِل/iframe واقعی
+--   Teamyar این ناوبری آدرس اجرای بات را از دست می‌دهد و نتیجه صفحهٔ سفید است — دقیقاً همان چیزی که
+--   در `sales_revenue_center_dashboard_report_bot.lua` هم ثبت شده بود («document.write کل صفحه یا
+--   iframe تودرتو هر دو داخل شِل/Iframe واقعی Teamyar شکست می‌خورند؛ روش سالم fetch همین آدرس +
+--   جایگزینی innerHTML بخش‌هاست»). این قانون به v01 اعمال نشده بود.
+--   حالا: ارسال بومی فرم غیرفعال است، فیلتر با `action=preview` قطعهٔ نتیجه را fetch می‌کند و جای
+--   `#resultBox` می‌گذارد. چون دکمه‌های داخل آن قطعه با هر پیش‌نمایش دوباره ساخته می‌شوند، کلیک
+--   «شروع پاک‌سازی» هم از اتصال مستقیم به واگذاری رویداد (delegation) روی `#reportRoot` منتقل شد.
 --
 -- ============================================================================
 -- خواستهٔ کاربر (نقل مستقیم)
@@ -1042,8 +1052,12 @@ local function render_filter_bar(filters, organizations)
         { "full", "کامل (فقط اگر حداقلی خطا داد)" },
     }
 
+    -- بدون method/action: ارسال بومی فرم عمداً غیرفعال است. طبق تجربهٔ ثبت‌شدهٔ همین پروژه
+    -- (ر.ک. یادداشت «فیلتر: fetch …» در sales_revenue_center_dashboard_report_bot.lua)، ناوبری
+    -- بومی داخل شِل/iframe واقعی Teamyar بات را از دست می‌دهد و صفحهٔ سفید می‌دهد. JS پایین صفحه
+    -- submit را می‌گیرد و به‌جایش قطعهٔ نتیجه را با fetch می‌آورد.
     return table.concat({
-        '<form class="filter-bar" method="get" id="filterForm">',
+        '<form class="filter-bar" id="filterForm" onsubmit="return false;">',
         '<div class="filter-field"><label>سازمان</label><select name="org">',
             render_options(org_pairs, tostring(filters.org)), '</select></div>',
         '<div class="filter-field"><label>نوع فاکتور</label><select name="itype">',
@@ -1061,7 +1075,8 @@ local function render_filter_bar(filters, organizations)
             '<input type="text" name="cap" value="', escape_html(tostring(filters.execute_cap)), '"></div>',
         '<div class="filter-field"><label>حالت Payload</label><select name="payload_mode">',
             render_options(payload_pairs, filters.payload_mode), '</select></div>',
-        '<div class="filter-actions"><button type="submit" class="btn-primary">پیش‌نمایش</button></div>',
+        '<div class="filter-actions">',
+        '<button type="button" class="btn-primary" id="previewButton">پیش‌نمایش</button></div>',
         '</form>',
     })
 end
@@ -1439,10 +1454,62 @@ function runClear(){
     });
 }
 
+/* ---------------- فیلتر ----------------
+   ارسال بومی فرم عمداً استفاده نمی‌شود: طبق تجربهٔ ثبت‌شدهٔ همین پروژه، ناوبری بومی داخل شِل/iframe
+   واقعی Teamyar بات را از دست می‌دهد و صفحهٔ سفید می‌دهد. به‌جایش قطعهٔ نتیجه با fetch می‌آید و
+   جای #resultBox می‌نشیند. */
+var previewInFlight = false;
+
+function loadPreview(){
+  if (previewInFlight) return;
+  previewInFlight = true;
+
+  var button = document.getElementById('previewButton');
+  var box = document.getElementById('resultBox');
+  var originalText = button ? button.textContent : '';
+  if (button) { button.disabled = true; button.textContent = 'در حال بارگذاری…'; }
+
+  var data = new FormData(document.getElementById('filterForm'));
+  data.append('action', 'preview');
+
+  fetch(window.location.href, { method: 'POST', body: data })
+    .then(function(res){
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    })
+    .then(function(html){
+      box.innerHTML = html;
+      initSortableTables(box);
+    })
+    .catch(function(err){
+      box.innerHTML = '<div class="notice"><strong>خطا در دریافت پیش‌نمایش:</strong> ' +
+        escapeHtml(String(err)) + '</div>';
+    })
+    .then(function(){
+      previewInFlight = false;
+      if (button) { button.disabled = false; button.textContent = originalText; }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function(){
   initSortableTables(document);
-  var button = document.getElementById('runButton');
-  if (button) button.addEventListener('click', runClear);
+
+  var form = document.getElementById('filterForm');
+  if (form) {
+    form.addEventListener('submit', function(e){ e.preventDefault(); loadPreview(); });
+  }
+
+  /* دکمه‌های داخل #resultBox با هر پیش‌نمایش دوباره ساخته می‌شوند، پس اتصال مستقیم از بین می‌رود —
+     رویداد روی ریشه واگذار (delegate) می‌شود. */
+  var root = document.getElementById('reportRoot');
+  if (root) {
+    root.addEventListener('click', function(e){
+      var target = e.target;
+      if (!target || !target.closest) return;
+      if (target.closest('#previewButton')) { e.preventDefault(); loadPreview(); return; }
+      if (target.closest('#runButton')) { e.preventDefault(); runClear(); return; }
+    });
+  }
 });
 </script>
 ]]
@@ -1457,6 +1524,23 @@ local function render_error_html(message)
         '<div id="reportRoot"><div class="danger-band"><h2>خطا</h2><ul><li>',
         escape_html(message),
         '</li></ul></div></div>',
+    })
+end
+
+-- قطعهٔ نتیجه — هرچه با عوض‌شدن فیلتر باید دوباره ساخته شود. هم در صفحهٔ کامل تعبیه می‌شود و هم
+-- به‌تنهایی با `action=preview` برگردانده می‌شود تا JS آن را جای `#resultBox` بگذارد.
+local function render_results_fragment(filters, scope)
+    return table.concat({
+        render_warnings(filters.warnings),
+
+        '<div class="section"><div class="section-head">',
+        '<h2><span class="num">۲</span>پیش‌نمایش (فقط خواندنی)</h2>',
+        '<p>دامنهٔ انتخابی: ', escape_html(SCOPE_STATES[filters.scope] or ""), '</p></div>',
+        render_kpis(scope),
+        render_scope_table(scope, filters),
+        '</div>',
+
+        render_execute_panel(scope, filters),
     })
 end
 
@@ -1490,8 +1574,6 @@ local function render_page(filters, scope, actor)
         'بالا ببرید.</li>',
         '</ul></div>',
 
-        render_warnings(filters.warnings),
-
         '<div class="section"><div class="section-head">',
         '<h2><span class="num">۱</span>فیلتر دامنه</h2>',
         '<p>دامنه فقط از روی همین فیلتر ساخته می‌شود — سمت سرور دوباره محاسبه می‌شود و هیچ فهرست سندی ',
@@ -1499,14 +1581,7 @@ local function render_page(filters, scope, actor)
         render_filter_bar(filters, organizations),
         '</div>',
 
-        '<div class="section"><div class="section-head">',
-        '<h2><span class="num">۲</span>پیش‌نمایش (فقط خواندنی)</h2>',
-        '<p>دامنهٔ انتخابی: ', escape_html(SCOPE_STATES[filters.scope] or ""), '</p></div>',
-        render_kpis(scope),
-        render_scope_table(scope, filters),
-        '</div>',
-
-        render_execute_panel(scope, filters),
+        '<div id="resultBox">', render_results_fragment(filters, scope), '</div>',
 
         '<footer>بات پاک‌سازی امضای سند حسابداری — تحلیل و ایجاد توسط سینا مقدم</footer>',
         '</div>',
@@ -1550,6 +1625,17 @@ local function main()
 
         local results, summary = execute_batch(scope, filters, actor)
         return "json", json.encode({ ok = true, results = results, summary = summary })
+    end
+
+    -- قطعهٔ نتیجه برای XHR فیلتر. ناوبری بومی فرم داخل شِل Teamyar بات را از دست می‌دهد
+    -- (صفحهٔ سفید)، پس فیلتر همیشه از این مسیر می‌آید.
+    if tostring(input["action"] or "") == "preview" then
+        local scope, scope_err = build_scope(filters)
+        if scope == nil then
+            return "html", '<div class="notice"><strong>خطا:</strong> ' ..
+                           escape_html(tostring(scope_err)) .. '</div>'
+        end
+        return "html", render_results_fragment(filters, scope)
     end
 
     local scope, scope_err = build_scope(filters)
