@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/05 22:37
+-- Last Edit = 1405/06/05 22:47
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -25,6 +25,9 @@ local _MAX_RUNTIME_SECONDS = 16200;
 -- سقف تعداد ردیف در همان یک کوئری SELECT (صرفاً برای محدود نگه‌داشتن حافظه‌ی یک اجرا؛
 -- در عمل به‌خاطر سقف زمانی بالا معمولاً خیلی زودتر از این عدد اجرا متوقف می‌شود)
 local _QUERY_ROW_LIMIT = 50000;
+-- بازه‌ی تسویه = کل سال مالی زیر همین رشته (نه day_befor از کانفیگ). برای اجرای بعدی
+-- روی سال مالی ۱۴۰۵، فقط این رشته را عوض کنید و دوباره دیپلوی کنید.
+local _TARGET_FISCAL_YEAR = "1404";
 --------------------------------------------
 local config = teamyar.get_config()
 local config_data = {}
@@ -56,8 +59,43 @@ local sec = time.get_second(time.current());
 local currentdate_time = time.get_filetime([[{"year":]] .. year .. [[,"month":]] .. month .. [[,"day":]] .. day .. [[,"hour":]] .. hour .. [[,"minute":]] .. min .. [[,"second":]] .. sec .. [[}]])
 local temp_time = time.get_filetime([[{"year":]] .. year .. [[,"month":]] .. month .. [[,"day":]] .. day .. [[,"hour":0,"minute":0,"second":0}]])
 local currentdate = string.format("%18.0f", temp_time);
-local from_date = string.format("%18.0f", (temp_time - ((60 * 60 * 24 * 10000000 * c_day_befor) + (60 * 60 * 24 * 10000000))))
-local to_date = currentdate + (60 * 60 * 3 * 10000000)
+
+-- بازه‌ی تسویه: ابتدا تلاش برای گرفتن بازه‌ی دقیق سال مالی _TARGET_FISCAL_YEAR از
+-- pa_fiscal_year (همان جدول/الگویی که سایر بات‌های این ریپو برای «سال مالی جاری»
+-- استفاده می‌کنند — اینجا به‌جای «جاری»، سال مشخص‌شده را می‌خواهیم). اگر برای این
+-- org_id چنین سالی پیدا نشد (کانفیگ ناقص یا سال اشتباه)، برمی‌گردیم به رفتار قبلی
+-- (day_befor نسبت به امروز) تا بات بی‌صدا روی کل تاریخچه اجرا نشود.
+function fetchFiscalYearRange(orgId, jalaliYear)
+  db.use_db("0000000");
+  local q = [[
+    SELECT fy.START_DATE, fy.END_DATE
+    FROM pa_fiscal_year fy
+    WHERE fy.ORG_ID = ]] .. tostring(tonumber(orgId) or 0) .. [[
+      AND REPORT_FN_JDATE(fy.START_DATE, '-') LIKE ']] .. jalaliYear .. [[-%'
+    LIMIT 1
+  ]];
+  db.query({ query = q, params = {} });
+  local record = db.query_fetch();
+  db.query_free();
+  if record == nil or record[1] == nil or record[2] == nil then
+    return nil, nil;
+  end
+  return tostring(record[1]), tostring(record[2]);
+end
+
+local from_date, to_date;
+local fy_start, fy_end = fetchFiscalYearRange(c_org_id, _TARGET_FISCAL_YEAR);
+if fy_start ~= nil and fy_end ~= nil then
+  from_date = fy_start;
+  to_date = fy_end;
+  teamyar.write_log("backfill using fiscal year " .. _TARGET_FISCAL_YEAR .. " for org_id=" .. tostring(c_org_id)
+    .. " — from_date=" .. from_date .. " to_date=" .. to_date);
+else
+  from_date = string.format("%18.0f", (temp_time - ((60 * 60 * 24 * 10000000 * c_day_befor) + (60 * 60 * 24 * 10000000))))
+  to_date = tostring(currentdate + (60 * 60 * 3 * 10000000))
+  teamyar.write_log("backfill: fiscal year " .. _TARGET_FISCAL_YEAR .. " not found for org_id=" .. tostring(c_org_id)
+    .. " — falling back to day_befor range: from_date=" .. from_date .. " to_date=" .. to_date);
+end
 
 -- زمان شروع اجرا (FILETIME، واحد ۱۰۰نانوثانیه) برای سنجش سقف زمانی
 local _RUN_START = currentdate_time;
