@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/05 23:42
+-- Last Edit = 1405/06/05 23:49
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -86,19 +86,28 @@ function fetchFiscalYearRange(orgId, jalaliYear)
     return nil, nil;
   end
 
+  -- الگوی while db.query_fetch(record) با جدول از پیش ساخته‌شده — همان الگوی
+  -- امتحان‌پس‌داده‌ی queryResultFact در همین فایل؛ فراخوانی db.query_fetch() بدون
+  -- آرگومان در حلقه امتحان نشده بود و مشکوک به عدم پیشروی درست بین ردیف‌هاست.
   local yearPrefixLen = string.len(jalaliYear);
-  local record = db.query_fetch();
-  while record ~= nil do
+  local foundStart, foundEnd = nil, nil;
+  local seenRows = {};
+  local record = {};
+  while db.query_fetch(record) do
     local startJalali = record[3];
-    if startJalali ~= nil and string.sub(tostring(startJalali), 1, yearPrefixLen) == jalaliYear then
-      local startDate, endDate = record[1], record[2];
-      db.query_free();
-      return tostring(startDate), tostring(endDate);
+    table.insert(seenRows, tostring(startJalali));
+    if foundStart == nil and startJalali ~= nil and string.sub(tostring(startJalali), 1, yearPrefixLen) == jalaliYear then
+      foundStart = record[1];
+      foundEnd = record[2];
     end
-    record = db.query_fetch();
   end
   db.query_free();
-  return nil, nil;
+  teamyar.write_log("fetchFiscalYearRange rows for org_id=" .. tostring(orgId) .. " (start_jalali values): "
+    .. json.encode(seenRows));
+  if foundStart == nil or foundEnd == nil then
+    return nil, nil;
+  end
+  return tostring(foundStart), tostring(foundEnd);
 end
 
 local from_date, to_date;
