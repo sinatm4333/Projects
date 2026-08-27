@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/05 23:00
+-- Last Edit = 1405/06/05 23:42
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -47,8 +47,8 @@ if config ~= nil then
   c_center_code = config_data.center_code
   c_project_code = config_data.project_code
   c_kind = config_data.kind
-  c_day_befor = config_data.day_befor
-  c_org_id = config_data.org_id
+  c_day_befor = tonumber(config_data.day_befor) or 0
+  c_org_id = tonumber(config_data.org_id) or 0
 end
 local day = time.get_day(time.current());
 local month = time.get_month(time.current());
@@ -66,12 +66,15 @@ local currentdate = string.format("%18.0f", temp_time);
 -- org_id چنین سالی پیدا نشد (کانفیگ ناقص یا سال اشتباه)، برمی‌گردیم به رفتار قبلی
 -- (day_befor نسبت به امروز) تا بات بی‌صدا روی کل تاریخچه اجرا نشود.
 function fetchFiscalYearRange(orgId, jalaliYear)
+  -- REPORT_FN_JDATE فقط داخل SELECT کار می‌کند (همان الگویی که بات‌های دیگر این ریپو
+  -- استفاده می‌کنند) — گذاشتنش داخل WHERE ... LIKE با «sql error» شکست خورد. پس همه‌ی
+  -- سال‌های مالی این سازمان را می‌گیریم (بدون فیلتر تابع در SQL) و تطبیق «کدام سال
+  -- ۱۴۰۴ است» را در خود Lua روی رشته‌ی تبدیل‌شده انجام می‌دهیم.
   local q = [[
-    SELECT fy.START_DATE, fy.END_DATE
+    SELECT fy.START_DATE, fy.END_DATE, REPORT_FN_JDATE(fy.START_DATE, '-') AS start_jalali
     FROM pa_fiscal_year fy
     WHERE fy.ORG_ID = ]] .. tostring(tonumber(orgId) or 0) .. [[
-      AND REPORT_FN_JDATE(fy.START_DATE, '-') LIKE ']] .. jalaliYear .. [[-%'
-    LIMIT 1
+    ORDER BY fy.START_DATE DESC
   ]];
   local ok, err = pcall(function()
     db.use_db("0000000");
@@ -82,12 +85,20 @@ function fetchFiscalYearRange(orgId, jalaliYear)
     pcall(db.query_free);
     return nil, nil;
   end
+
+  local yearPrefixLen = string.len(jalaliYear);
   local record = db.query_fetch();
-  db.query_free();
-  if record == nil or record[1] == nil or record[2] == nil then
-    return nil, nil;
+  while record ~= nil do
+    local startJalali = record[3];
+    if startJalali ~= nil and string.sub(tostring(startJalali), 1, yearPrefixLen) == jalaliYear then
+      local startDate, endDate = record[1], record[2];
+      db.query_free();
+      return tostring(startDate), tostring(endDate);
+    end
+    record = db.query_fetch();
   end
-  return tostring(record[1]), tostring(record[2]);
+  db.query_free();
+  return nil, nil;
 end
 
 local from_date, to_date;
