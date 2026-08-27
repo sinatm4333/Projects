@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/05 22:47
+-- Last Edit = 1405/06/05 23:00
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -66,7 +66,6 @@ local currentdate = string.format("%18.0f", temp_time);
 -- org_id چنین سالی پیدا نشد (کانفیگ ناقص یا سال اشتباه)، برمی‌گردیم به رفتار قبلی
 -- (day_befor نسبت به امروز) تا بات بی‌صدا روی کل تاریخچه اجرا نشود.
 function fetchFiscalYearRange(orgId, jalaliYear)
-  db.use_db("0000000");
   local q = [[
     SELECT fy.START_DATE, fy.END_DATE
     FROM pa_fiscal_year fy
@@ -74,7 +73,15 @@ function fetchFiscalYearRange(orgId, jalaliYear)
       AND REPORT_FN_JDATE(fy.START_DATE, '-') LIKE ']] .. jalaliYear .. [[-%'
     LIMIT 1
   ]];
-  db.query({ query = q, params = {} });
+  local ok, err = pcall(function()
+    db.use_db("0000000");
+    db.query({ query = q, params = {} });
+  end);
+  if not ok then
+    teamyar.write_log("fetchFiscalYearRange sql error ---- " .. tostring(err) .. " ---- query was: " .. q);
+    pcall(db.query_free);
+    return nil, nil;
+  end
   local record = db.query_fetch();
   db.query_free();
   if record == nil or record[1] == nil or record[2] == nil then
