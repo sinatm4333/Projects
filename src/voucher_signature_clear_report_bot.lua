@@ -1,9 +1,30 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/04 16:40
+-- Last Edit = 1405/06/04 19:10
 
 -- Bot: Voucher Signature Clear (پاک‌سازی امضای سند حسابداری فاکتور فروش)
 -- botName = voucher_signature_clear_report
--- version = v03
+-- version = v04
+--
+-- تغییرات v04 (بعد از گزارش زندهٔ کاربر: «HTML لود شد، پاپ‌آپ بسته شد، لودینگ فراخوانی آمد ولی
+-- چیزی لود نکرد» + پیشنهاد صریح کاربر: «از رویهٔ بات ۶۱۲ و دستورات res_v2 برای فراخوانی استفاده کن»):
+--   علت: مقصد XHR روی `window.location.href` بود. ولی صفحه‌ای که کاربر می‌بیند صفحهٔ **پنلِ** بات است
+--   (`?page=/bot/command/view&id=617&cat_id=79&tab=0` — در رجیستری همان `view_url`)، نه آدرس اجرای بات
+--   (`/bot/run/443/VoucherSignatureClear` — همان `run_url`). پس POST روی صفحهٔ پنل می‌نشست و چیزی که
+--   برمی‌گشت قطعهٔ گزارش نبود؛ چون کد کورکورانه innerHTML می‌کرد، نتیجه «هیچی» دیده می‌شد.
+--   رفع (دقیقاً همان قراردادی که کاربر گفت — `{{_bot_path}}` در res_v2، و همان کاری که بات
+--   signed_invoices از اول می‌کرد):
+--     ۱) آدرس اجرا سمت سرور از `teamyar.self().run_path` ساخته و به JS تزریق می‌شود
+--        (`TYVSC_BOT_URL`)؛ `window.location.href` فقط fallback است.
+--     ۲) هر دو فراخوانی (پیش‌نمایش و اجرا) با `credentials: 'same-origin'` به همان آدرس می‌روند.
+--     ۳) دیگر هیچ پاسخی کورکورانه رندر نمی‌شود: قطعهٔ پیش‌نمایش نشانهٔ `tyvsc-fragment` دارد و اگر
+--        نبود، خطای روشن با آدرس مقصد و ابتدای پاسخ نشان داده می‌شود؛ مسیر اجرا هم پاسخ غیر-JSON را
+--        به‌جای شکست خاموش، با متن واقعی گزارش می‌کند. سکوت دیگر ممکن نیست.
+--     ۴) مسیر فراخوانی در خود گزارش (زیر «فیلتر دامنه») نمایش داده می‌شود تا اگر باز هم اشتباه بود،
+--        بدون کنسول مرورگر قابل تشخیص باشد.
+--   یادداشت دربارهٔ پیشنهاد res_v2: بازنویسی کامل بات روی چارچوب RES عمداً انجام **نشد** — طبق قاعدهٔ
+--   خود CLAUDE.md («ترجیح بده اشکال را جراحی‌وار رفع کنی، نه بازنویسی کامل روی RES») و چون رندر RES از
+--   طریق `$.Teamyar.table` است و کل طراحی ایمنی این بات (پیش‌نمایش/تأیید/سقف/بازرسی یکپارچگی) را
+--   می‌ریزد. آنچه از res_v2 لازم بود، همین قرارداد آدرس‌دهی `{{_bot_path}}` بود که اعمال شد.
 --
 -- تغییرات v03 (بعد از گزارش زندهٔ کاربر: «پاپ‌آپ راهنما بسته نمی‌شود» + «تمام صفحه کار نمی‌کند»):
 --   ریشهٔ هر دو باگ یکی بود: CSS این بات **بدون دامنه** نوشته شده بود. کلاس‌های کاملاً عمومی
@@ -176,6 +197,18 @@ local function escape_html(value)
         :gsub(">", gt_entity)
         :gsub('"', quot_entity)
         :gsub("'", apos_entity)
+end
+
+-- برای مقادیری که داخل رشتهٔ تک‌کوتیشنی JS می‌نشینند. escape_html اینجا غلط است: داخل <script>
+-- موجودیت‌های HTML رمزگشایی نمی‌شوند، پس «&#39;» عیناً در رشته می‌ماند.
+local function escape_js_string(value)
+    if value == nil then return "" end
+    return tostring(value)
+        :gsub("\\", "\\\\")
+        :gsub("'", "\\'")
+        :gsub("\r", "")
+        :gsub("\n", "")
+        :gsub("<", "\\x3C")
 end
 
 local function fmt_num(value)
@@ -1324,7 +1357,19 @@ local REPORT_JS_HEAD = [[
 <script>
 var TYVSC_CONFIRM_PHRASE = ']]
 
+-- بین عبارت تأیید و بدنهٔ JS، آدرس اجرای خودِ بات تزریق می‌شود (ر.ک. یادداشت v04 بالای فایل).
+local REPORT_JS_MID = [[';
+var TYVSC_BOT_URL = ']]
+
 local REPORT_JS_BODY = [[';
+
+/* آدرس مقصدِ همهٔ فراخوانی‌ها. **هرگز window.location.href نیست** — این باگ زندهٔ گزارش‌شده بود:
+   صفحه‌ای که کاربر می‌بیند `?page=/bot/command/view&id=…` است (صفحهٔ پنلِ بات)، نه آدرس اجرای بات.
+   پس POST به window.location.href روی صفحهٔ پنل می‌نشست و چیزی که برمی‌گشت قطعهٔ ما نبود.
+   آدرس درست از teamyar.self() سمت سرور ساخته می‌شود، دقیقاً همان قرارداد {{_bot_path}} در res_v2. */
+function tyvscEndpoint(){
+  return (TYVSC_BOT_URL && TYVSC_BOT_URL !== '') ? TYVSC_BOT_URL : window.location.href;
+}
 
 /* ============================================================================
    همه‌چیز با واگذاری رویداد (delegation) روی document کار می‌کند — نه onclick درون‌خطی و نه
@@ -1474,12 +1519,25 @@ function tyvscLoadPreview(root){
   var data = new FormData(form);
   data.append('action', 'preview');
 
-  fetch(window.location.href, { method: 'POST', body: data })
+  fetch(tyvscEndpoint(), { method: 'POST', body: data, credentials: 'same-origin' })
     .then(function(res){
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.text();
     })
-    .then(function(html){ box.innerHTML = html; })
+    .then(function(html){
+      /* اگر نشانهٔ قطعه نبود، یعنی پاسخ از جای درستی نیامده. سکوت ممنوع — دقیقاً همین سکوت بود که
+         کاربر دید («لودینگ آمد ولی چیزی لود نکرد»). */
+      if (html.indexOf('tyvsc-fragment') === -1) {
+        var head = html.replace(/\s+/g, ' ').substring(0, 300);
+        box.innerHTML = '<div class="notice"><strong>پاسخ نامعتبر از سرور.</strong><br>' +
+          'درخواست به این آدرس رفت: <code>' + escapeHtml(tyvscEndpoint()) + '</code><br>' +
+          'ولی چیزی که برگشت قطعهٔ گزارش نیست (نشانهٔ tyvsc-fragment در آن نبود) — ' +
+          'یعنی احتمالاً به‌جای آدرس اجرای بات، به صفحهٔ پنل خورده است.<br>' +
+          'ابتدای پاسخ: <code>' + escapeHtml(head) + '</code></div>';
+        return;
+      }
+      box.innerHTML = html;
+    })
     .catch(function(err){
       box.innerHTML = '<div class="notice"><strong>خطا در دریافت پیش‌نمایش:</strong> ' +
         escapeHtml(String(err)) + '</div>';
@@ -1563,10 +1621,18 @@ function tyvscRunClear(root){
   data.append('action', 'execute');
   data.append('confirm', confirmInput.value.trim());
 
-  fetch(window.location.href, { method: 'POST', body: data })
+  fetch(tyvscEndpoint(), { method: 'POST', body: data, credentials: 'same-origin' })
     .then(function(res){
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
+      /* اجرا هرگز نباید روی پاسخ غیر-JSON کورکورانه جلو برود: اگر درخواست به صفحهٔ پنل خورده باشد،
+         متن HTML برمی‌گردد و JSON.parse خطا می‌دهد — که همان را به کاربر نشان می‌دهیم. */
+      return res.text().then(function(text){
+        try { return JSON.parse(text); }
+        catch (err) {
+          throw new Error('پاسخ JSON نبود (آدرس: ' + tyvscEndpoint() + '). ابتدای پاسخ: ' +
+            text.replace(/\s+/g, ' ').substring(0, 200));
+        }
+      });
     })
     .then(function(payload){
       if (!payload.ok) {
@@ -1647,8 +1713,13 @@ end
 
 -- قطعهٔ نتیجه — هرچه با عوض‌شدن فیلتر باید دوباره ساخته شود. هم در صفحهٔ کامل تعبیه می‌شود و هم
 -- به‌تنهایی با `action=preview` برگردانده می‌شود تا JS آن را جای `#resultBox` بگذارد.
+local FRAGMENT_MARKER = "<!-- tyvsc-fragment -->"
+
 local function render_results_fragment(filters, scope)
     return table.concat({
+        -- نشانهٔ تشخیص: اگر پاسخِ XHR این را نداشته باشد، یعنی درخواست به آدرس اشتباهی خورده
+        -- (مثلاً صفحهٔ پنل به‌جای آدرس اجرای بات). آن‌وقت JS به‌جای سکوت، خطای روشن نشان می‌دهد.
+        FRAGMENT_MARKER,
         render_warnings(filters.warnings),
 
         '<div class="section"><div class="section-head">',
@@ -1662,8 +1733,23 @@ local function render_results_fragment(filters, scope)
     })
 end
 
+-- آدرس اجرای خودِ بات. صفحه‌ای که کاربر می‌بیند «?page=/bot/command/view&id=…» است (صفحهٔ پنلِ بات)،
+-- نه آدرس اجرا — پس مقصد XHR باید صریح ساخته شود، نه از window.location.href گرفته شود.
+-- همان قراردادِ {{_bot_path}} در res_v2 و همان کاری که بات signed_invoices می‌کرد.
+local function resolve_bot_url()
+    local ok_self, self_info = pcall(teamyar.self)
+    if not ok_self or type(self_info) ~= "table" then return "" end
+
+    local run_path = tostring(self_info.run_path or "")
+    if run_path == "" then return "" end
+
+    run_path = run_path:gsub("^/+", "")
+    return "/bot/run/" .. run_path
+end
+
 local function render_page(filters, scope, actor)
     local organizations = fetch_organizations()
+    local bot_url = resolve_bot_url()
 
     return table.concat({
         REPORT_CSS,
@@ -1697,7 +1783,9 @@ local function render_page(filters, scope, actor)
         '<div class="section"><div class="section-head">',
         '<h2><span class="num">۱</span>فیلتر دامنه</h2>',
         '<p>دامنه فقط از روی همین فیلتر ساخته می‌شود — سمت سرور دوباره محاسبه می‌شود و هیچ فهرست سندی ',
-        'از مرورگر پذیرفته نمی‌شود.</p></div>',
+        'از مرورگر پذیرفته نمی‌شود.<br>مسیر فراخوانی این بات: <b>',
+        escape_html(bot_url ~= "" and bot_url or "؟ (از teamyar.self خوانده نشد)"),
+        '</b></p></div>',
         render_filter_bar(filters, organizations),
         '</div>',
 
@@ -1710,7 +1798,9 @@ local function render_page(filters, scope, actor)
         render_help_modal(),
 
         '</div>',
-        REPORT_JS_HEAD, CONFIG.CONFIRM_PHRASE, REPORT_JS_BODY,
+        REPORT_JS_HEAD, escape_js_string(CONFIG.CONFIRM_PHRASE),
+        REPORT_JS_MID, escape_js_string(bot_url),
+        REPORT_JS_BODY,
     })
 end
 
