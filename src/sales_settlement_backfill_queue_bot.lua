@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/06 16:20
+-- Last Edit = 1405/06/06 17:05
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -218,6 +218,69 @@ function queryResultFact(select_query, user_param)
   return res_text;
 end
 -------------------------------------------------------------
+-- جدول اختصاصی این بات برای فاکتورهایی که با خطای دائمی («سند مربوطه امضا شده است»)
+-- رد شده‌اند. بدون این جدول، این فاکتورها چون هیچ‌وقت در sales_invoice_settlement ثبت
+-- نمی‌شوند، هر اجرا دوباره در صف ظاهر و دوباره رد می‌شوند (گزارش کاربر ۱۴۰۵/۰۶/۰۶:
+-- «هر دفعه بات رو ران می‌کنی دوباره همون فاکتورها رو میاره و تسویه نمی‌کنه»).
+-- idempotent — هر اجرا فقط اگر جدول از قبل نباشد می‌سازدش.
+-------------------------------------------------------------
+function ensurePermanentSkipTable()
+  db.use_db("0000000");
+  local ddl = [[
+    CREATE TABLE IF NOT EXISTS sales_settlement_permanent_skip (
+      ID bigint NOT NULL AUTO_INCREMENT,
+      ORG_ID bigint NOT NULL,
+      INVOICE_ID bigint NOT NULL,
+      REASON varchar(500) NOT NULL,
+      DATE_CREATE bigint NOT NULL,
+      PRIMARY KEY (ID),
+      UNIQUE KEY UQ_ORG_INVOICE (ORG_ID, INVOICE_ID)
+    ) ENGINE=InnoDB
+  ]];
+  local ok, err = pcall(function()
+    db.query({ query = ddl, params = {} });
+  end);
+  if not ok then
+    teamyar.write_log("ensurePermanentSkipTable error ---- " .. tostring(err));
+  end
+  pcall(db.query_free);
+  return ok;
+end
+
+-- ثبت یک فاکتور در جدول ردهای دائمی — فقط برای خطاهای دائمی (امضا شده)؛ خطاهای دیگر
+-- عمداً اینجا ثبت نمی‌شوند چون ممکن است موقتی باشند و باید در اجرای بعد دوباره امتحان شوند
+function recordPermanentSkip(orgId, invoiceId, reason)
+  db.use_db("0000000");
+  local truncatedReason = string.sub(tostring(reason), 1, 500);
+  local sql = [[
+    INSERT INTO sales_settlement_permanent_skip (ORG_ID, INVOICE_ID, REASON, DATE_CREATE)
+    VALUES (?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE REASON = VALUES(REASON), DATE_CREATE = VALUES(DATE_CREATE)
+  ]];
+  local params = { tonumber(orgId), tonumber(invoiceId), truncatedReason, currentdate_time };
+  local ok, err = pcall(function()
+    db.query({ query = sql, params = params });
+  end);
+  if not ok then
+    teamyar.write_log("recordPermanentSkip error (invoice " .. tostring(invoiceId) .. ")----" .. tostring(err));
+  end
+  pcall(db.query_free);
+  return ok;
+end
+
+-- اگر CREATE TABLE به هر دلیلی شکست بخورد (مثلاً کاربر DB این بات فقط دسترسی DML دارد،
+-- نه DDL)، نباید کل بات (که قبل از این ویژگی فقط SELECT/API می‌زد) از کار بیفتد؛ در آن
+-- حالت شرط NOT IN زیر اصلاً به کوئری اضافه نمی‌شود و رفتار به همان قبل (بدون این فیلتر)
+-- برمی‌گردد — recordPermanentSkip هم پایین‌تر با همین pcall صرفاً لاگ می‌کند، صف را نمی‌شکند.
+local _skipTableReady = ensurePermanentSkipTable();
+local skipTableClause = "";
+if _skipTableReady then
+  skipTableClause = " and i.id not in (select INVOICE_ID from sales_settlement_permanent_skip where ORG_ID = "
+    .. c_org_id .. ") ";
+else
+  teamyar.write_log("backfill: sales_settlement_permanent_skip در دسترس نیست — فیلتر امضا-دائمی غیرفعال این اجرا");
+end
+-------------------------------------------------------------
 -- کوئری فیلتر — عیناً از بات 582. order by + limit فقط برای کران‌دار نگه‌داشتن یک
 -- SELECT اضافه شده (نه برای صف‌بندی؛ صف‌بندی واقعی از طریق سقف زمانی پایین‌تر است)
 -------------------------------------------------------------
@@ -271,6 +334,7 @@ local q = [[
  left join pa_project prj on prj.id=i.project_id
          where  i.status= 2 and i.org_id=]] .. c_org_id .. [[  and ps.org_id=]] .. c_org_id .. [[  and i.id not in (select INVOICE_ID from sales_invoice_settlement) and i.type=1
           and i.deleted = 0
+          ]] .. skipTableClause .. [[
           and i.RUN_DATE >=]] .. from_date .. [[  and i.RUN_DATE<=]] .. to_date .. [[
          order by i.RUN_DATE asc
          limit ]] .. _QUERY_ROW_LIMIT
@@ -279,7 +343,12 @@ local q = [[
 -- i.deleted=0: عیناً از کوئری بات 612 (mySqlQuery.txt) اضافه شد — این کوئری (که از
 -- بات 582 کپی شده بود) این شرط رو نداشت و فاکتورهایی رو می‌آورد که سند مربوطه‌شون
 -- «امضا شده» بود (API با «سند مربوطه امضا شده است...» ردشون می‌کرد). بات 612 هیچ‌وقت
--- این‌ها رو نمی‌آورد، دقیقاً به‌خاطر همین شرط.
+-- این‌ها رو نمی‌آورد، دقیقاً به‌خاطر همین شرط. اما این کافی نبود (گزارش کاربر
+-- ۱۴۰۵/۰۶/۰۶) — deleted=0 فقط یک زیرمجموعه از فاکتورهای امضاشده را حذف می‌کرد؛
+-- بقیه‌شان چون هیچ‌وقت در sales_invoice_settlement ثبت نمی‌شدند، همچنان هر اجرا دوباره
+-- برمی‌گشتند. حالا هر فاکتوری که settleFactor با خطای «امضا» رد کند، در
+-- sales_settlement_permanent_skip ثبت و از این کوئری هم حذف می‌شود (بالاتر: تعریف
+-- ensurePermanentSkipTable/recordPermanentSkip).
 local q_count = [[
   select count(*) cnt
   from sales_invoice i
@@ -287,6 +356,7 @@ local q_count = [[
   where i.status = 2 and i.org_id=]] .. c_org_id .. [[ and ps.org_id=]] .. c_org_id .. [[
     and i.deleted = 0
     and i.id not in (select INVOICE_ID from sales_invoice_settlement)
+    ]] .. skipTableClause .. [[
     and i.type = 1
     and i.RUN_DATE >=]] .. from_date .. [[ and i.RUN_DATE<=]] .. to_date
 
@@ -402,6 +472,12 @@ for i, v in ipairs(compelete_factors) do
     failCount = failCount + 1;
     if reason ~= nil and string.find(reason, _SIGNED_DOC_ERROR_MARKER, 1, true) ~= nil then
       signedDocFailCount = signedDocFailCount + 1;
+      -- خطای دائمی — ثبت در جدول اختصاصی تا از اجرای بعدی این کوئری حذف شود، وگرنه
+      -- برای همیشه در صف می‌ماند (چون هیچ‌وقت در sales_invoice_settlement ثبت نمی‌شود).
+      -- اگر جدول در دسترس نبود، این تلاش هم بی‌فایده است — رد می‌شود تا لاگ شلوغ نشود.
+      if _skipTableReady then
+        recordPermanentSkip(c_org_id, v.id, reason);
+      end
       if #signedDocSampleIds < _FAIL_SAMPLE_LIMIT then
         table.insert(signedDocSampleIds, tostring(v.id));
       end
@@ -419,7 +495,13 @@ for i, v in ipairs(compelete_factors) do
   end
 end
 
+-- signedDocFailCount فقط وقتی از remaining کم می‌شود که جدول اختصاصی واقعاً در دسترس
+-- بوده باشد (یعنی این فاکتورها واقعاً ثبت و از کوئری اجرای بعدی حذف شدند) — وگرنه
+-- (fallback بدون جدول) هنوز جزو صف واقعی‌اند و باید در remaining بمانند.
 local remaining = queue_total - okCount;
+if _skipTableReady then
+  remaining = remaining - signedDocFailCount;
+end
 if remaining < 0 then remaining = 0; end
 
 local summary = "این اجرا: " .. processedCount .. " فاکتور پردازش شد (موفق=" .. okCount .. "، ناموفق=" .. failCount .. ")"
@@ -436,14 +518,21 @@ else
   summary = summary .. " صف خالی شد.";
 end
 
--- تفکیک دلیل شکست‌ها: «سند مربوطه امضا شده است» دائمی است (این فاکتورها هیچ‌وقت از این
--- مسیر تسویه نمی‌شوند و چون در sales_invoice_settlement ثبت نمی‌شوند، هر اجرا دوباره در
--- صف ظاهر می‌شوند و دوباره رد خواهند شد) — باید صریح از بقیه‌ی خطاها جدا گزارش شود.
+-- تفکیک دلیل شکست‌ها: «سند مربوطه امضا شده است» دائمی است. این فاکتورها بالاتر در
+-- sales_settlement_permanent_skip ثبت شدند — از این به بعد کوئری صف خودش این‌ها را
+-- کنار می‌گذارد و دیگر هر اجرا دوباره امتحان/رد نمی‌شوند (رفع مستقیم گزارش کاربر
+-- ۱۴۰۵/۰۶/۰۶: «هر دفعه بات رو ران می‌کنی دوباره همون فاکتورها رو میاره»).
 if failCount > 0 then
   summary = summary .. " از ناموفق‌ها: " .. signedDocFailCount
-    .. " فاکتور به دلیل «سند مربوطه امضا شده است» رد شد (دائمی — این فاکتورها از این مسیر"
-    .. " هیچ‌وقت تسویه نمی‌شوند و باید دستی در حسابداری رسیدگی/مستثنا شوند، وگرنه هر اجرای"
-    .. " بعدی دوباره امتحان و دوباره رد می‌شوند) و " .. otherFailCount
+    .. " فاکتور به دلیل «سند مربوطه امضا شده است» رد شد";
+  if _skipTableReady then
+    summary = summary .. " و در جدول اختصاصی این بات ثبت شد تا دیگر در اجراهای بعدی امتحان نشود"
+      .. " (دائمی — این فاکتورها باید دستی در حسابداری رسیدگی شوند)";
+  else
+    summary = summary .. " — ثبت در جدول اختصاصی این اجرا ممکن نشد، پس این فاکتورها همچنان در"
+      .. " اجرای بعدی دوباره در صف ظاهر می‌شوند (برای علت به لاگ اجرا مراجعه کنید)";
+  end
+  summary = summary .. " و " .. otherFailCount
     .. " فاکتور با خطای دیگر (احتمالاً موقتی، در اجرای بعد دوباره امتحان می‌شود).";
   if #signedDocSampleIds > 0 then
     summary = summary .. " نمونه شناسه فاکتورهای دارای سند امضاشده: "
