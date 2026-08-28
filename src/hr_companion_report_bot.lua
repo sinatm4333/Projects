@@ -475,6 +475,18 @@ local celebration_group_id = config_number("celebration_group_id")
 -- show_in_portal یکی از فیلدهای تاییدشدهٔ /api/dialog/add است. معنای دقیقش مستند نشده، پس
 -- پیش‌فرض ۰ (محافظه‌کارانه) است و از bot_config قابل تغییر.
 local celebration_show_in_portal = tonumber(config_data.celebration_show_in_portal) or 0
+
+-- آدرس ماژول گفتگو. نسبی نوشته شده تا روی هر میزبانی که بات از آن سرو می‌شود کار کند و دامنه
+-- جایی hardcode نشود. عمداً هیچ پارامتر اضافه‌ای ندارد: پارامترهای widget_* که در لینک کامل
+-- پورتال دیده می‌شوند تنظیمات ظاهری ویجت‌اند و به گفتگو ربطی ندارند.
+-- ⚠️ محدودیت واقعی: گفتگوها در این ماژول به‌صورت پاپ‌آپ باز می‌شوند، پس **لینک مستقیم به یک
+-- گفتگوی مشخص وجود ندارد**. بیشترین کاری که می‌شود کرد باز کردن خود ماژول است؛ به همین دلیل
+-- عنوان قطعی گفتگو هم به کاربر نشان داده می‌شود تا در فهرست پیدایش کند.
+local chat_module_url = config_data.chat_module_url
+if chat_module_url == nil or tostring(chat_module_url) == "" then
+    chat_module_url = "/?page=/chat/index"
+end
+chat_module_url = tostring(chat_module_url)
 if celebration_show_in_portal ~= 1 then celebration_show_in_portal = 0 end
 
 -- ⛔ کلید ایمنی نوشتن روی ماژول گفتگو — پیش‌فرض خاموش.
@@ -2689,8 +2701,10 @@ local html_tail = [==[
       <p class="note" id="celebrationHint">در حال بارگذاری گفتگو...</p>
       <p class="note" id="celebrationMembers"></p>
       <div class="thread" id="celebrationThread"></div>
+      <p class="note" id="celebrationTopic"></p>
       <div class="modal-foot">
         <button type="button" class="btn-action" id="celebrationJoin" onclick="joinCelebration()">پیوستن به گفتگو</button>
+        <button type="button" class="btn-action" id="celebrationOpenModule" onclick="openChatModule()">باز کردن ماژول گفتگو</button>
         <button type="button" class="btn-action" onclick="closeCelebration()">بستن</button>
       </div>
       <p class="note" id="celebrationResult">پس از پیوستن، پیام تبریک را داخل خودِ گفتگو بنویسید؛ همین‌جا هم نمایش داده می‌شود.</p>
@@ -2705,6 +2719,7 @@ var RUN_URL = (location.pathname.indexOf('/bot/run/') === 0) ? location.pathname
 var celebrationTarget = { name: '', date: '', dialogId: 0 };
 var CELEBRATION_GROUP_ID = __CELEBRATION_GROUP_ID__;
 var CELEBRATION_ENABLED = __CELEBRATION_ENABLED__;
+var CHAT_MODULE_URL = '__CHAT_MODULE_URL__';
 
 document.querySelectorAll('.nav button').forEach(function (btn) {
   btn.addEventListener('click', function () { goToPage(btn.dataset.page); });
@@ -2886,6 +2901,14 @@ function setCelebrationState(res) {
     joinBtn.textContent = 'پیوستن فعلاً غیرفعال است';
     hint.textContent = 'این گفتگو فقط خواندنی است؛ ساخت و پیوستن هنوز فعال نشده است.';
   }
+  var topicBox = document.getElementById('celebrationTopic');
+  if (celebrationTarget.dialogId) {
+    topicBox.textContent = 'این گفتگو در ماژول گفتگو با همین عنوان پیدا می‌شود: «تبریک تولد ' +
+      celebrationTarget.name + ' — ' + celebrationTarget.date +
+      '». گفتگوها پاپ‌آپ باز می‌شوند و لینک مستقیم به یک گفتگو ندارند.';
+  } else {
+    topicBox.textContent = '';
+  }
   var list = (res && res.members) ? res.members : [];
   members.textContent = list.length
     ? ('تا اینجا در گفتگو: ' + list.join('، '))
@@ -2916,6 +2939,10 @@ function openCelebration(name, dateLabel) {
     function () {
       document.getElementById('celebrationHint').textContent = 'خطا در ارتباط با سرور.';
     });
+}
+
+function openChatModule() {
+  window.open(CHAT_MODULE_URL, '_blank');
 }
 
 function closeCelebration() {
@@ -2978,6 +3005,7 @@ html_tail = replace_token(html_tail, "__CELEBRATION_GROUP_ID__",
     celebration_group_id and tostring(celebration_group_id) or "0")
 html_tail = replace_token(html_tail, "__CELEBRATION_ENABLED__",
     celebration_enabled and "true" or "false")
+html_tail = replace_token(html_tail, "__CHAT_MODULE_URL__", js_str(chat_module_url))
 
 local html = html_head .. topbar_html .. error_html ..
     section_overview .. section_attendance .. section_requests .. section_profile ..
