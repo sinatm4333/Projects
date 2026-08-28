@@ -400,6 +400,7 @@ end
 -- چندخطی باشد، و پاسخ خام هر فراخوانی در خروجی برمی‌گردد تا در اولین اجرای واقعی دیده شود.
 
 local CHAT_MODULE_ID = 9
+local HR_MODULE_ID = 13 -- ماژول «پرسنلی» طبق جدول HOME_MODULE_LIST
 local DIALOG_TYPE_GROUP = 1 -- chat_dialogs.TYPE: 0=خصوصی، 1=گروهی، 2=عمومی (تاییدشده در بات ۹۴۲)
 
 local celebration_group_id = config_number("celebration_group_id")
@@ -419,8 +420,17 @@ end
 local api_caller_path = config_data.api_caller_path
 local api_caller_secret = config_data.api_caller_secret
 
+-- توجه: نمونهٔ رسمی پورتال برای success مقدار عددی 0/1 نشان می‌دهد، ولی جدول schema نوعش را
+-- boolean اعلام کرده. هر دو حالت اینجا «ناموفق» شمرده می‌شوند (در Lua مقایسهٔ 0 == false غلط است).
+local function api_failed(result)
+    if type(result) ~= "table" then return false end
+    if result.success == false then return true end
+    if tonumber(result.success) ~= nil and tonumber(result.success) == 0 then return true end
+    return false
+end
+
 local function unwrap_api_error(result)
-    if type(result) == "table" and result.success == false then
+    if api_failed(result) then
         local detail = "نامشخص"
         if type(result.error) == "table" and result.error.message ~= nil then
             detail = tostring(result.error.message)
@@ -1101,13 +1111,52 @@ for _, r in ipairs(requests) do
 end
 
 -- ── section: leave balance ───────────────────────────────────────────
+-- منبع اول: API رسمی /api/hr/leaveTransferGet (ماژول ۱۳، schema تاییدشده ۱۴۰۵/۰۶/۰۶)
+--   درخواست: {id, org_id, date_to, personnel_ids[]} — id (شناسهٔ حکم) و date_to اجباری نیستند
+--   پاسخ:   {data:[{value, personnel_id}], error:{status,message}, success}
+-- منبع دوم (fallback): جدول hr_leave_remained_records، اگر API خطا داد یا رکوردی برنگرداند.
+-- واحد value در پورتال اعلام نشده؛ مثل بقیهٔ مدت‌های این اسکیما tick در نظر گرفته می‌شود. مقدار خام
+-- در خروجی format=json می‌ماند تا در اولین اجرای واقعی با پنل رسمی مقایسه و در صورت نیاز اصلاح شود.
 
 local leave_balance = nil
 local leave_balance_period = nil
+local leave_balance_source = nil
+local leave_balance_raw = nil
 local leave_balance_err = nil
 
 do
     local ok, err = pcall(function()
+        local response, api_err = call_teamyar_api(HR_MODULE_ID, "/api/hr/leaveTransferGet", {
+            personnel_ids = { personnel.personnel_id },
+            org_id = personnel.org_id or 0,
+            date_to = to_date
+        })
+        if api_err == nil and type(response) == "table" then
+            local rows = response.data
+            if type(rows) == "table" then
+                for _, item in ipairs(rows) do
+                    if type(item) == "table" then
+                        local item_personnel = tonumber(item.personnel_id)
+                        if item_personnel == nil or item_personnel == personnel.personnel_id then
+                            local raw_value = tonumber(item.value)
+                            if raw_value ~= nil then
+                                leave_balance_raw = raw_value
+                                leave_balance = {
+                                    remained_minutes = math.floor((raw_value / 10000000 / 60) + 0.5)
+                                }
+                                leave_balance_source = "api"
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        elseif api_err ~= nil then
+            leave_balance_err = "API مانده مرخصی: " .. tostring(api_err)
+        end
+
+        if leave_balance ~= nil then return end
+
         local rows, query_err = fetch_rows([[
 SELECT ]] .. sql_ticks_to_minutes("rec.LEAVE_REMAINED") .. [[ AS remained_minutes,
        ]] .. sql_ticks_to_minutes("rec.PAID_LEAVE_REMAINED") .. [[ AS paid_remained_minutes,
@@ -1120,7 +1169,8 @@ ORDER BY lst.DATE_TO DESC, lst.ID DESC
 LIMIT 1
 ]], { personnel.personnel_id })
         if rows == nil then
-            leave_balance_err = tostring(query_err)
+            leave_balance_err = (leave_balance_err and (leave_balance_err .. " | ") or "") ..
+                tostring(query_err)
             return
         end
         if #rows > 0 then
@@ -1129,9 +1179,17 @@ LIMIT 1
                 paid_remained_minutes = tonumber(rows[1][2]) or 0
             }
             leave_balance_period = (rows[1][3] or "—") .. " تا " .. (rows[1][4] or "—")
+            leave_balance_source = "db"
         end
     end)
     if not ok then leave_balance_err = tostring(err) end
+end
+
+local leave_balance_note = "برای این پرسنل دوره‌ای برای محاسبهٔ مانده ثبت نشده است"
+if leave_balance_source == "api" then
+    leave_balance_note = "منبع: API رسمی مانده مرخصی سامانه"
+elseif leave_balance_source == "db" then
+    leave_balance_note = "دورهٔ محاسبه: " .. (leave_balance_period or "—")
 end
 
 -- ── section: profile extras (education) ──────────────────────────────
@@ -1661,6 +1719,8 @@ if format_out == "json" then
         request_counts = request_counts,
         leave_balance = leave_balance,
         leave_balance_period = leave_balance_period,
+        leave_balance_source = leave_balance_source,
+        leave_balance_raw = leave_balance_raw,
         education = education_label,
         birthdays_today = birthdays_today,
         birthdays_month = birthdays_month,
@@ -1717,10 +1777,10 @@ table.insert(kpi_html, kpi_card("اضافه‌کاری محاسبه‌شده",
 if leave_balance ~= nil then
     table.insert(kpi_html, kpi_card("مانده مرخصی",
         minutes_to_hm(leave_balance.remained_minutes) .. ' <small>ساعت</small>',
-        "دورهٔ محاسبه: " .. (leave_balance_period or "—")))
+        leave_balance_note))
 else
     table.insert(kpi_html, kpi_card("مانده مرخصی", '<span class="dash">—</span>',
-        "برای این پرسنل دورهٔ محاسبهٔ مانده ثبت نشده است"))
+        leave_balance_note))
 end
 table.insert(kpi_html, kpi_card("تاخیر محاسبه‌شده",
     minutes_to_hm(totals.delay) .. ' <small>ساعت</small>',
@@ -1928,7 +1988,7 @@ local profile_right = detail_row("تقویم کاری", employment.calendar_name
     detail_row("وضعیت حکم", employment.is_current == false and
         "حکم جاری فعال نیست (آخرین حکم نمایش داده شده)" or "حکم جاری فعال") ..
     detail_row("مانده مرخصی", leave_balance and minutes_to_hm(leave_balance.remained_minutes) or nil) ..
-    detail_row("دورهٔ محاسبهٔ مانده", leave_balance_period)
+    detail_row("منبع مانده مرخصی", leave_balance_note)
 
 -- Celebration section
 local celebration_html
