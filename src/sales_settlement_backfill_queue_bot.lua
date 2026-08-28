@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/06 14:30
+-- Last Edit = 1405/06/06 16:20
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -304,7 +304,25 @@ if #compelete_factors == 0 then
 end
 
 --------------------------------------------
+-- استخراج پیام خطای قابل‌خواندن از پاسخ API (error می‌تواند رشته یا جدول {message=...} باشد)
+--------------------------------------------
+function extractErrorMessage(res)
+  if res == nil then return "پاسخ خالی از API"; end
+  if res.error == nil then return nil; end
+  if type(res.error) == "table" then
+    return tostring(res.error.message or json.encode(res.error));
+  end
+  return tostring(res.error);
+end
+
+-- علامت تشخیص خطای «سند مربوطه امضا شده است» — این‌ها خطای دائمی/غیرقابل‌تلاش‌مجدد هستند
+-- (فاکتور دیگر هیچ‌وقت از این مسیر تسویه نمی‌شود)، برخلاف بقیه‌ی خطاها که می‌توانند
+-- موقتی باشند. جدا کردنشان در خلاصه‌ی خروجی لازم است تا معلوم شود «ناموفق» یعنی چه.
+local _SIGNED_DOC_ERROR_MARKER = "امضا";
+
+--------------------------------------------
 -- تسویه‌ی یک فاکتور؛ history فقط روی تسویه‌ی واقعاً موفق ثبت می‌شود (همان رفع باگ 582)
+-- خروجی: success, reason (reason فقط وقتی success=false پر است)
 --------------------------------------------
 function settleFactor(v)
   local info_settelment = {
@@ -328,8 +346,9 @@ function settleFactor(v)
 
   local callOk, res_settelment = pcall(teamyar.call_api, 23, '/api/sales/create_settlement', info_settelment);
   if not callOk then
-    teamyar.write_log("create_settlement error (invoice " .. tostring(v.id) .. ")----" .. tostring(res_settelment));
-    return false;
+    local reason = "خطای فراخوانی API: " .. tostring(res_settelment);
+    teamyar.write_log("create_settlement error (invoice " .. tostring(v.id) .. ")----" .. reason);
+    return false, reason;
   end
 
   local success = res_settelment ~= nil and res_settelment.error == nil and res_settelment.success == true;
@@ -343,10 +362,12 @@ function settleFactor(v)
     if not logOk then
       teamyar.write_log("update_invoice_history error (invoice " .. tostring(v.id) .. ")----" .. tostring(res_log));
     end
-  else
-    teamyar.write_log("settle failed (invoice " .. tostring(v.id) .. ")----" .. json.encode(res_settelment));
+    return true, nil;
   end
-  return success;
+
+  local reason = extractErrorMessage(res_settelment) or "خطای نامشخص";
+  teamyar.write_log("settle failed (invoice " .. tostring(v.id) .. ")----" .. json.encode(res_settelment));
+  return false, reason;
 end
 
 --------------------------------------------
@@ -356,8 +377,13 @@ end
 --------------------------------------------
 local okCount = 0;
 local failCount = 0;
+local signedDocFailCount = 0;
+local otherFailCount = 0;
 local processedCount = 0;
 local stoppedEarly = false;
+local _FAIL_SAMPLE_LIMIT = 15;
+local signedDocSampleIds = {};
+local otherFailSamples = {};
 
 -- زمان فقط هر _TIME_CHECK_EVERY فاکتور یک‌بار چک می‌شود، نه هر فاکتور — چون
 -- elapsedSeconds() خودش چند فراخوانی time.* دارد و روی صدها‌هزار تکرار محسوس می‌شود؛
@@ -368,16 +394,28 @@ for i, v in ipairs(compelete_factors) do
     stoppedEarly = true;
     break;
   end
-  local success = settleFactor(v);
+  local success, reason = settleFactor(v);
   processedCount = processedCount + 1;
   if success then
     okCount = okCount + 1;
   else
     failCount = failCount + 1;
+    if reason ~= nil and string.find(reason, _SIGNED_DOC_ERROR_MARKER, 1, true) ~= nil then
+      signedDocFailCount = signedDocFailCount + 1;
+      if #signedDocSampleIds < _FAIL_SAMPLE_LIMIT then
+        table.insert(signedDocSampleIds, tostring(v.id));
+      end
+    else
+      otherFailCount = otherFailCount + 1;
+      if #otherFailSamples < _FAIL_SAMPLE_LIMIT then
+        table.insert(otherFailSamples, tostring(v.id) .. ": " .. tostring(reason));
+      end
+    end
   end
   if processedCount % 500 == 0 then
     teamyar.write_log("backfill progress — processed=" .. processedCount .. "/" .. #compelete_factors
-      .. " ok=" .. okCount .. " fail=" .. failCount .. " elapsed_s=" .. string.format("%.0f", elapsedSeconds()));
+      .. " ok=" .. okCount .. " fail=" .. failCount .. " (signed_doc=" .. signedDocFailCount
+      .. " other=" .. otherFailCount .. ") elapsed_s=" .. string.format("%.0f", elapsedSeconds()));
   end
 end
 
@@ -396,6 +434,24 @@ if remaining > 0 then
   summary = summary .. " برای ادامه، این بات را دوباره اجرا کنید — صف خودکار از همین‌جا ادامه پیدا می‌کند.";
 else
   summary = summary .. " صف خالی شد.";
+end
+
+-- تفکیک دلیل شکست‌ها: «سند مربوطه امضا شده است» دائمی است (این فاکتورها هیچ‌وقت از این
+-- مسیر تسویه نمی‌شوند و چون در sales_invoice_settlement ثبت نمی‌شوند، هر اجرا دوباره در
+-- صف ظاهر می‌شوند و دوباره رد خواهند شد) — باید صریح از بقیه‌ی خطاها جدا گزارش شود.
+if failCount > 0 then
+  summary = summary .. " از ناموفق‌ها: " .. signedDocFailCount
+    .. " فاکتور به دلیل «سند مربوطه امضا شده است» رد شد (دائمی — این فاکتورها از این مسیر"
+    .. " هیچ‌وقت تسویه نمی‌شوند و باید دستی در حسابداری رسیدگی/مستثنا شوند، وگرنه هر اجرای"
+    .. " بعدی دوباره امتحان و دوباره رد می‌شوند) و " .. otherFailCount
+    .. " فاکتور با خطای دیگر (احتمالاً موقتی، در اجرای بعد دوباره امتحان می‌شود).";
+  if #signedDocSampleIds > 0 then
+    summary = summary .. " نمونه شناسه فاکتورهای دارای سند امضاشده: "
+      .. table.concat(signedDocSampleIds, "، ") .. ".";
+  end
+  if #otherFailSamples > 0 then
+    summary = summary .. " نمونه خطاهای دیگر: " .. table.concat(otherFailSamples, " | ") .. ".";
+  end
 end
 
 teamyar.write_log(summary);
