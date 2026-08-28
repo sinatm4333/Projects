@@ -48,6 +48,12 @@
 --   واقعی تطبیق داده شود؛ هر سه payload عمداً در یک جا جمع شده‌اند و پاسخ خام API در خروجی JSON
 --   برمی‌گردد تا در اولین اجرای واقعی دیده و اصلاح شود.
 --
+--   مسیر فراخوانی: تابع call_teamyar_api. اگر api_caller_path در bot_config تنظیم شده باشد، همهٔ
+--   فراخوانی‌ها از بات عمومی api_caller_json_bot.lua رد می‌شوند (همان الگوی call_api_1_bot.lua:
+--   teamyar.call_api(module_id, url, params) با کنترل secret-key و allowlist)؛ وگرنه مستقیم
+--   teamyar.call_api صدا زده می‌شود. bot_config برای حالت اول:
+--     { "api_caller_path": "443/api_caller", "api_caller_secret": "...", "celebration_group_id": 3 }
+--
 -- هویت کاربر: خروجی همیشه مربوط به همان کاربری است که بات را اجرا کرده. هیچ ورودی
 -- personnel_id/profile_id پذیرفته نمی‌شود تا کسی نتواند با عوض کردن یک عدد، کارکرد و مرخصی و
 -- اطلاعات پرسنلی دیگران را ببیند.
@@ -402,21 +408,69 @@ local function celebration_topic(person_name, jalali_date)
     return "تبریک تولد " .. tostring(person_name) .. " — " .. tostring(jalali_date)
 end
 
-local function call_chat_api(path, payload)
-    local ok, result = pcall(function()
-        return teamyar.call_api(CHAT_MODULE_ID, path, payload)
-    end)
-    if not ok then
-        return nil, tostring(result)
-    end
+-- لایهٔ فراخوانی API — همان الگوی call_api_1_bot.lua این ریپو
+-- (teamyar.call_api(module_id, url, params) + کنترل secret-key)، ولی با دو مسیر:
+--   ۱) اگر api_caller_path در bot_config تنظیم شده باشد، فراخوانی از بات عمومی
+--      api_caller_json_bot.lua رد می‌شود (teamyar.run_command). مزیتش این است که کل ترافیک API
+--      از یک نقطه با allowlist و کلید مشترک عبور می‌کند و همان‌جا هم قابل لاگ گرفتن است.
+--   ۲) اگر تنظیم نشده باشد، مستقیم teamyar.call_api صدا زده می‌شود.
+-- هر دو مسیر دقیقاً یک شکل خروجی می‌دهند تا بقیهٔ کد فرقی نکند.
+
+local api_caller_path = config_data.api_caller_path
+local api_caller_secret = config_data.api_caller_secret
+
+local function unwrap_api_error(result)
     if type(result) == "table" and result.success == false then
         local detail = "نامشخص"
         if type(result.error) == "table" and result.error.message ~= nil then
             detail = tostring(result.error.message)
+        elseif type(result.error) == "string" then
+            detail = result.error
         end
-        return result, detail
+        return detail
     end
-    return result, nil
+    return nil
+end
+
+local function call_teamyar_api(module_id, path, payload)
+    if api_caller_path ~= nil and tostring(api_caller_path) ~= "" then
+        local ok, envelope = pcall(function()
+            return teamyar.run_command(tostring(api_caller_path), {
+                module_id = module_id,
+                url = path,
+                params = payload,
+                secret_key = api_caller_secret
+            })
+        end)
+        if not ok then
+            return nil, "خطا در فراخوانی بات api_caller: " .. tostring(envelope)
+        end
+        -- بعضی نسخه‌ها رشتهٔ JSON برمی‌گردانند و بعضی جدول
+        if type(envelope) == "string" then
+            local decoded_ok, decoded = pcall(function() return json.decode(envelope) end)
+            if decoded_ok and type(decoded) == "table" then envelope = decoded end
+        end
+        if type(envelope) ~= "table" then
+            return nil, "پاسخ بات api_caller قابل خواندن نبود"
+        end
+        if envelope.ok == false then
+            return envelope, tostring(envelope.error or "نامشخص")
+        end
+        local response = envelope.response
+        return response, unwrap_api_error(response)
+    end
+
+    local ok, result = pcall(function()
+        return teamyar.call_api(module_id, path, payload)
+    end)
+    if not ok then
+        return nil, tostring(result)
+    end
+    return result, unwrap_api_error(result)
+end
+
+local function call_chat_api(path, payload)
+    return call_teamyar_api(CHAT_MODULE_ID, path, payload)
 end
 
 -- استخراج شناسه از پاسخ API بدون فرض دربارهٔ شکل دقیق پاسخ (data.id / data.dialog_id / id / ...)
