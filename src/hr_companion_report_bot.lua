@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/06 19:53
+-- Last Edit = 1405/06/07 00:31
 
 -- botName = hr_companion
 -- description = همراه ۱۴۰ — پنل پرسنلی (تردد و کارکرد، درخواست‌ها، اطلاعات پرسنلی، همراهِ روز و تولدها)
@@ -135,6 +135,16 @@ local function minutes_to_hm(minutes)
     if m < 0 then m = 0 end
     m = math.floor(m + 0.5)
     return string.format("%02d:%02d", math.floor(m / 60), m % 60)
+end
+
+-- واحد tick برای hr_work_time.TOTAL_WORK با دادهٔ زنده تایید شد (۱۴۰۵/۰۶/۰۷: مقادیر خام
+-- ۲۱۶۰۰۰۰۰۰۰۰۰ و ۱۴۲۸۰۰۰۰۰۰۰۰ دقیقاً ۶٫۰۰ و ۳٫۹۷ ساعت شدند). ستون‌های مدت‌دارِ جدول احکام
+-- جداگانه تایید نشده‌اند، فقط هم‌خانواده‌اند. برای اینکه یک واحدِ متفاوت هرگز به‌شکل «عددی
+-- باورپذیر ولی غلط» جلوی کارمند ننشیند، هر کدام یک سقف منطقی دارد: بیرون از بازه → «—».
+local function plausible_minutes(minutes, max_minutes)
+    local m = tonumber(minutes)
+    if m == nil or m <= 0 or m > max_minutes then return nil end
+    return m
 end
 
 local function minutes_to_hm_or_dash(minutes)
@@ -460,14 +470,18 @@ end
 
 local CHAT_MODULE_ID = 9
 local HR_MODULE_ID = 13 -- ماژول «پرسنلی» طبق جدول HOME_MODULE_LIST
-local DIALOG_TYPE_GROUP = 1 -- chat_dialogs.TYPE: 0=خصوصی، 1=گروهی، 2=عمومی (تاییدشده در بات ۹۴۲)
 
 local celebration_group_id = config_number("celebration_group_id")
+-- show_in_portal یکی از فیلدهای تاییدشدهٔ /api/dialog/add است. معنای دقیقش مستند نشده، پس
+-- پیش‌فرض ۰ (محافظه‌کارانه) است و از bot_config قابل تغییر.
+local celebration_show_in_portal = tonumber(config_data.celebration_show_in_portal) or 0
+if celebration_show_in_portal ~= 1 then celebration_show_in_portal = 0 end
 
--- ⛔ کلید ایمنی: نوشتن روی ماژول گفتگو تا وقتی schema واقعی تایید نشده، پیش‌فرض خاموش است.
--- payload سه endpoint گفتگو (dialog/add، group/get، assign/add) حدسی است — schema هیچ‌کدام نه در
--- مستندات این ریپو هست و نه در پورتال ثبت شده. برای یک بات پرسنلیِ عملیاتی، فراخوانی نوشتنی با
--- payload حدسی ریسک غیرقابل‌قبولی است، پس تا وقتی celebration_enabled = 1 در bot_config ثبت نشود:
+-- ⛔ کلید ایمنی نوشتن روی ماژول گفتگو — پیش‌فرض خاموش.
+-- schema هر سه endpoint حالا تایید شده است (۱۴۰۵/۰۶/۰۷)، پس دلیل اولیهٔ این کلید (payload حدسی)
+-- دیگر برقرار نیست. ولی این عملیات‌ها روی سامانهٔ زندهٔ سازمان رکورد واقعی می‌سازند (یک گروه گفتگو
+-- و یک گفتگو به ازای هر تولد)، و این بات با دادهٔ پرسنلی کار می‌کند. پس کلید عمداً باقی ماند تا
+-- شروع نوشتن یک تصمیم آگاهانه باشد، نه اثر جانبی استقرار. تا وقتی celebration_enabled = 1 نشود:
 --   • فهرست تولدها، پیام روز و کل بقیهٔ پنل کاملاً کار می‌کند (همه خواندنی‌اند)
 --   • خواندن گفتگوی موجود از chat_message هم کار می‌کند (باز هم خواندنی)
 --   • فقط ساخت گفتگو و پیوستن (تنها دو عملیات نوشتنی این بات) انجام نمی‌شود
@@ -622,23 +636,48 @@ LIMIT 200
     return members
 end
 
--- گروه پیش‌فرض گفتگو: اول از bot_config، وگرنه اولین گروه فعالی که /api/group/get برمی‌گرداند
+-- گروه گفتگوی تبریک.
+-- ⚠️ نکتهٔ مهمِ schema (تاییدشده ۱۴۰۵/۰۶/۰۷): /api/group/get ورودی {id} می‌گیرد، یعنی یک گروه
+-- مشخص را می‌خواند و **فهرست گروه‌ها را نمی‌دهد**. پس با آن نمی‌شود گروه را «کشف» کرد؛ فقط
+-- می‌شود گروهی که شناسه‌اش را داریم راستی‌آزمایی کرد. ترتیب کار:
+--   ۱) اگر celebration_group_id در bot_config باشد، همان استفاده می‌شود
+--   ۲) وگرنه گروهی با نام قطعی در جدول chat_group جست‌وجو می‌شود (تطبیق دقیق با =، نه LIKE)
+--   ۳) اگر نبود، یک بار با /api/group/add ساخته می‌شود و دفعات بعد در گام ۲ پیدا می‌شود
+local CELEBRATION_GROUP_NAME = "گفتگوهای تبریک تولد — همراه ۱۴۰"
+
+local function find_group_by_name(name)
+    local rows, err = fetch_rows([[
+SELECT g.ID FROM chat_group g WHERE g.NAME = ? ORDER BY g.ID DESC LIMIT 1
+]], { name }, 1)
+    if rows == nil then return nil, tostring(err) end
+    if #rows == 0 then return nil, nil end
+    return tonumber(rows[1][1]), nil
+end
+
 local function resolve_group_id()
     if celebration_group_id ~= nil then return celebration_group_id, nil end
-    local response, err = call_chat_api("/api/group/get", {})
-    if err ~= nil then return nil, err end
-    local direct = extract_id(response, { "group_id", "id", "ID", "GROUP_ID" })
-    if direct ~= nil then return direct, nil end
-    if type(response) == "table" then
-        local lists = { response.data, response.result, response.groups, response }
-        for _, list in ipairs(lists) do
-            if type(list) == "table" and type(list[1]) == "table" then
-                local first = extract_id({ data = list[1] }, { "group_id", "id", "ID", "GROUP_ID" })
-                if first ~= nil then return first, nil end
-            end
-        end
+
+    local existing, lookup_err = find_group_by_name(CELEBRATION_GROUP_NAME)
+    if lookup_err ~= nil then return nil, lookup_err end
+    if existing ~= nil then return existing, nil end
+
+    local response, api_err = call_chat_api("/api/group/add", {
+        name = CELEBRATION_GROUP_NAME,
+        public_name = CELEBRATION_GROUP_NAME,
+        status = 0,
+        keywords = {}
+    })
+    if api_err ~= nil then return nil, "ساخت گروه گفتگو انجام نشد: " .. api_err end
+
+    local created = extract_id(response, { "id", "ID", "group_id", "GROUP_ID" })
+    if created == nil then
+        -- بعضی APIها فقط success می‌دهند؛ گروه تازه‌ساخته را با همان نام پیدا می‌کنیم
+        created = select(1, find_group_by_name(CELEBRATION_GROUP_NAME))
     end
-    return nil, "گروه گفتگویی برای ساخت گفتگوی تبریک پیدا نشد"
+    if created == nil then
+        return nil, "گروه ساخته شد ولی شناسه‌اش برگردانده نشد"
+    end
+    return created, nil
 end
 
 -- POST type=celebrate → «به گفتگوی تبریک بپیوند» (اگر گفتگو نبود، ساخته می‌شود)
@@ -658,8 +697,7 @@ if action_type == "celebrate" then
         teamyar.write_result(json.encode({
             ok = false,
             error = "ساخت و پیوستن به گفتگوی تبریک هنوز فعال نشده است. " ..
-                "پس از تایید schema APIهای ماژول گفتگو، مقدار celebration_enabled را در " ..
-                "bot_config این بات برابر ۱ بگذارید."
+                "برای فعال کردن، celebration_enabled را در bot_config این بات برابر ۱ بگذارید."
         }))
         return
     end
@@ -683,12 +721,12 @@ if action_type == "celebrate" then
             }))
             return
         end
+        -- فیلدهای تاییدشدهٔ schema؛ type و status که قبلاً حدس زده بودم اصلاً در این API نیستند
         local response, api_err = call_chat_api("/api/dialog/add", {
             topic = topic,
             group_id = group_id,
-            type = DIALOG_TYPE_GROUP,
             author_id = personnel.profile_id,
-            status = 0
+            show_in_portal = celebration_show_in_portal
         })
         create_response = response
         if api_err ~= nil then
@@ -715,10 +753,12 @@ if action_type == "celebrate" then
         created = true
     end
 
+    -- فیلدهای تاییدشدهٔ schema. نسخهٔ قبلی user_id/user_ids می‌فرستاد که هیچ‌کدام در این API
+    -- وجود ندارند و assigned/author_id را نمی‌فرستاد — یعنی قطعاً کار نمی‌کرد.
     local assign_response, assign_err = call_chat_api("/api/assign/add", {
-        dialog_id = dialog_id,
-        user_id = personnel.profile_id,
-        user_ids = { personnel.profile_id }
+        assigned = { personnel.profile_id },
+        author_id = personnel.profile_id,
+        dialog_id = dialog_id
     })
     if assign_err ~= nil then
         teamyar.write_result(json.encode({
@@ -2175,6 +2215,21 @@ local function detail_row(label, value)
         escape_html(value == nil and "—" or tostring(value)) .. '</b></div>'
 end
 
+-- مقادیر مدت‌دارِ حکم، هر کدام با سقف منطقی خودش (بالا را ببینید)
+local function order_hm(raw_ticks, max_minutes)
+    if raw_ticks == nil then return nil end
+    local minutes = plausible_minutes(math.floor((tonumber(raw_ticks) or 0) / 10000000 / 60 + 0.5), max_minutes)
+    if minutes == nil then return nil end
+    return minutes_to_hm(minutes)
+end
+
+local order_working_hm = order_hm(employment.working_hours_raw, 500 * 60)      -- تا ۵۰۰ ساعت (ماهانه)
+local order_leave_month_hm = order_hm(employment.leave_per_month_raw, 60 * 60) -- تا ۶۰ ساعت
+local order_max_delay_hm = order_hm(employment.max_delay_month_raw, 100 * 60)  -- تا ۱۰۰ ساعت
+local order_rest_hm = order_hm(employment.rest_during_work_raw, 8 * 60)        -- تا ۸ ساعت
+local order_max_hourly_hm = order_hm(employment.max_hourly_leave_raw, 24 * 60) -- تا ۲۴ ساعت
+
+
 local profile_left = detail_row("نام و نام خانوادگی", personnel.fullname) ..
     detail_row("کد پرسنلی", personnel.personnel_code) ..
     detail_row("واحد سازمانی", employment.unit_name) ..
@@ -2187,6 +2242,8 @@ local profile_left = detail_row("نام و نام خانوادگی", personnel.f
 
 local profile_right = detail_row("تقویم کاری", employment.calendar_name) ..
     detail_row("موظفی محاسبه‌شدهٔ بازه", totals.expected > 0 and minutes_to_hm(totals.expected) or nil) ..
+    detail_row("موظفی طبق حکم", order_working_hm) ..
+    detail_row("سقف مرخصی ماهانه طبق حکم", order_leave_month_hm) ..
     detail_row("بازهٔ حکم جاری", (employment.date_from or "—") .. " تا " .. (employment.date_to or "—")) ..
     detail_row("وضعیت حکم", employment.is_current == false and
         "حکم جاری فعال نیست (آخرین حکم نمایش داده شده)" or "حکم جاری فعال") ..
@@ -2259,7 +2316,7 @@ do
         celebration_config_note = '<div class="notice">گفتگوی تبریک فعلاً فقط خواندنی است: ' ..
             'فهرست تولدها و پیام‌های گفتگوهای موجود نمایش داده می‌شوند، ولی ساخت گفتگوی تازه و ' ..
             'پیوستن به آن انجام نمی‌شود. علتش این است که ساختار درخواست APIهای ماژول گفتگو هنوز ' ..
-            'تایید نشده و این بات با دادهٔ پرسنلی کار می‌کند. پس از تایید، ' ..
+            'تایید شده است؛ چون این کار روی سامانهٔ زنده گروه و گفتگوی واقعی می‌سازد، ' ..
             '<code>celebration_enabled</code> را در تنظیمات همین بات برابر ۱ بگذارید.</div>'
     elseif celebration_group_id == nil then
         celebration_config_note = '<div class="notice">گروه گفتگوی پیش‌فرض تنظیم نشده است؛ هنگام ' ..
@@ -2508,11 +2565,17 @@ local section_attendance = '<section id="attendance" class="page">' ..
     '<article class="card"><div class="title">قواعد محاسبهٔ حکم من</div>' ..
     detail_row("تقویم کاری", employment.calendar_name) ..
     detail_row("بازهٔ حکم جاری", (employment.date_from or "—") .. " تا " .. (employment.date_to or "—")) ..
+    detail_row("موظفی طبق حکم", order_working_hm) ..
+    detail_row("سقف مرخصی ماهانه طبق حکم", order_leave_month_hm) ..
+    detail_row("سقف تاخیر مجاز ماهانه", order_max_delay_hm) ..
+    detail_row("استراحت حین کار", order_rest_hm) ..
+    detail_row("سقف مرخصی ساعتی", order_max_hourly_hm) ..
     detail_row("مجموع موظفی بازه", totals.expected > 0 and minutes_to_hm(totals.expected) or nil) ..
     detail_row("مجموع کارکرد بازه", minutes_to_hm(totals.work)) ..
     detail_row("مانده مرخصی", leave_balance and minutes_to_hm(leave_balance.remained_minutes) or nil) ..
     '<p class="note">موظفی هر روز از تقویم کاری همان روز خوانده می‌شود (ساعت شروع و پایان شیفت ثبت‌شده ' ..
-    'در تقویم)، نه از یک عدد ثابت ماهانه.</p>' ..
+    'در تقویم)، نه از یک عدد ثابت ماهانه. مقادیر بالا از حکم فعال شما می‌آیند؛ هر مقداری که خارج از ' ..
+    'بازهٔ منطقی باشد به‌جای عدد، «—» نشان داده می‌شود.</p>' ..
     '</article>' ..
     '<article class="card"><div class="title">خلاصهٔ بازه</div>' ..
     detail_row("روزهای حضور", fmt_num(totals.present_days)) ..
