@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/06 11:05
+-- Last Edit = 1405/06/06 13:16
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -39,7 +39,11 @@ local c_client_code = 0
 local c_float_code = 0
 local c_center_code = 0
 local c_project_code = 0
-local c_kind = 0
+-- «نوع تسویه» هارد شده، نه از کانفیگ خونده می‌شه — چون هر چیزی که get_config برای
+-- kind برمی‌گردوند، API تسویه رو با «نوع تسویه را مشخص کنید» رد می‌کرد؛ طبق درخواست
+-- کاربر مستقیم مقدار «نقد» (که همون چیزیه که تو تب پیکربندی هم انتخاب شده بود) هارد شد.
+-- طبق bot_config: لیست kind = [["4","نقد"],["5","حساب"]] → نقد = "4".
+local c_kind = "4";
 local c_day_befor = 0
 local c_org_id = 0
 if config ~= nil then
@@ -49,12 +53,9 @@ if config ~= nil then
   c_float_code = config_data.float_code
   c_center_code = config_data.center_code
   c_project_code = config_data.project_code
-  c_kind = config_data.kind
   c_day_befor = tonumber(config_data.day_befor) or 0
   c_org_id = tonumber(config_data.org_id) or 0
 end
--- تشخیص خطای «نوع تسویه را مشخص کنید»: دقیقاً همون چیزی که get_config برگردونده رو
--- لاگ می‌کنیم (شکل واقعی kind — رشته‌ی ساده یا چیز دیگه‌ای مثل آرایه/آبجکت)
 teamyar.write_log("backfill config_data raw: " .. json.encode(config_data)
   .. " | type(kind)=" .. type(c_kind));
 local day = time.get_day(time.current());
