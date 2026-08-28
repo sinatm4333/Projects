@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/05 23:49
+-- Last Edit = 1405/06/06 10:31
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -70,10 +70,16 @@ function fetchFiscalYearRange(orgId, jalaliYear)
   -- استفاده می‌کنند) — گذاشتنش داخل WHERE ... LIKE با «sql error» شکست خورد. پس همه‌ی
   -- سال‌های مالی این سازمان را می‌گیریم (بدون فیلتر تابع در SQL) و تطبیق «کدام سال
   -- ۱۴۰۴ است» را در خود Lua روی رشته‌ی تبدیل‌شده انجام می‌دهیم.
+  -- REPORT_FN_JDATE روی مقدار NULL/0 خطا می‌دهد (دیده‌شده در fmt_jalali_datetime،
+  -- EghdamPerId_bot.lua، که دقیقاً همین را با CASE محافظت کرده) — این همان چیزی بود که
+  -- «sql error» می‌داد: بدون فیلتر روی اعتبار START_DATE، اگر یک ردیف سال مالی این
+  -- سازمان START_DATE خالی/صفر داشته باشد، کل کوئری می‌شکند. همان الگوی CASE اینجا هم.
   local q = [[
-    SELECT fy.START_DATE, fy.END_DATE, REPORT_FN_JDATE(fy.START_DATE, '-') AS start_jalali
+    SELECT fy.START_DATE, fy.END_DATE,
+      CASE WHEN fy.START_DATE IS NULL OR fy.START_DATE = 0 THEN NULL ELSE REPORT_FN_JDATE(fy.START_DATE, '-') END AS start_jalali
     FROM pa_fiscal_year fy
     WHERE fy.ORG_ID = ]] .. tostring(tonumber(orgId) or 0) .. [[
+      AND fy.START_DATE IS NOT NULL AND fy.START_DATE <> 0
     ORDER BY fy.START_DATE DESC
   ]];
   local ok, err = pcall(function()
