@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/06 17:05
+-- Last Edit = 1405/06/06 17:40
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -222,26 +222,31 @@ end
 -- رد شده‌اند. بدون این جدول، این فاکتورها چون هیچ‌وقت در sales_invoice_settlement ثبت
 -- نمی‌شوند، هر اجرا دوباره در صف ظاهر و دوباره رد می‌شوند (گزارش کاربر ۱۴۰۵/۰۶/۰۶:
 -- «هر دفعه بات رو ران می‌کنی دوباره همون فاکتورها رو میاره و تسویه نمی‌کنه»).
--- idempotent — هر اجرا فقط اگر جدول از قبل نباشد می‌سازدش.
+--
+-- تأیید شده روی داده‌ی زنده (۱۴۰۵/۰۶/۰۶، تاریخچه‌ی اجرا): db.query این پلتفرم با DDL
+-- (CREATE TABLE) «sql error» عمومی می‌دهد — دقیقاً همان الگوی «sql error عمومی» که
+-- برای LIKE ? پارامتری هم قبلاً دیده شده بود؛ ظاهراً کل مسیر DDL از db.query مسدود
+-- است، نه یک محدودیت دسترسی مخصوص این بات. پس بات دیگر تلاشی برای ساختن جدول نمی‌کند
+-- (بی‌فایده و فقط لاگ را شلوغ می‌کرد) — فقط با یک SELECT سبک وجودش را probe می‌کند.
+-- جدول باید یک‌بار دستی (خارج از بات، توسط ادمین DB) با DDL زیر ساخته شود:
+--
+-- CREATE TABLE IF NOT EXISTS sales_settlement_permanent_skip (
+--   ID bigint NOT NULL AUTO_INCREMENT,
+--   ORG_ID bigint NOT NULL,
+--   INVOICE_ID bigint NOT NULL,
+--   REASON varchar(500) NOT NULL,
+--   DATE_CREATE bigint NOT NULL,
+--   PRIMARY KEY (ID),
+--   UNIQUE KEY UQ_ORG_INVOICE (ORG_ID, INVOICE_ID)
+-- ) ENGINE=InnoDB
 -------------------------------------------------------------
-function ensurePermanentSkipTable()
+function checkPermanentSkipTableExists()
   db.use_db("0000000");
-  local ddl = [[
-    CREATE TABLE IF NOT EXISTS sales_settlement_permanent_skip (
-      ID bigint NOT NULL AUTO_INCREMENT,
-      ORG_ID bigint NOT NULL,
-      INVOICE_ID bigint NOT NULL,
-      REASON varchar(500) NOT NULL,
-      DATE_CREATE bigint NOT NULL,
-      PRIMARY KEY (ID),
-      UNIQUE KEY UQ_ORG_INVOICE (ORG_ID, INVOICE_ID)
-    ) ENGINE=InnoDB
-  ]];
   local ok, err = pcall(function()
-    db.query({ query = ddl, params = {} });
+    db.query({ query = "select 1 from sales_settlement_permanent_skip limit 1", params = {} });
   end);
   if not ok then
-    teamyar.write_log("ensurePermanentSkipTable error ---- " .. tostring(err));
+    teamyar.write_log("checkPermanentSkipTableExists: probe failed (جدول هنوز ساخته نشده؟) ---- " .. tostring(err));
   end
   pcall(db.query_free);
   return ok;
@@ -268,11 +273,11 @@ function recordPermanentSkip(orgId, invoiceId, reason)
   return ok;
 end
 
--- اگر CREATE TABLE به هر دلیلی شکست بخورد (مثلاً کاربر DB این بات فقط دسترسی DML دارد،
--- نه DDL)، نباید کل بات (که قبل از این ویژگی فقط SELECT/API می‌زد) از کار بیفتد؛ در آن
--- حالت شرط NOT IN زیر اصلاً به کوئری اضافه نمی‌شود و رفتار به همان قبل (بدون این فیلتر)
--- برمی‌گردد — recordPermanentSkip هم پایین‌تر با همین pcall صرفاً لاگ می‌کند، صف را نمی‌شکند.
-local _skipTableReady = ensurePermanentSkipTable();
+-- اگر جدول هنوز ساخته نشده باشد (یا probe به هر دلیل دیگری شکست بخورد)، نباید کل بات
+-- (که قبل از این ویژگی فقط SELECT/API می‌زد) از کار بیفتد؛ در آن حالت شرط NOT IN زیر
+-- اصلاً به کوئری اضافه نمی‌شود و رفتار به همان قبل (بدون این فیلتر) برمی‌گردد —
+-- recordPermanentSkip هم پایین‌تر با همین pcall صرفاً لاگ می‌کند، صف را نمی‌شکند.
+local _skipTableReady = checkPermanentSkipTableExists();
 local skipTableClause = "";
 if _skipTableReady then
   skipTableClause = " and i.id not in (select INVOICE_ID from sales_settlement_permanent_skip where ORG_ID = "
