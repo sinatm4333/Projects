@@ -327,6 +327,14 @@ Do not index or read `docs/context/DatabaseSchema.md`.
 - **Never use SELECT *** — always specify columns.
 - Use parameterized queries (`params = {}`) — never concatenate user input into SQL.
 - Always call `db.query_free()` after fetching results.
+- **هرگز طول ردیف را با `#record` نگیرید (تایید‌شده ۱۴۰۵/۰۶/۰۶).** الگوی رایج این ریپو
+  `for i = 1, #record do row[i] = record[i] end` است. اگر درایور برای یک ستون `NULL` مقدار `nil`
+  بگذارد، جدول «سوراخ» می‌شود و `#` در Lua روی جدول سوراخ‌دار **تعریف‌نشده** است — با اجرای واقعی
+  تست شد و در الگویی که دقیقاً شبیه `fetch_rows` است (جدول `record` بازاستفاده‌شده که پاک و دوباره
+  پر می‌شود) عددِ کوتاه برگرداند (۸ و ۷ به‌جای ۱۶). نتیجه: ردیف بریده می‌شود و همهٔ ستون‌های بعدی
+  جابه‌جا می‌شوند — یعنی عدد اشتباه، بی‌هیچ خطایی. راه درست: تعداد ستون‌ها را صریح به تابع خواندن
+  بدهید (`fetch_rows(query, params, column_count)`) و علاوه بر آن هر عبارت nullable را در SQL با
+  `COALESCE(..., '')` بپوشانید. نمونهٔ پیاده‌شده: `src/hr_companion_report_bot.lua`.
 - Prefer CTEs for complex multi-step queries.
 - Use `EXISTS` instead of `IN` for subqueries when possible.
 - Lua bots target **MySQL** (schema `0000000`). The .NET/Blazor side (when applicable) targets **SQL Server** via EF Core — same principles above apply there too.
@@ -362,14 +370,19 @@ Do not index or read `docs/context/DatabaseSchema.md`.
       local gt_entity = "&" .. "gt;"
       local quot_entity = "&" .. "quot;"
       local apos_entity = "&" .. "#39;"
-      return tostring(value)
+      return (tostring(value)
           :gsub("&", amp_entity)
           :gsub("<", lt_entity)
           :gsub(">", gt_entity)
           :gsub('"', quot_entity)
-          :gsub("'", apos_entity)
+          :gsub("'", apos_entity))
   end
   ```
+  **پرانتزِ دور کل زنجیره اجباری است (اضافه‌شده ۱۴۰۵/۰۶/۰۶).** `gsub` دو مقدار برمی‌گرداند (رشته و
+  تعداد جایگزینی)؛ بدون این پرانتز `escape_html` هم دو مقدار برمی‌گرداند و آن‌وقت
+  `table.insert(t, escape_html(x))` با خطای `number expected, got string` **کرش می‌کند** (سه‌آرگومانی
+  تفسیر می‌شود) و در هر table constructor یک عضو اضافه می‌سازد. تایید‌شده با اجرای واقعی Lua. همین
+  اصلاح برای `js_str` و هر تابع دیگری که بدنه‌اش با یک زنجیرهٔ `gsub` تمام می‌شود لازم است.
   **Confirmed live (1405/05/23): a literal contiguous entity string (`"&amp;"` etc. typed directly as the
   `gsub` replacement) throws an error when Teamyar saves the bot's `command`.** Build each entity via string
   concatenation (`"&" .. "amp;"`) instead — this is not a style preference, it's the only form that saves

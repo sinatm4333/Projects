@@ -92,14 +92,17 @@ local HTML_GT = "&" .. "gt;"
 local HTML_QUOT = "&" .. "quot;"
 local HTML_APOS = "&" .. "#39;"
 
+-- پرانتزِ دور کل زنجیره عمدی است: gsub دو مقدار برمی‌گرداند (رشته و تعداد جایگزینی) و بدون این
+-- پرانتز، escape_html هم دو مقدار برمی‌گرداند. آن‌وقت table.insert(t, escape_html(x)) با خطای
+-- "number expected, got string" کرش می‌کند و در هر table constructor یک عضو اضافه می‌سازد.
 local function escape_html(value)
     if value == nil then return "" end
-    return tostring(value)
+    return (tostring(value)
         :gsub("&", HTML_AMP)
         :gsub("<", HTML_LT)
         :gsub(">", HTML_GT)
         :gsub('"', HTML_QUOT)
-        :gsub("'", HTML_APOS)
+        :gsub("'", HTML_APOS))
 end
 
 local function js_str(value)
@@ -112,7 +115,8 @@ local function fmt_num(value)
     if n == nil then return "0" end
     local neg = n < 0
     n = math.abs(n)
-    local s = tostring(math.floor(n + 0.5))
+    -- %.0f به‌جای tostring: tostring روی عدد بزرگ نماد علمی می‌دهد («1e+15») که گروه‌بندی را خراب می‌کند
+    local s = string.format("%.0f", n)
     local grouped = s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
     return (neg and "-" or "") .. grouped
 end
@@ -150,13 +154,20 @@ local function name_initials(full_name)
     local letters = {}
     for _, word in ipairs(parts) do
         -- حروف فارسی چندبایتی‌اند؛ اولین کاراکتر UTF-8 برداشته می‌شود، نه اولین بایت
-        local first = word:match("^[%z\1-\127\194-\244][\128-\191]*") or word:sub(1, 1)
+        -- بدون %z نوشته شده: %z در Lua 5.2 حذف شد و نسخهٔ Lua این پلتفرم معلوم نیست.
+        -- بایت صفر هم در نام نمی‌آید، پس بازهٔ \1-\127 کافی است.
+        local first = word:match("^[\1-\127\194-\244][\128-\191]*") or word:sub(1, 1)
         table.insert(letters, first)
     end
     return table.concat(letters, " ")
 end
 
-local function fetch_rows(query, params)
+-- column_count اجباری است و عمدی: نسخهٔ قبلی طول هر ردیف را با #record می‌گرفت، ولی اگر درایور
+-- برای یک ستون NULL مقدار nil بگذارد، جدول «سوراخ» می‌شود و طول #record در Lua تعریف‌نشده است —
+-- یعنی یک NULL وسط SELECT می‌توانست ردیف را ببُرد و همهٔ ستون‌های بعدی را یک خانه جابه‌جا کند.
+-- با شمارش صریح ستون‌ها، هر ردیف همیشه دقیقاً به همان اندازه‌ای خوانده می‌شود که کوئری دارد.
+-- علاوه بر این، هر عبارت nullable در کوئری‌های این بات با COALESCE به رشتهٔ خالی تبدیل شده است.
+local function fetch_rows(query, params, column_count)
     db.use_db("0000000")
     local ok, err = pcall(function()
         db.query({ query = query, params = params or {} })
@@ -168,11 +179,20 @@ local function fetch_rows(query, params)
     local record = {}
     while db.query_fetch(record) do
         local row = {}
-        for i = 1, #record do row[i] = record[i] end
+        local width = column_count or #record
+        for i = 1, width do row[i] = record[i] end
         table.insert(rows, row)
     end
     db.query_free()
     return rows
+end
+
+-- ستون‌های متنی این بات با COALESCE هرگز NULL نمی‌شوند؛ رشتهٔ خالی یعنی «مقدار ندارد»
+local function blank_to_nil(value)
+    if value == nil then return nil end
+    local text = tostring(value)
+    if text == "" then return nil end
+    return text
 end
 
 local FT_DAY = 864000000000 -- 86400 * 10000000
@@ -188,13 +208,34 @@ end
 -- ساعتِ روز از یک ستون FILETIME یا tick-since-midnight، بدون فرض دربارهٔ این‌که کدام‌یک است:
 -- MOD(col, ticks_of_day) برای FILETIME کامل «ساعت همان روز» را می‌دهد و برای مقدار درون‌روزی
 -- خودِ مقدار را دست‌نخورده برمی‌گرداند. پس هر دو حالت درست رندر می‌شوند.
+-- به‌جای NULL رشتهٔ خالی برمی‌گرداند تا هیچ NULLای به لایهٔ Lua نرسد (بالا را ببینید)
 local function sql_time_of_day(col)
-    return "CASE WHEN " .. col .. " IS NULL OR " .. col .. " <= 0 THEN NULL ELSE " ..
-        "TIME_FORMAT(SEC_TO_TIME(MOD(" .. col .. ", 864000000000) / 10000000), '%H:%i') END"
+    return "COALESCE(CASE WHEN " .. col .. " IS NULL OR " .. col .. " <= 0 THEN NULL ELSE " ..
+        "TIME_FORMAT(SEC_TO_TIME(MOD(" .. col .. ", 864000000000) / 10000000), '%H:%i') END, '')"
 end
 
 local function sql_ticks_to_minutes(col)
     return "ROUND(COALESCE(" .. col .. ", 0) / 10000000 / 60, 0)"
+end
+
+-- صفحهٔ خطای تمیز فارسی — به‌جای اینکه کاربر یک traceback خام Lua ببیند
+local function render_error_page(message, detail)
+    local body = '<p style="font-size:15px;">' .. escape_html(message) .. '</p>'
+    if detail ~= nil and tostring(detail) ~= "" then
+        body = body .. '<p style="font-size:14px;color:#666;overflow-wrap:anywhere;">' ..
+            escape_html(tostring(detail)) .. '</p>'
+    end
+    return '<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8">' ..
+        '<meta name="viewport" content="width=device-width,initial-scale=1">' ..
+        '<title>همراه ۱۴۰</title></head><body style="font-family:Tahoma,Arial,sans-serif;' ..
+        'background:#f4f7fb;padding:40px;font-size:15px;color:#000;">' ..
+        '<div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e5eaf2;' ..
+        'border-radius:14px;padding:24px;line-height:2;">' ..
+        '<h1 style="font-size:18px;color:#16509D;margin:0 0 12px;">پنل پرسنلی باز نشد</h1>' ..
+        body ..
+        '<p style="font-size:14px;color:#666;margin-top:14px;">اگر این پیام تکرار شد، لطفاً همین ' ..
+        'متن را به واحد فناوری اطلاعات بدهید.</p>' ..
+        '</div></body></html>'
 end
 
 -- ── inputs / config ──────────────────────────────────────────────────
@@ -220,11 +261,29 @@ end
 local action_type = input.type
 local format_out = input.format
 
-local to_date = tonumber(input.to_date) or today_filetime()
+-- اعتبارسنجی بازهٔ تاریخ. بدون این، یک to_date بی‌معنی (مثلاً 0 یا 1 که پلتفرم برای فیلد عددیِ
+-- پرنشده می‌سازد) کوئری‌ها را بی‌سروصدا خالی برمی‌گرداند و پنل «خراب» به نظر می‌رسد بدون هیچ خطایی.
+-- کف بازه ۱۳۰۰/۰۱/۰۱ شمسی (تقریباً ۱۹۲۱ میلادی) و سقف آن ۵ سال بعد از امروز است.
+local FT_MIN_VALID = 116000000000000000 -- حدود ۱۹۲۰ میلادی
+local today_ft = today_filetime()
+
+local to_date = tonumber(input.to_date)
+if to_date == nil or to_date < FT_MIN_VALID or to_date > (today_ft + 1826 * FT_DAY) then
+    to_date = today_ft
+end
+
 local days_back = tonumber(input.days) or 31
+if days_back ~= days_back then days_back = 31 end -- NaN
 if days_back < 1 then days_back = 1 end
 if days_back > 190 then days_back = 190 end
-local from_date = tonumber(input.from_date) or (to_date - ((days_back - 1) * FT_DAY))
+days_back = math.floor(days_back)
+
+local from_date = tonumber(input.from_date)
+if from_date == nil or from_date < FT_MIN_VALID or from_date > to_date then
+    from_date = to_date - ((days_back - 1) * FT_DAY)
+else
+    days_back = math.floor((to_date - from_date) / FT_DAY) + 1
+end
 
 -- ── resolve the signed-in user ───────────────────────────────────────
 -- قانون این پنل: خروجی همیشه مربوط به همان کاربری است که بات را اجرا کرده — نه کسی که در ورودی
@@ -332,7 +391,7 @@ do
 WHERE h.PROFILE_ID = ?
 ORDER BY h.PERSONNEL_ID DESC
 LIMIT 1
-]], { current_profile_id })
+]], { current_profile_id }, 11)
         elseif login_value ~= nil then
             -- لایهٔ آخر: نشست فقط یک شناسهٔ متنی داده است (ایمیل/موبایل/کد ملی). جدول لاگین
             -- جداگانه‌ای در این اسکیما نیست؛ این سه، جدول‌های تاییدشدهٔ نگه‌دارندهٔ همین مقادیرند و
@@ -348,7 +407,7 @@ JOIN (
 ) login_match ON login_match.USER_ID = p.id
 ORDER BY h.PERSONNEL_ID DESC
 LIMIT 1
-]], { login_value, login_value, login_value })
+]], { login_value, login_value, login_value }, 11)
         else
             identity_err = "کاربر جاری از نشست شناسایی نشد. یک‌بار بات را با ورودی type=whoami " ..
                 "اجرا کنید تا کلید شناسهٔ کاربر در این سرور مشخص شود."
@@ -404,6 +463,17 @@ local HR_MODULE_ID = 13 -- ماژول «پرسنلی» طبق جدول HOME_MODU
 local DIALOG_TYPE_GROUP = 1 -- chat_dialogs.TYPE: 0=خصوصی، 1=گروهی، 2=عمومی (تاییدشده در بات ۹۴۲)
 
 local celebration_group_id = config_number("celebration_group_id")
+
+-- ⛔ کلید ایمنی: نوشتن روی ماژول گفتگو تا وقتی schema واقعی تایید نشده، پیش‌فرض خاموش است.
+-- payload سه endpoint گفتگو (dialog/add، group/get، assign/add) حدسی است — schema هیچ‌کدام نه در
+-- مستندات این ریپو هست و نه در پورتال ثبت شده. برای یک بات پرسنلیِ عملیاتی، فراخوانی نوشتنی با
+-- payload حدسی ریسک غیرقابل‌قبولی است، پس تا وقتی celebration_enabled = 1 در bot_config ثبت نشود:
+--   • فهرست تولدها، پیام روز و کل بقیهٔ پنل کاملاً کار می‌کند (همه خواندنی‌اند)
+--   • خواندن گفتگوی موجود از chat_message هم کار می‌کند (باز هم خواندنی)
+--   • فقط ساخت گفتگو و پیوستن (تنها دو عملیات نوشتنی این بات) انجام نمی‌شود
+-- بعد از تایید schema، یک بار مقدار را ۱ کنید؛ نیازی به تغییر کد نیست.
+local celebration_enabled = (tonumber(input.celebration_enabled)
+    or tonumber(config_data.celebration_enabled) or 0) == 1
 
 local function celebration_topic(person_name, jalali_date)
     return "تبریک تولد " .. tostring(person_name) .. " — " .. tostring(jalali_date)
@@ -505,7 +575,7 @@ FROM chat_dialogs cd
 WHERE cd.TOPIC = ? AND COALESCE(cd.deleted, 0) = 0
 ORDER BY cd.ID DESC
 LIMIT 1
-]], { topic })
+]], { topic }, 2)
     if rows == nil then return nil, tostring(err) end
     if #rows == 0 then return nil, nil end
     return tonumber(rows[1][1]), nil
@@ -514,14 +584,14 @@ end
 local function load_celebration_messages(dialog_id)
     local rows = fetch_rows([[
 SELECT COALESCE(pm.fullname, N'همکار') AS author_name, cm.CONTENT,
-  REPORT_FN_JDATE(cm.DATE_CREATE, '/') AS jdate,
+  COALESCE(REPORT_FN_JDATE(cm.DATE_CREATE, '/'), '') AS jdate,
   ]] .. sql_time_of_day("cm.DATE_CREATE") .. [[ AS jtime
 FROM chat_message cm
 LEFT JOIN profile_main pm ON pm.id = cm.USER_ID
 WHERE cm.DIALOG_ID = ?
 ORDER BY cm.DATE_CREATE ASC, cm.ID ASC
 LIMIT 200
-]], { dialog_id })
+]], { dialog_id }, 4)
     local messages = {}
     if rows ~= nil then
         for _, r in ipairs(rows) do
@@ -544,7 +614,7 @@ LEFT JOIN profile_main pm ON pm.id = cdv.USER_ID
 WHERE cdv.DIALOG_ID = ?
 ORDER BY pm.fullname
 LIMIT 200
-]], { dialog_id })
+]], { dialog_id }, 1)
     local members = {}
     if rows ~= nil then
         for _, r in ipairs(rows) do table.insert(members, r[1] or "همکار") end
@@ -582,6 +652,15 @@ if action_type == "celebrate" then
     end
     if personnel == nil then
         teamyar.write_result(json.encode({ ok = false, error = identity_err or "کاربر شناسایی نشد" }))
+        return
+    end
+    if not celebration_enabled then
+        teamyar.write_result(json.encode({
+            ok = false,
+            error = "ساخت و پیوستن به گفتگوی تبریک هنوز فعال نشده است. " ..
+                "پس از تایید schema APIهای ماژول گفتگو، مقدار celebration_enabled را در " ..
+                "bot_config این بات برابر ۱ بگذارید."
+        }))
         return
     end
 
@@ -695,15 +774,7 @@ if personnel == nil then
         return
     end
     -- در حالت HTML هم به‌جای صفحهٔ سفید، پیام روشن فارسی برگردانده می‌شود
-    teamyar.write_result(
-        '<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8">' ..
-        '<title>همراه ۱۴۰</title></head><body style="font-family:Tahoma,Arial,sans-serif;' ..
-        'background:#f4f7fb;padding:40px;font-size:15px;color:#000;">' ..
-        '<div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e5eaf2;' ..
-        'border-radius:14px;padding:24px;line-height:2;">' ..
-        '<h1 style="font-size:18px;color:#16509D;margin:0 0 12px;">پنل پرسنلی باز نشد</h1>' ..
-        '<p style="font-size:15px;">' .. escape_html(identity_err or "کاربر شناسایی نشد") .. '</p>' ..
-        '</div></body></html>')
+    teamyar.write_result(render_error_page(identity_err or "کاربر شناسایی نشد"))
     return
 end
 
@@ -739,15 +810,15 @@ local function resolve_order_names(unit_id, calendar_id, supervisor_id, date_fro
 SELECT COALESCE(ou.NAME, N'نامشخص') AS unit_name,
        COALESCE(hc.NAME, N'—') AS calendar_name,
        COALESCE(sup.FULLNAME, N'—') AS supervisor_name,
-       REPORT_FN_JDATE(?, '/') AS date_from_j,
-       REPORT_FN_JDATE(?, '/') AS date_to_j
+       COALESCE(REPORT_FN_JDATE(?, '/'), '') AS date_from_j,
+       COALESCE(REPORT_FN_JDATE(?, '/'), '') AS date_to_j
 FROM (SELECT 1) seed
 LEFT JOIN org_organization_unit oou ON oou.ID = ?
 LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
 LEFT JOIN hr_calendar hc ON hc.ID = ?
 LEFT JOIN profile_main sup ON sup.id = ?
 LIMIT 1
-]], { date_from or 0, date_to or 0, unit_id or 0, calendar_id or 0, supervisor_id or 0 })
+]], { date_from or 0, date_to or 0, unit_id or 0, calendar_id or 0, supervisor_id or 0 }, 5)
     if rows == nil or #rows == 0 then return nil end
     return {
         unit_name = rows[1][1] or "نامشخص",
@@ -764,8 +835,8 @@ SELECT o.ID, o.UNIT_ID, COALESCE(ou.NAME, N'نامشخص') AS unit_name,
        o.CALENDAR_ID, COALESCE(hc.NAME, N'—') AS calendar_name,
        ]] .. sql_ticks_to_minutes("o.WORKING_HOURS") .. [[ AS working_minutes,
        ]] .. sql_ticks_to_minutes("o.LEAVE_PER_MONTH") .. [[ AS leave_per_month_minutes,
-       REPORT_FN_JDATE(o.DATE_FROM, '/') AS date_from_j,
-       REPORT_FN_JDATE(o.DATE_TO, '/') AS date_to_j
+       COALESCE(REPORT_FN_JDATE(o.DATE_FROM, '/'), '') AS date_from_j,
+       COALESCE(REPORT_FN_JDATE(o.DATE_TO, '/'), '') AS date_to_j
 FROM hr_personnel_order o
 LEFT JOIN org_organization_unit oou ON oou.ID = o.UNIT_ID
 LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
@@ -829,7 +900,7 @@ do
 WHERE o.PERSONNEL_ID = ? AND o.DATE_FROM <= ? AND o.DATE_TO >= ?
 ORDER BY o.ID DESC
 LIMIT 1
-]], { personnel.personnel_id, to_date, to_date })
+]], { personnel.personnel_id, to_date, to_date }, 11)
         if rows == nil then
             employment_err = (employment_err and (employment_err .. " | ") or "") .. tostring(query_err)
             return
@@ -840,7 +911,7 @@ LIMIT 1
 WHERE o.PERSONNEL_ID = ?
 ORDER BY o.ID DESC
 LIMIT 1
-]], { personnel.personnel_id })
+]], { personnel.personnel_id }, 11)
             if rows == nil or #rows == 0 then return end
             employment.is_current = false
         else
@@ -878,7 +949,10 @@ end
 local supervisor_source = employment_source
 local supervisor_id = nil
 
-if personnel.profile_id ~= nil and to_date == today_filetime() then
+-- «همان روز» با اختلاف کمتر از یک روز سنجیده می‌شود، نه تساوی دقیق دو عدد بزرگ FILETIME
+local viewing_today = math.abs(to_date - today_ft) < FT_DAY
+
+if personnel.profile_id ~= nil and viewing_today then
     local ok = pcall(function()
         local response, api_err = call_teamyar_api(HR_MODULE_ID, "/api/hr/profileSupervisorGet", {
             org_id = personnel.org_id or 0,
@@ -919,7 +993,7 @@ WITH shift_day AS (
   GROUP BY d.CALENDAR_ID, d.DAY_DATE
 )
 SELECT
-  REPORT_FN_JDATE(w.WORK_DATE, '/') AS jdate,
+  COALESCE(REPORT_FN_JDATE(w.WORK_DATE, '/'), '') AS jdate,
   COALESCE(rd.JTDAY, '—') AS jday_name,
   COALESCE(rd.JMDAY, 0) AS jmday,
   ]] .. sql_time_of_day("w.FIRST_IN") .. [[ AS first_in,
@@ -941,7 +1015,7 @@ LEFT JOIN shift_day sd ON sd.DAY_DATE = w.WORK_DATE
 WHERE w.PERSONNEL_ID = ? AND w.WORK_DATE BETWEEN ? AND ?
 ORDER BY w.WORK_DATE DESC
 LIMIT 200
-]], { employment.calendar_id or 0, from_date, to_date, personnel.personnel_id, from_date, to_date })
+]], { employment.calendar_id or 0, from_date, to_date, personnel.personnel_id, from_date, to_date }, 16)
 
         if rows == nil then
             attendance_err = tostring(query_err)
@@ -954,7 +1028,7 @@ LIMIT 200
             local leave_minutes = tonumber(r[9]) or 0
             local mission_minutes = tonumber(r[10]) or 0
             local absent_flag = tonumber(r[11]) or 0
-            local first_in, last_out = r[4], r[5]
+            local first_in, last_out = blank_to_nil(r[4]), blank_to_nil(r[5])
             local incomplete = (first_in ~= nil and last_out == nil) or (first_in == nil and last_out ~= nil)
 
             local deficit = 0
@@ -990,8 +1064,8 @@ LIMIT 200
                 delay_minutes = tonumber(r[8]) or 0,
                 leave_minutes = leave_minutes,
                 mission_minutes = mission_minutes,
-                shift_from = r[13],
-                shift_to = r[14],
+                shift_from = blank_to_nil(r[13]),
+                shift_to = blank_to_nil(r[14]),
                 shift_minutes = shift_minutes,
                 deficit_minutes = deficit,
                 incomplete = incomplete,
@@ -1037,7 +1111,7 @@ do
     local ok, err = pcall(function()
         local rows, query_err = fetch_rows([[
 SELECT
-  REPORT_FN_JDATE(e.EXT_DATE, '/') AS jdate,
+  COALESCE(REPORT_FN_JDATE(e.EXT_DATE, '/'), '') AS jdate,
   ]] .. sql_time_of_day("e.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_time_of_day("e.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(e.TIME_TO - e.TIME_FROM, 0)") .. [[ AS duration_minutes,
@@ -1052,7 +1126,7 @@ LEFT JOIN hr_machine mt ON mt.ID = e.MACHINE_ID_TO
 WHERE e.PERSONNEL_ID = ? AND e.EXT_DATE BETWEEN ? AND ?
 ORDER BY e.EXT_DATE DESC, e.TIME_FROM DESC
 LIMIT 300
-]], { personnel.personnel_id, from_date, to_date })
+]], { personnel.personnel_id, from_date, to_date }, 9)
         if rows == nil then
             events_err = tostring(query_err)
             return
@@ -1060,8 +1134,8 @@ LIMIT 300
         for _, r in ipairs(rows) do
             table.insert(events, {
                 jdate = r[1] or "—",
-                time_from = r[2],
-                time_to = r[3],
+                time_from = blank_to_nil(r[2]),
+                time_to = blank_to_nil(r[3]),
                 duration_minutes = tonumber(r[4]) or 0,
                 ext_type = tonumber(r[5]) or 0,
                 enabled = tonumber(r[6]) or 0,
@@ -1101,13 +1175,13 @@ do
 SELECT
   v.ID,
   COALESCE(NULLIF(vt_by_type.NAME, ''), NULLIF(vt_by_id.NAME, ''), N'مرخصی/ماموریت') AS type_name,
-  REPORT_FN_JDATE(v.DATE_VACATOIN, '/') AS jdate,
+  COALESCE(REPORT_FN_JDATE(v.DATE_VACATOIN, '/'), '') AS jdate,
   ]] .. sql_time_of_day("v.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_time_of_day("v.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("v.TOTAL_TIME") .. [[ AS total_minutes,
   COALESCE(v.STATUS, 0) AS status_code,
   COALESCE(v.DESCRIPTION, '') AS description,
-  REPORT_FN_JDATE(v.DATE_CREATE, '/') AS created_j,
+  COALESCE(REPORT_FN_JDATE(v.DATE_CREATE, '/'), '') AS created_j,
   COALESCE(v.KIND, 0) AS kind_code,
   (SELECT COUNT(*) FROM hr_leave_verify lv WHERE lv.LEAVE_ID = v.ID) AS verify_count,
   (SELECT COUNT(*) FROM hr_leave_verify lv WHERE lv.LEAVE_ID = v.ID AND lv.STATUS = 1) AS verify_done,
@@ -1118,7 +1192,7 @@ LEFT JOIN hr_vacation_type vt_by_id ON vt_by_id.ID = v.TYPE
 WHERE v.PERSONNEL_ID = ? AND v.DATE_VACATOIN BETWEEN ? AND ?
 ORDER BY v.DATE_VACATOIN DESC, v.ID DESC
 LIMIT 200
-]], { personnel.personnel_id, from_date, to_date })
+]], { personnel.personnel_id, from_date, to_date }, 13)
         if rows == nil then
             requests_err = tostring(query_err)
         else
@@ -1128,8 +1202,8 @@ LIMIT 200
                     family = "مرخصی و ماموریت",
                     type_name = r[2] or "مرخصی/ماموریت",
                     jdate = r[3] or "—",
-                    time_from = r[4],
-                    time_to = r[5],
+                    time_from = blank_to_nil(r[4]),
+                    time_to = blank_to_nil(r[5]),
                     total_minutes = tonumber(r[6]) or 0,
                     status_code = tonumber(r[7]) or 0,
                     status = request_status_label(r[7]),
@@ -1144,19 +1218,19 @@ LIMIT 200
 
         local ot_rows = fetch_rows([[
 SELECT r.ID,
-  REPORT_FN_JDATE(r.DAY_DATE, '/') AS jdate,
+  COALESCE(REPORT_FN_JDATE(r.DAY_DATE, '/'), '') AS jdate,
   ]] .. sql_time_of_day("r.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_time_of_day("r.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(r.TIME_TO - r.TIME_FROM, 0)") .. [[ AS total_minutes,
   COALESCE(r.STATUS, 0) AS status_code,
   COALESCE(r.DESCRIPTION, '') AS description,
-  REPORT_FN_JDATE(r.DATE_CREATE, '/') AS created_j,
+  COALESCE(REPORT_FN_JDATE(r.DATE_CREATE, '/'), '') AS created_j,
   r.DAY_DATE AS day_raw
 FROM hr_overtime_request r
 WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ? AND ?
 ORDER BY r.DAY_DATE DESC, r.ID DESC
 LIMIT 100
-]], { personnel.personnel_id, from_date, to_date })
+]], { personnel.personnel_id, from_date, to_date }, 9)
         if ot_rows ~= nil then
             for _, r in ipairs(ot_rows) do
                 table.insert(requests, {
@@ -1164,8 +1238,8 @@ LIMIT 100
                     family = "اضافه‌کاری",
                     type_name = "درخواست اضافه‌کاری",
                     jdate = r[2] or "—",
-                    time_from = r[3],
-                    time_to = r[4],
+                    time_from = blank_to_nil(r[3]),
+                    time_to = blank_to_nil(r[4]),
                     total_minutes = tonumber(r[5]) or 0,
                     status_code = tonumber(r[6]) or 0,
                     status = request_status_label(r[6]),
@@ -1180,19 +1254,19 @@ LIMIT 100
 
         local tw_rows = fetch_rows([[
 SELECT r.ID,
-  REPORT_FN_JDATE(r.DAY_DATE, '/') AS jdate,
+  COALESCE(REPORT_FN_JDATE(r.DAY_DATE, '/'), '') AS jdate,
   ]] .. sql_time_of_day("r.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_time_of_day("r.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(r.TIME_TO - r.TIME_FROM, 0)") .. [[ AS total_minutes,
   COALESCE(r.STATUS, 0) AS status_code,
   COALESCE(r.DESCRIPTION, '') AS description,
-  REPORT_FN_JDATE(r.DATE_CREATE, '/') AS created_j,
+  COALESCE(REPORT_FN_JDATE(r.DATE_CREATE, '/'), '') AS created_j,
   r.DAY_DATE AS day_raw
 FROM hr_telework_request r
 WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ? AND ?
 ORDER BY r.DAY_DATE DESC, r.ID DESC
 LIMIT 100
-]], { personnel.personnel_id, from_date, to_date })
+]], { personnel.personnel_id, from_date, to_date }, 9)
         if tw_rows ~= nil then
             for _, r in ipairs(tw_rows) do
                 table.insert(requests, {
@@ -1200,8 +1274,8 @@ LIMIT 100
                     family = "دورکاری",
                     type_name = "درخواست دورکاری",
                     jdate = r[2] or "—",
-                    time_from = r[3],
-                    time_to = r[4],
+                    time_from = blank_to_nil(r[3]),
+                    time_to = blank_to_nil(r[4]),
                     total_minutes = tonumber(r[5]) or 0,
                     status_code = tonumber(r[6]) or 0,
                     status = request_status_label(r[6]),
@@ -1280,14 +1354,14 @@ do
         local rows, query_err = fetch_rows([[
 SELECT ]] .. sql_ticks_to_minutes("rec.LEAVE_REMAINED") .. [[ AS remained_minutes,
        ]] .. sql_ticks_to_minutes("rec.PAID_LEAVE_REMAINED") .. [[ AS paid_remained_minutes,
-       REPORT_FN_JDATE(lst.DATE_FROM, '/') AS date_from_j,
-       REPORT_FN_JDATE(lst.DATE_TO, '/') AS date_to_j
+       COALESCE(REPORT_FN_JDATE(lst.DATE_FROM, '/'), '') AS date_from_j,
+       COALESCE(REPORT_FN_JDATE(lst.DATE_TO, '/'), '') AS date_to_j
 FROM hr_leave_remained_records rec
 JOIN hr_leave_remained lst ON lst.ID = rec.LIST_ID
 WHERE rec.PERSONNEL_ID = ?
 ORDER BY lst.DATE_TO DESC, lst.ID DESC
 LIMIT 1
-]], { personnel.personnel_id })
+]], { personnel.personnel_id }, 4)
         if rows == nil then
             leave_balance_err = (leave_balance_err and (leave_balance_err .. " | ") or "") ..
                 tostring(query_err)
@@ -1323,7 +1397,7 @@ SELECT MAX(CASE e.education
         ELSE -1 END) AS rnk
 FROM hr_education e
 WHERE e.PERSONNEL_ID = ?
-]], { personnel.personnel_id })
+]], { personnel.personnel_id }, 1)
         if rows ~= nil and #rows > 0 then
             local rnk = tonumber(rows[1][1])
             local labels = { [0] = "زیر دیپلم", [1] = "دیپلم", [2] = "کاردانی",
@@ -1344,13 +1418,13 @@ local celebration_err = nil
 do
     local ok, err = pcall(function()
         local rows = fetch_rows([[
-SELECT REPORT_FN_JDATE(rd.DATEKEY, '/') AS jdate, COALESCE(rd.JTDAY, '—') AS jday_name,
+SELECT COALESCE(REPORT_FN_JDATE(rd.DATEKEY, '/'), '') AS jdate, COALESCE(rd.JTDAY, '—') AS jday_name,
        COALESCE(rd.JYDAY, 0) AS jyday, COALESCE(rd.JMONTH, 0) AS jmonth,
        COALESCE(rd.JMDAY, 0) AS jmday, COALESCE(rd.JTMONTH, '—') AS jmonth_name
 FROM report_dimdate rd
 WHERE rd.DATEKEY = (? - MOD(?, 864000000000))
 LIMIT 1
-]], { to_date, to_date })
+]], { to_date, to_date }, 6)
         if rows ~= nil and #rows > 0 then
             today_meta.jdate = rows[1][1] or "—"
             today_meta.jday_name = rows[1][2] or "—"
@@ -1366,7 +1440,7 @@ LIMIT 1
             -- «شاغل» است که بات ۴۴۴ و hr_dashboard_report_bot استفاده می‌کنند.
             local bd_rows = fetch_rows([[
 SELECT p.FULLNAME, COALESCE(rd.JMDAY, 0) AS jmday, COALESCE(rd.JTMONTH, '—') AS jmonth_name,
-       COALESCE(rd.JMONTH, 0) AS jmonth, REPORT_FN_JDATE(uf.BIRTHDAY, '/') AS birth_j,
+       COALESCE(rd.JMONTH, 0) AS jmonth, COALESCE(REPORT_FN_JDATE(uf.BIRTHDAY, '/'), '') AS birth_j,
        COALESCE(ou.NAME, N'—') AS unit_name, h.PERSONNEL_ID
 FROM hr_personnels h
 JOIN profile_main p ON p.id = h.PROFILE_ID
@@ -1381,7 +1455,7 @@ LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
 WHERE h.HIRING_STATUS = 2 AND h.ORG_ID = ? AND uf.BIRTHDAY > 0 AND rd.JMONTH = ?
 ORDER BY rd.JMDAY, p.FULLNAME
 LIMIT 200
-]], { to_date, to_date, personnel.org_id or 0, today_meta.jmonth })
+]], { to_date, to_date, personnel.org_id or 0, today_meta.jmonth }, 7)
             if bd_rows ~= nil then
                 for _, r in ipairs(bd_rows) do
                     local entry = {
@@ -1405,7 +1479,7 @@ LIMIT 200
         local bs_rows = fetch_rows([[
 SELECT COALESCE(ENABLE_POPUP, 0), COALESCE(ENABLE_SMS, 0), COALESCE(ENABLE_EMAIL, 0)
 FROM hr_birth_setting WHERE ORG_ID = ? LIMIT 1
-]], { personnel.org_id or 0 })
+]], { personnel.org_id or 0 }, 3)
         if bs_rows ~= nil and #bs_rows > 0 then
             birth_setting = {
                 popup = tonumber(bs_rows[1][1]) == 1,
@@ -1851,6 +1925,7 @@ if format_out == "json" then
         birth_setting = birth_setting,
         daily_message = daily_message,
         celebration_group_id = celebration_group_id,
+        celebration_enabled = celebration_enabled,
         errors = {
             identity = identity_err,
             employment = employment_err,
@@ -1865,6 +1940,10 @@ if format_out == "json" then
 end
 
 -- ── HTML building blocks ─────────────────────────────────────────────
+-- کل مرحلهٔ رندر داخل یک pcall است. بارگذاری داده از قبل بخش‌به‌بخش pcall داشت، ولی خودِ ساختِ
+-- HTML محافظ نداشت؛ یعنی یک خطای غیرمنتظره در این مرحله، به‌جای صفحه، traceback خام Lua را جلوی
+-- کاربر می‌گذاشت. حالا در بدترین حالت هم یک صفحهٔ خطای تمیز فارسی برگردانده می‌شود.
+local render_ok, render_output = pcall(function()
 
 local function pill(text, tone)
     local cls = "pill"
@@ -2176,7 +2255,13 @@ do
     end
 
     local celebration_config_note = ""
-    if celebration_group_id == nil then
+    if not celebration_enabled then
+        celebration_config_note = '<div class="notice">گفتگوی تبریک فعلاً فقط خواندنی است: ' ..
+            'فهرست تولدها و پیام‌های گفتگوهای موجود نمایش داده می‌شوند، ولی ساخت گفتگوی تازه و ' ..
+            'پیوستن به آن انجام نمی‌شود. علتش این است که ساختار درخواست APIهای ماژول گفتگو هنوز ' ..
+            'تایید نشده و این بات با دادهٔ پرسنلی کار می‌کند. پس از تایید، ' ..
+            '<code>celebration_enabled</code> را در تنظیمات همین بات برابر ۱ بگذارید.</div>'
+    elseif celebration_group_id == nil then
         celebration_config_note = '<div class="notice">گروه گفتگوی پیش‌فرض تنظیم نشده است؛ هنگام ' ..
             'ساخت گفتگوی تبریک، اولین گروه فعالِ ماژول گفتگو استفاده می‌شود. برای انتخاب گروه ' ..
             'مشخص، مقدار <code>celebration_group_id</code> را در تنظیمات همین بات ثبت کنید.</div>'
@@ -2556,6 +2641,7 @@ local html_tail = [==[
 var RUN_URL = (location.pathname.indexOf('/bot/run/') === 0) ? location.pathname : location.pathname;
 var celebrationTarget = { name: '', date: '', dialogId: 0 };
 var CELEBRATION_GROUP_ID = __CELEBRATION_GROUP_ID__;
+var CELEBRATION_ENABLED = __CELEBRATION_ENABLED__;
 
 document.querySelectorAll('.nav button').forEach(function (btn) {
   btn.addEventListener('click', function () { goToPage(btn.dataset.page); });
@@ -2732,7 +2818,11 @@ function setCelebrationState(res) {
     hint.textContent = 'گفتگو باز است؛ با زدن دکمه به همان گفتگو می‌پیوندی.';
     joinBtn.textContent = 'پیوستن به گفتگو';
   }
-  joinBtn.disabled = false;
+  joinBtn.disabled = !CELEBRATION_ENABLED;
+  if (!CELEBRATION_ENABLED) {
+    joinBtn.textContent = 'پیوستن فعلاً غیرفعال است';
+    hint.textContent = 'این گفتگو فقط خواندنی است؛ ساخت و پیوستن هنوز فعال نشده است.';
+  }
   var list = (res && res.members) ? res.members : [];
   members.textContent = list.length
     ? ('تا اینجا در گفتگو: ' + list.join('، '))
@@ -2823,9 +2913,20 @@ html_head = replace_token(html_head, "__PERSON_UNIT__", person_unit)
 
 html_tail = replace_token(html_tail, "__CELEBRATION_GROUP_ID__",
     celebration_group_id and tostring(celebration_group_id) or "0")
+html_tail = replace_token(html_tail, "__CELEBRATION_ENABLED__",
+    celebration_enabled and "true" or "false")
 
 local html = html_head .. topbar_html .. error_html ..
     section_overview .. section_attendance .. section_requests .. section_profile ..
     celebration_html .. html_tail
 
-teamyar.write_result(html)
+return html
+end)
+
+if render_ok and type(render_output) == "string" and render_output ~= "" then
+    teamyar.write_result(render_output)
+else
+    teamyar.write_result(render_error_page(
+        "در ساخت صفحه خطایی رخ داد. اطلاعات شما دست‌نخورده است و این خطا فقط در نمایش بوده است.",
+        render_ok and "خروجی رندر خالی بود" or render_output))
+end
