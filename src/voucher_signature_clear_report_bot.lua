@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/04 19:10
+-- Last Edit = 1405/06/04 19:45
 
 -- Bot: Voucher Signature Clear (پاک‌سازی امضای سند حسابداری فاکتور فروش)
 -- botName = voucher_signature_clear_report
@@ -21,6 +21,12 @@
 --        به‌جای شکست خاموش، با متن واقعی گزارش می‌کند. سکوت دیگر ممکن نیست.
 --     ۴) مسیر فراخوانی در خود گزارش (زیر «فیلتر دامنه») نمایش داده می‌شود تا اگر باز هم اشتباه بود،
 --        بدون کنسول مرورگر قابل تشخیص باشد.
+--     ۵) تفکیک عملیات با `?type=N` روی Query String هم فرستاده می‌شود (نه فقط فیلد `action` در بدنه) —
+--        عیناً الگوی بات ۶۱۳ «Factor Settlement By Selection» که کاربر معرفی کرد: در `data.js` آن،
+--        `sendSettleRequest` به `report[reportPath].botPath + "?type=201"` پست می‌کند، نه به آدرس صفحه.
+--        پارامترهای فیلتر هم در هر دو کانال (Query و بدنه) می‌روند، تا اگر لایهٔ get_input فیلدهای
+--        multipart بدنه را نچیند، درخواست باز هم درست مسیردهی شود. سمت سرور `type=101` (پیش‌نمایش) و
+--        `type=201` (اجرا) به‌عنوان جایگزین `action` پذیرفته می‌شوند.
 --   یادداشت دربارهٔ پیشنهاد res_v2: بازنویسی کامل بات روی چارچوب RES عمداً انجام **نشد** — طبق قاعدهٔ
 --   خود CLAUDE.md («ترجیح بده اشکال را جراحی‌وار رفع کنی، نه بازنویسی کامل روی RES») و چون رندر RES از
 --   طریق `$.Teamyar.table` است و کل طراحی ایمنی این بات (پیش‌نمایش/تأیید/سقف/بازرسی یکپارچگی) را
@@ -1371,6 +1377,20 @@ function tyvscEndpoint(){
   return (TYVSC_BOT_URL && TYVSC_BOT_URL !== '') ? TYVSC_BOT_URL : window.location.href;
 }
 
+/* پارامترها هم در Query String می‌روند و هم در بدنهٔ POST. الگو از بات ۶۱۳
+   (Factor Settlement By Selection) گرفته شده که تفکیک عملیات را با `?type=N` روی botPath می‌فرستد.
+   دلیل دوبار فرستادن: اگر لایهٔ get_input فیلدهای multipart بدنه را نچیند، تفکیک عملیات از Query
+   خوانده می‌شود و درخواست باز هم درست مسیردهی می‌شود — به‌جای اینکه بی‌صدا صفحهٔ کامل برگردد. */
+function tyvscUrlWith(formData, action, typeCode){
+  var parts = ['type=' + encodeURIComponent(typeCode), 'action=' + encodeURIComponent(action)];
+  formData.forEach(function(value, key){
+    if (key === 'action' || key === 'type') return;
+    parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+  });
+  var url = tyvscEndpoint();
+  return url + (url.indexOf('?') === -1 ? '?' : '&') + parts.join('&');
+}
+
 /* ============================================================================
    همه‌چیز با واگذاری رویداد (delegation) روی document کار می‌کند — نه onclick درون‌خطی و نه
    addEventListener روی گره‌های مشخص. دلیل، دو باگ زندهٔ گزارش‌شده:
@@ -1519,7 +1539,7 @@ function tyvscLoadPreview(root){
   var data = new FormData(form);
   data.append('action', 'preview');
 
-  fetch(tyvscEndpoint(), { method: 'POST', body: data, credentials: 'same-origin' })
+  fetch(tyvscUrlWith(data, 'preview', 101), { method: 'POST', body: data, credentials: 'same-origin' })
     .then(function(res){
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.text();
@@ -1621,7 +1641,7 @@ function tyvscRunClear(root){
   data.append('action', 'execute');
   data.append('confirm', confirmInput.value.trim());
 
-  fetch(tyvscEndpoint(), { method: 'POST', body: data, credentials: 'same-origin' })
+  fetch(tyvscUrlWith(data, 'execute', 201), { method: 'POST', body: data, credentials: 'same-origin' })
     .then(function(res){
       if (!res.ok) throw new Error('HTTP ' + res.status);
       /* اجرا هرگز نباید روی پاسخ غیر-JSON کورکورانه جلو برود: اگر درخواست به صفحهٔ پنل خورده باشد،
@@ -1817,7 +1837,20 @@ local function main()
     local input = teamyar.get_input() or {}
     local filters = read_filters(input)
 
-    if tostring(input["action"] or "") == "execute" then
+    -- تفکیک عملیات از دو کانال خوانده می‌شود: فیلد `action` و کدِ `type` در Query String.
+    -- الگوی `type=N` از بات ۶۱۳ (Factor Settlement By Selection) گرفته شده — همان قرارداد بومی
+    -- پلتفرم. اگر لایهٔ get_input فیلدهای multipart بدنه را نچیند، `type` از Query می‌آید و درخواست
+    -- باز هم درست مسیردهی می‌شود، به‌جای اینکه بی‌صدا صفحهٔ کامل برگردد.
+    local TYPE_PREVIEW, TYPE_EXECUTE = 101, 201
+    local action = tostring(input["action"] or "")
+    local type_code = tonumber(latin_digits(tostring(input["type"] or ""))) or 0
+
+    if action == "" then
+        if type_code == TYPE_EXECUTE then action = "execute"
+        elseif type_code == TYPE_PREVIEW then action = "preview" end
+    end
+
+    if action == "execute" then
         if filters.confirm ~= CONFIG.CONFIRM_PHRASE then
             return "json", json.encode({ ok = false,
                 error = "عبارت تأیید درست تایپ نشده است." })
@@ -1842,7 +1875,7 @@ local function main()
 
     -- قطعهٔ نتیجه برای XHR فیلتر. ناوبری بومی فرم داخل شِل Teamyar بات را از دست می‌دهد
     -- (صفحهٔ سفید)، پس فیلتر همیشه از این مسیر می‌آید.
-    if tostring(input["action"] or "") == "preview" then
+    if action == "preview" then
         local scope, scope_err = build_scope(filters)
         if scope == nil then
             return "html", '<div class="notice"><strong>خطا:</strong> ' ..
