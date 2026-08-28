@@ -1,5 +1,15 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/29 17:10
+-- Last Edit = 1405/06/05 11:30
+-- اصلاح باگ گزارش‌شدهٔ کاربر («درخواست‌ها باز نمی‌شوند»، «اکشن‌ها ارور می‌دهند») — ریشه‌یابی‌شده با
+-- Dry-run واقعی JS در jsdom (نه فقط luac -p که فقط Lua را چک می‌کند، نه جاوااسکریپت تعبیه‌شده):
+--   یک جدول Lua کاملاً خالی (مثلاً وقتی هیچ چکی/درخواستی در بازهٔ فعلی نبود) می‌تواند به‌جای آرایهٔ
+--   JSON خالی ([]) به‌صورت شیء خالی ({}) Encode شود (ابهام شناخته‌شدهٔ Lua/JSON). سمت کلاینت این مقدار
+--   مستقیم با .map() صدا زده می‌شد -> Throw -> چون همهٔ توابع Init پشت‌سرهم و بدون محافظت اجرا
+--   می‌شدند، همان یک خطا جدول‌ها/نمودارها/مرتب‌سازی هدر جدول را با هم می‌شکست. رفع شد با ۲ لایه:
+--   ۱) asArray() قبل از هر .map()/پیمایش روی داده تعبیه‌شده. ۲) safeInit() — هر تابع Init مستقل و با
+--   try/catch اجرا می‌شود، خطای یکی بقیه را نمی‌شکند. تأیید شد با شبیه‌سازی دقیق همین حالت بدترین (یک
+--   Encoder آزمایشی که عمداً جدول خالی را {} برمی‌گرداند) در jsdom — دیگر هیچ خطایی رخ نمی‌دهد و همهٔ
+--   ۳۲ هدر جدول Sortable باقی می‌مانند.
 
 -- Bot: داشبورد مدیریتی Cash Flow / خزانه‌داری — v01
 -- اصلاحات پس از بازخورد کاربر روی نسخهٔ اول (این دور):
@@ -661,6 +671,13 @@ function escapeHtml(v){
 }
 
 var DASH = JSON.parse(document.getElementById('dashData').textContent);
+/* یک آرایهٔ Lua کاملاً خالی گاهی به‌جای JSON آرایهٔ خالی ([]) به‌صورت شیء خالی ({}) Encode می‌شود
+   (ابهام شناخته‌شدهٔ Lua/JSON — جدول خالی نمی‌داند آرایه بوده یا شیء). اگر یکی از فیلدهای DASH خالی
+   باشد و مستقیم .map()/.forEach() رویش صدا زده شود، کل تابع صدا‌زننده Throw می‌کند و چون همهٔ توابع
+   Init پشت‌سرهم و بدون try/catch صدا زده می‌شدند، این یکی خطا کل صفحه (جدول‌ها، نمودارها، مرتب‌سازی) را
+   با هم می‌شکست — دقیقاً همان چیزی که کاربر گزارش داد («درخواست‌ها باز نمی‌شوند»/«اکشن‌ها ارور می‌دهند»).
+   asArray همیشه یک آرایهٔ واقعی برمی‌گرداند، صرف‌نظر از این‌که سرور چه شکلی Encode کرده باشد. */
+function asArray(v){ return Array.isArray(v) ? v : []; }
 
 /* ---------------- Tooltip ---------------- */
 var tipEl = null;
@@ -739,6 +756,7 @@ function exportActiveTab(){
 
 /* ---------------- Bar chart (افقی، بدون کتابخانه خارجی) ---------------- */
 function renderBarChart(containerId, items, opts){
+  items = asArray(items);
   opts = opts || {};
   var valueKey = opts.valueKey || 'value';
   var labelKey = opts.labelKey || 'label';
@@ -767,6 +785,7 @@ function renderBarChart(containerId, items, opts){
 
 /* ---------------- Donut chart (conic-gradient، فقط سایه‌های Accent طبق قانون رنگ پروژه) ---------------- */
 function renderDonutChart(containerId, slices){
+  slices = asArray(slices);
   var el = document.getElementById(containerId);
   if (!el) return;
   var shades = ['#16509D', '#3068AE', '#5b85bc', '#8aa5c9', '#a9c2de'];
@@ -793,6 +812,7 @@ function renderDonutChart(containerId, slices){
 
 /* ---------------- Stacked bar (۷ روز آینده — چک صادره / درخواست خزانه‌داری) ---------------- */
 function renderStackedBar(containerId, items){
+  items = asArray(items);
   var el = document.getElementById(containerId);
   if (!el) return;
   var max = 0;
@@ -822,6 +842,7 @@ function renderStackedBar(containerId, items){
 
 /* ---------------- Line chart (روند ۳۰ روز اخیر — SVG ساده، بدون کتابخانه خارجی) ---------------- */
 function renderLineChart(containerId, items){
+  items = asArray(items);
   var el = document.getElementById(containerId);
   if (!el) return;
   var w = 760, h = 220, pad = 30;
@@ -862,7 +883,7 @@ function detTypeLabel(code){ return code === 2 ? 'حسابداری' : ('کد ' +
 
 function buildNext7Rows(){
   var tbody = document.getElementById('next7Tbody');
-  var rows = DASH.next7_items.map(function(it){
+  var rows = asArray(DASH.next7_items).map(function(it){
     return '<tr><td>' + escapeHtml(it.jdate) + '</td><td>' + escapeHtml(it.kind) + '</td><td class="wrap-cell">' + escapeHtml(it.beneficiary) +
       '</td><td>' + escapeHtml(it.bank) + '</td><td>' + escapeHtml(it.unit_name) + '</td><td class="amount">' + fmtNum(it.amount) +
       '</td><td><span class="tag ' + (it.overdue ? 'accent' : 'gray') + '">' + escapeHtml(it.status_label) + '</span></td><td>' + it.record_id + '</td></tr>';
@@ -871,7 +892,7 @@ function buildNext7Rows(){
 }
 function buildChequeRows(list, tbodyId){
   var tbody = document.getElementById(tbodyId);
-  var rows = list.map(function(c){
+  var rows = asArray(list).map(function(c){
     return '<tr><td>' + escapeHtml(c.serial || '—') + '</td><td class="wrap-cell">' + escapeHtml(c.bank || '—') + '</td><td class="wrap-cell">' + escapeHtml(c.counterparty) +
       '</td><td>' + escapeHtml(c.export_jdate || '—') + '</td><td>' + escapeHtml(c.due_jdate || '—') + '</td><td class="amount">' + fmtNum(c.amount) +
       '</td><td><span class="tag ' + (c.status === 1 ? 'accent' : 'gray') + '">' + escapeHtml(statusLabel('cheque', c.status)) + '</span></td><td>' + c.id + '</td></tr>';
@@ -880,7 +901,7 @@ function buildChequeRows(list, tbodyId){
 }
 function buildRequestRows(){
   var tbody = document.getElementById('requestsTbody');
-  var rows = DASH.requests_list.map(function(r){
+  var rows = asArray(DASH.requests_list).map(function(r){
     var label = r.status === 3 ? 'تایید/پرداخت‌شده' : (r.overdue ? 'معوق (سررسید گذشته)' : 'در انتظار تایید');
     return '<tr><td>' + r.number + '</td><td>' + escapeHtml(r.requester) + '</td><td class="wrap-cell">' + escapeHtml(r.beneficiary) +
       '</td><td>' + escapeHtml(detTypeLabel(r.det_type)) + '</td><td>' + escapeHtml(r.request_jdate) + '</td><td>' + escapeHtml(r.request_jdate) +
@@ -897,13 +918,20 @@ function initCharts(){
   renderBarChart('unitBarChart', DASH.unit_chart, { valueKey:'amt', labelKey:'unit_name' });
 }
 
+/* هر بخش جدا Try/Catch می‌شود — قبلاً همه پشت‌سرهم و بدون این محافظت صدا زده می‌شدند، یعنی اگر یکی
+   Throw می‌کرد (مثلاً به‌خاطر همان ابهام آرایهٔ خالی بالا) همهٔ موارد بعدی هم اجرا نمی‌شدند: جدول‌ها
+   خالی می‌ماندند، نمودارها رسم نمی‌شدند، و کلیک روی هدر جدول‌ها (initSortableTables) کار نمی‌کرد —
+   دقیقاً گزارش کاربر. الان هر بخش مستقل است؛ خطای یکی بقیه را نمی‌شکند. */
+function safeInit(fn, label){
+  try { fn(); } catch (e) { if (window.console) console.error('cash-flow dashboard init error [' + label + ']:', e); }
+}
 document.addEventListener('DOMContentLoaded', function(){
-  buildNext7Rows();
-  buildChequeRows(DASH.issued_list, 'issuedTbody');
-  buildChequeRows(DASH.received_list, 'receivedTbody');
-  buildRequestRows();
-  initCharts();
-  initSortableTables();
+  safeInit(buildNext7Rows, 'buildNext7Rows');
+  safeInit(function(){ buildChequeRows(DASH.issued_list, 'issuedTbody'); }, 'buildChequeRows:issued');
+  safeInit(function(){ buildChequeRows(DASH.received_list, 'receivedTbody'); }, 'buildChequeRows:received');
+  safeInit(buildRequestRows, 'buildRequestRows');
+  safeInit(initCharts, 'initCharts');
+  safeInit(initSortableTables, 'initSortableTables');
 });
 </script>
 ]]
