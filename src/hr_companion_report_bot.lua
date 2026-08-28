@@ -863,6 +863,40 @@ LIMIT 1
     if not ok then employment_err = tostring(err) end
 end
 
+-- ── section: direct supervisor (profileSupervisorGet) ────────────────
+-- API رسمی /api/hr/profileSupervisorGet (ماژول ۱۳، schema تاییدشده ۱۴۰۵/۰۶/۰۶)
+--   درخواست: {org_id, profile_id}  — توجه: profile_id، نه personnel_id
+--   پاسخ:   {data:{id, name}, error, success}
+-- برخلاف orderInDateGet که فقط شناسهٔ سرپرست را می‌دهد و نیاز به join دارد، این API خودِ نام را
+-- برمی‌گرداند و منطقش شعبه‌محور است. پس وقتی جواب بدهد، منبع ارجحِ «سرپرست مستقیم» است.
+--
+-- ⚠️ محدودیت مهم: توضیح پورتال می‌گوید «... در شعبهٔ مربوطه **برای زمان حاضر**». یعنی این API
+-- سرپرستِ همین لحظه را می‌دهد، نه سرپرست در یک تاریخ گذشته. پس فقط وقتی استفاده می‌شود که گزارش
+-- برای امروز باشد؛ اگر کاربر بازهٔ گذشته را ببیند، سرپرستِ همان حکم (از orderInDateGet یا جدول)
+-- دست‌نخورده می‌ماند تا عدد تاریخی با یک مقدار امروزی جایگزین نشود.
+
+local supervisor_source = employment_source
+local supervisor_id = nil
+
+if personnel.profile_id ~= nil and to_date == today_filetime() then
+    local ok = pcall(function()
+        local response, api_err = call_teamyar_api(HR_MODULE_ID, "/api/hr/profileSupervisorGet", {
+            org_id = personnel.org_id or 0,
+            profile_id = personnel.profile_id
+        })
+        if api_err ~= nil or type(response) ~= "table" or type(response.data) ~= "table" then
+            return
+        end
+        local name = response.data.name
+        if type(name) == "string" and name ~= "" then
+            employment.supervisor_name = name
+            supervisor_id = tonumber(response.data.id)
+            supervisor_source = "api_supervisor"
+        end
+    end)
+    if not ok then supervisor_source = employment_source end
+end
+
 -- ── section: daily attendance (hr_work_time + real shift) ────────────
 
 local daily = {}
@@ -1798,6 +1832,8 @@ if format_out == "json" then
         employment = employment,
         employment_settings = employment_settings,
         employment_source = employment_source,
+        supervisor_source = supervisor_source,
+        supervisor_id = supervisor_id,
         today = today_meta,
         today_row = today_row,
         totals = totals,
@@ -2434,6 +2470,8 @@ if employment_settings ~= nil and #employment_settings > 0 then
         '</article><article class="card"><div class="title">منبع اطلاعات این صفحه</div>' ..
         detail_row("حکم فعال", employment_source == "api" and
             "API رسمی حکم سامانه" or "جدول احکام پرسنلی") ..
+        detail_row("سرپرست مستقیم", supervisor_source == "api_supervisor" and
+            "API رسمی سرپرست شعبه" or "حکم فعال") ..
         detail_row("مانده مرخصی", leave_balance_note) ..
         detail_row("کارکرد و تردد", "رکورد حضور و غیاب و تقویم کاری") ..
         '<p class="note">هر عدد این پنل از منبع رسمی خودش خوانده می‌شود. اگر جایی با پنل رسمی منابع ' ..
