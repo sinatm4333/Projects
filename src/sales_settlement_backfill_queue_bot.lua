@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/06 13:21
+-- Last Edit = 1405/06/06 14:30
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -270,16 +270,22 @@ local q = [[
  left join pa_center cn on cn.id=i.SALES_CENTER
  left join pa_project prj on prj.id=i.project_id
          where  i.status= 2 and i.org_id=]] .. c_org_id .. [[  and ps.org_id=]] .. c_org_id .. [[  and i.id not in (select INVOICE_ID from sales_invoice_settlement) and i.type=1
+          and i.deleted = 0
           and i.RUN_DATE >=]] .. from_date .. [[  and i.RUN_DATE<=]] .. to_date .. [[
          order by i.RUN_DATE asc
          limit ]] .. _QUERY_ROW_LIMIT
 
 -- تعداد کل فاکتورهای واجد شرایط (کل صف واقعی)، بدون اعمال LIMIT — فقط برای گزارش
+-- i.deleted=0: عیناً از کوئری بات 612 (mySqlQuery.txt) اضافه شد — این کوئری (که از
+-- بات 582 کپی شده بود) این شرط رو نداشت و فاکتورهایی رو می‌آورد که سند مربوطه‌شون
+-- «امضا شده» بود (API با «سند مربوطه امضا شده است...» ردشون می‌کرد). بات 612 هیچ‌وقت
+-- این‌ها رو نمی‌آورد، دقیقاً به‌خاطر همین شرط.
 local q_count = [[
   select count(*) cnt
   from sales_invoice i
   inner join pa_symbols ps on ps.id = i.SYMBOL_ID and ps.org_id = i.org_id
   where i.status = 2 and i.org_id=]] .. c_org_id .. [[ and ps.org_id=]] .. c_org_id .. [[
+    and i.deleted = 0
     and i.id not in (select INVOICE_ID from sales_invoice_settlement)
     and i.type = 1
     and i.RUN_DATE >=]] .. from_date .. [[ and i.RUN_DATE<=]] .. to_date
