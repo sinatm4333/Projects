@@ -707,51 +707,136 @@ if personnel == nil then
     return
 end
 
--- ── section: current order (unit, supervisor, calendar, quotas) ──────
+-- ── section: current order (unit, supervisor, calendar, settings) ────
+-- منبع اول: API رسمی /api/hr/orderInDateGet (ماژول ۱۳، schema تاییدشده ۱۴۰۵/۰۶/۰۶)
+--   درخواست: {date, org_id, personnel_id}
+--   پاسخ:   data شامل کل رکورد حکم فعال در آن تاریخ (id, unit_id, calendar_id, supervisor,
+--           date_from/date_to, و دوجین تنظیم حکم مثل telework_request/overtime_disabled/...)
+-- API فقط شناسه برمی‌گرداند نه نام، پس نام واحد/تقویم/سرپرست با یک کوئری کوچک resolve می‌شود.
+-- منبع دوم (fallback): همان SELECT قبلی روی hr_personnel_order، اگر API خطا داد یا حکمی نداد.
 
 local employment = {}
+local employment_settings = nil
+local employment_source = nil
 local employment_err = nil
 
-do
-    local ok, err = pcall(function()
-        local rows, query_err = fetch_rows([[
+local ORDER_SETTING_LABELS = {
+    { key = "telework_request", label = "درخواست دورکاری", on = "فعال", off = "غیرفعال" },
+    { key = "overtime_disabled", label = "اضافه‌کاری", on = "غیرفعال", off = "فعال" },
+    { key = "overtime_confirm", label = "اضافه‌کاری نیاز به تایید دارد", on = "بله", off = "خیر" },
+    { key = "pre_overtime_disabled", label = "اضافه‌کاری ابتدای کار", on = "غیرفعال", off = "فعال" },
+    { key = "pre_overtime_confirm", label = "اضافه‌کاری ابتدای کار نیاز به تایید دارد", on = "بله", off = "خیر" },
+    { key = "floating_enabled", label = "شناوری ساعت کاری", on = "فعال", off = "غیرفعال" },
+    { key = "cal_daily_vacation", label = "محاسبهٔ مرخصی و ماموریت روزانه", on = "فعال", off = "غیرفعال" },
+    { key = "insurable", label = "مشمول بیمه", on = "بله", off = "خیر" },
+    { key = "taxable", label = "مشمول مالیات", on = "بله", off = "خیر" },
+    { key = "unemployment_insurance_exemption", label = "معافیت بیمهٔ بیکاری", on = "دارد", off = "ندارد" }
+}
+
+-- نام واحد/تقویم/سرپرست و تاریخ شمسی حکم را برای شناسه‌هایی که API برگردانده resolve می‌کند
+local function resolve_order_names(unit_id, calendar_id, supervisor_id, date_from, date_to)
+    local rows = fetch_rows([[
+SELECT COALESCE(ou.NAME, N'نامشخص') AS unit_name,
+       COALESCE(hc.NAME, N'—') AS calendar_name,
+       COALESCE(sup.FULLNAME, N'—') AS supervisor_name,
+       REPORT_FN_JDATE(?, '/') AS date_from_j,
+       REPORT_FN_JDATE(?, '/') AS date_to_j
+FROM (SELECT 1) seed
+LEFT JOIN org_organization_unit oou ON oou.ID = ?
+LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
+LEFT JOIN hr_calendar hc ON hc.ID = ?
+LEFT JOIN profile_main sup ON sup.id = ?
+LIMIT 1
+]], { date_from or 0, date_to or 0, unit_id or 0, calendar_id or 0, supervisor_id or 0 })
+    if rows == nil or #rows == 0 then return nil end
+    return {
+        unit_name = rows[1][1] or "نامشخص",
+        calendar_name = rows[1][2] or "—",
+        supervisor_name = rows[1][3] or "—",
+        date_from = rows[1][4] or "—",
+        date_to = rows[1][5] or "—"
+    }
+end
+
+local ORDER_SELECT = [[
 SELECT o.ID, o.UNIT_ID, COALESCE(ou.NAME, N'نامشخص') AS unit_name,
        o.SUPERVISOR, COALESCE(sup.FULLNAME, N'—') AS supervisor_name,
        o.CALENDAR_ID, COALESCE(hc.NAME, N'—') AS calendar_name,
        ]] .. sql_ticks_to_minutes("o.WORKING_HOURS") .. [[ AS working_minutes,
        ]] .. sql_ticks_to_minutes("o.LEAVE_PER_MONTH") .. [[ AS leave_per_month_minutes,
        REPORT_FN_JDATE(o.DATE_FROM, '/') AS date_from_j,
-       REPORT_FN_JDATE(o.DATE_TO, '/') AS date_to_j,
-       o.STATUS, o.KIND, o.TYPE
+       REPORT_FN_JDATE(o.DATE_TO, '/') AS date_to_j
 FROM hr_personnel_order o
 LEFT JOIN org_organization_unit oou ON oou.ID = o.UNIT_ID
 LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
 LEFT JOIN profile_main sup ON sup.id = o.SUPERVISOR
 LEFT JOIN hr_calendar hc ON hc.ID = o.CALENDAR_ID
+]]
+
+do
+    local ok, err = pcall(function()
+        local response, api_err = call_teamyar_api(HR_MODULE_ID, "/api/hr/orderInDateGet", {
+            personnel_id = personnel.personnel_id,
+            org_id = personnel.org_id or 0,
+            date = to_date
+        })
+
+        local order = nil
+        if api_err == nil and type(response) == "table" and type(response.data) == "table" then
+            if tonumber(response.data.id) ~= nil and tonumber(response.data.id) > 0 then
+                order = response.data
+            end
+        elseif api_err ~= nil then
+            employment_err = "API حکم فعال: " .. tostring(api_err)
+        end
+
+        if order ~= nil then
+            local names = resolve_order_names(
+                tonumber(order.unit_id), tonumber(order.calendar_id), tonumber(order.supervisor),
+                tonumber(order.date_from), tonumber(order.date_to))
+            employment.order_id = tonumber(order.id)
+            employment.unit_id = tonumber(order.unit_id)
+            employment.calendar_id = tonumber(order.calendar_id)
+            employment.unit_name = names and names.unit_name or "نامشخص"
+            employment.calendar_name = names and names.calendar_name or "—"
+            employment.supervisor_name = names and names.supervisor_name or "—"
+            employment.date_from = names and names.date_from or "—"
+            employment.date_to = names and names.date_to or "—"
+            employment.is_current = true
+            -- واحد این دو در پورتال اعلام نشده؛ فقط در خروجی JSON می‌مانند، نه در رابط کاربری
+            employment.working_hours_raw = tonumber(order.working_hours)
+            employment.leave_per_month_raw = tonumber(order.leave_per_month)
+            employment.max_delay_month_raw = tonumber(order.max_delay_month)
+            employment.rest_during_work_raw = tonumber(order.rest_during_work)
+            employment.max_hourly_leave_raw = tonumber(order.max_hourly_leave)
+            employment.min_hourly_leave_raw = tonumber(order.min_hourly_leave)
+            -- تنظیمات پرچمی حکم: بدون ابهام واحد، مستقیماً قابل نمایش‌اند
+            employment_settings = {}
+            for _, setting in ipairs(ORDER_SETTING_LABELS) do
+                local raw = tonumber(order[setting.key])
+                if raw ~= nil then
+                    table.insert(employment_settings, {
+                        label = setting.label,
+                        value = (raw == 1) and setting.on or setting.off
+                    })
+                end
+            end
+            employment_source = "api"
+            return
+        end
+
+        local rows, query_err = fetch_rows(ORDER_SELECT .. [[
 WHERE o.PERSONNEL_ID = ? AND o.DATE_FROM <= ? AND o.DATE_TO >= ?
 ORDER BY o.ID DESC
 LIMIT 1
 ]], { personnel.personnel_id, to_date, to_date })
         if rows == nil then
-            employment_err = tostring(query_err)
+            employment_err = (employment_err and (employment_err .. " | ") or "") .. tostring(query_err)
             return
         end
         if #rows == 0 then
             -- بدون حکم جاری: آخرین حکم را نشان بده (پرسنل ممکن است در بازهٔ بین دو حکم باشد)
-            rows, query_err = fetch_rows([[
-SELECT o.ID, o.UNIT_ID, COALESCE(ou.NAME, N'نامشخص') AS unit_name,
-       o.SUPERVISOR, COALESCE(sup.FULLNAME, N'—') AS supervisor_name,
-       o.CALENDAR_ID, COALESCE(hc.NAME, N'—') AS calendar_name,
-       ]] .. sql_ticks_to_minutes("o.WORKING_HOURS") .. [[ AS working_minutes,
-       ]] .. sql_ticks_to_minutes("o.LEAVE_PER_MONTH") .. [[ AS leave_per_month_minutes,
-       REPORT_FN_JDATE(o.DATE_FROM, '/') AS date_from_j,
-       REPORT_FN_JDATE(o.DATE_TO, '/') AS date_to_j,
-       o.STATUS, o.KIND, o.TYPE
-FROM hr_personnel_order o
-LEFT JOIN org_organization_unit oou ON oou.ID = o.UNIT_ID
-LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
-LEFT JOIN profile_main sup ON sup.id = o.SUPERVISOR
-LEFT JOIN hr_calendar hc ON hc.ID = o.CALENDAR_ID
+            rows, query_err = fetch_rows(ORDER_SELECT .. [[
 WHERE o.PERSONNEL_ID = ?
 ORDER BY o.ID DESC
 LIMIT 1
@@ -769,10 +854,11 @@ LIMIT 1
         employment.supervisor_name = r[5] or "—"
         employment.calendar_id = tonumber(r[6])
         employment.calendar_name = r[7] or "—"
-        employment.working_minutes = tonumber(r[8]) or 0
-        employment.leave_per_month_minutes = tonumber(r[9]) or 0
+        employment.working_hours_raw = tonumber(r[8])
+        employment.leave_per_month_raw = tonumber(r[9])
         employment.date_from = r[10] or "—"
         employment.date_to = r[11] or "—"
+        employment_source = "db"
     end)
     if not ok then employment_err = tostring(err) end
 end
@@ -1710,6 +1796,8 @@ if format_out == "json" then
         ok = true,
         personnel = personnel,
         employment = employment,
+        employment_settings = employment_settings,
+        employment_source = employment_source,
         today = today_meta,
         today_row = today_row,
         totals = totals,
@@ -2333,12 +2421,32 @@ local section_requests = '<section id="requests" class="page">' ..
     'سامانه است تا با پنل رسمی منابع انسانی قابل تطبیق باشد.</p>' ..
     '</article></section>'
 
+local settings_card = ""
+if employment_settings ~= nil and #employment_settings > 0 then
+    local setting_rows = {}
+    for _, setting in ipairs(employment_settings) do
+        table.insert(setting_rows, detail_row(setting.label, setting.value))
+    end
+    settings_card = '<div class="grid2"><article class="card">' ..
+        '<div class="title">تنظیمات حکم من</div>' .. table.concat(setting_rows, "") ..
+        '<p class="note">این تنظیم‌ها از حکم فعال شما در سامانه خوانده می‌شوند و تعیین می‌کنند چه ' ..
+        'درخواست‌هایی برای شما فعال است و کدام‌ها نیاز به تایید دارند.</p>' ..
+        '</article><article class="card"><div class="title">منبع اطلاعات این صفحه</div>' ..
+        detail_row("حکم فعال", employment_source == "api" and
+            "API رسمی حکم سامانه" or "جدول احکام پرسنلی") ..
+        detail_row("مانده مرخصی", leave_balance_note) ..
+        detail_row("کارکرد و تردد", "رکورد حضور و غیاب و تقویم کاری") ..
+        '<p class="note">هر عدد این پنل از منبع رسمی خودش خوانده می‌شود. اگر جایی با پنل رسمی منابع ' ..
+        'انسانی اختلاف دیدید، همان پنل رسمی ملاک است و لطفاً گزارش کنید.</p>' ..
+        '</article></div>'
+end
+
 local section_profile = '<section id="profile" class="page"><div class="grid2">' ..
     '<article class="card"><div class="title">اطلاعات پرسنلی</div>' .. profile_left .. '</article>' ..
     '<article class="card"><div class="title">حکم کاری و مرخصی</div>' .. profile_right ..
     '<p class="note">این صفحه فقط خواندنی است. اصلاح اطلاعات پرسنلی از مسیر رسمی ماژول منابع انسانی ' ..
     'انجام می‌شود. اطلاعات حقوق و دستمزد عمداً در این پنل نمایش داده نمی‌شود.</p>' ..
-    '</article></div></section>'
+    '</article></div>' .. settings_card .. '</section>'
 
 local html_tail = [==[
 </main></div>

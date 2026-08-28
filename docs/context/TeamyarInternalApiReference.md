@@ -808,7 +808,7 @@ res = teamyar.call_api(10, "/api/voucher/create", req_param);
 | `/api/hr/ordersAdd` | ایجاد احکام به صورت گروهی | ۱۰۰٪ | ۱۴۰۴/۱۲/۰۴ | ❌ ندارد |
 | `/api/hr/leaveTransferGet` | دریافت مقدار مانده مرخصی (بر اساس آخرین حکم یا تاریخ ورودی) | ۸۸٪ | ۱۴۰۳/۱۱/۰۷ | **✅ schema ثبت شد — پایین را ببینید** |
 | `/api/hr/vacation_update` | ایجاد یا ویرایش مرخصی/مأموریت | ۱۰۰٪ | ۱۴۰۴/۰۸/۰۳ | ❌ ندارد |
-| `/api/hr/orderInDateGet` | دریافت حکم فعال کارمند در یک تاریخ مشخص | ۹۸٪ | ۱۴۰۴/۱۲/۰۴ | ❌ ندارد |
+| `/api/hr/orderInDateGet` | دریافت حکم فعال کارمند در یک تاریخ مشخص | ۹۸٪ | ۱۴۰۴/۱۲/۰۴ | **✅ schema ثبت شد — پایین را ببینید** |
 | `/api/hr/profileSupervisorGet` | دریافت سرپرست تعیین‌شده در حکم فعال کاربر در شعبهٔ مربوطه | ۱۰۰٪ | ۱۴۰۴/۱۲/۰۴ | ❌ ندارد |
 | `/api/hr/loanUpdate` | — (بدون توضیح در پورتال) | ۰٪ | — | ❌ ندارد |
 | `/api/hr/baseParamValueUpdate` | — (بدون توضیح در پورتال) | ۰٪ | — | ❌ ندارد |
@@ -872,3 +872,45 @@ schema از پورتال گرفته شد (۱۴۰۵/۰۶/۰۶، اسکرین‌ش
 2. **واحد `value` در پورتال اعلام نشده.** مثل بقیهٔ مدت‌های این اسکیما tick (۱۰۰ نانوثانیه) در نظر
    گرفته شده. مقدار خام در خروجی `format=json` بات نگه داشته می‌شود (`leave_balance_raw`) تا در
    اولین اجرای واقعی با عدد پنل رسمی مقایسه و در صورت نیاز ضریب اصلاح شود.
+
+### `/api/hr/orderInDateGet` — دریافت حکم فعال کارمند در یک تاریخ مشخص
+
+schema از پورتال گرفته شد (۱۴۰۵/۰۶/۰۶، اسکرین‌شات کاربر — تب «درخواست» و «پاسخ»).
+
+**Request:** `{"date":0,"org_id":0,"personnel_id":0}`
+
+| Field | Type | Format | Notes |
+|---|---|---|---|
+| `date` | integer | int64 | تاریخ مورد درخواست |
+| `org_id` | integer | int64 | بدون توضیح در پورتال |
+| `personnel_id` | integer | int64 | شناسهٔ کارمند مورد درخواست |
+
+**Response:** `data` یک **object** است (نه آرایه)، شامل کل رکورد حکم:
+
+```json
+{"data":{"id":0,"type":0,"roles":[0],"org_id":0,"date_to":0,"taxable":0,"unit_id":0,"position":0,
+"date_from":0,"insurable":0,"project_id":0,"sick_leave":0,"supervisor":0,"take_leave":0,
+"calendar_id":0,"floating_id":0,"item_values":[{"value":0,"item_id":0}],"compact_rows":[0],
+"personnel_id":0,"holiday_leave":0,"working_hours":0,"marriage_leave":0,"other_postions":"",
+"leave_per_month":0,"max_delay_month":0,"other_calendars":[0],"salary_group_id":0,
+"floating_enabled":0,"max_hourly_leave":0,"min_hourly_leave":0,"overtime_confirm":0,
+"rest_during_work":0,"telework_request":0,"overtime_disabled":0,"cal_daily_vacation":0,
+"over_floating_hour":0,"break_calculate_type":0,"leave_transfer_total":0,"pre_overtime_confirm":0,
+"pre_overtime_disabled":0,"unemployment_insurance_exemption":0},
+"error":{"status":0,"message":""},"success":0}
+```
+
+| گروه | فیلدها | توضیح |
+|---|---|---|
+| شناسه‌ها | `id` (شناسهٔ حکم)، `type` (نوع حکم)، `personnel_id`، `org_id` (شعبه)، `unit_id` (واحد سازمانی)، `position` (شغل)، `other_postions` (string، شناسهٔ سایر مشاغل)، `project_id`، `salary_group_id` (گروه استخدامی)، `supervisor` (سرپرست)، `calendar_id` (تقویم کاری)، `other_calendars[]`، `floating_id` (شناور)، `roles[]`، `compact_rows[]` (ردیف‌های پیمان) | همه int64 — API فقط **شناسه** می‌دهد، نه نام. برای نام باید به `org_units` / `hr_calendar` / `profile_main` join زد. |
+| تاریخ | `date_from` (تاریخ شروع)، `date_to` (تاریخ انقضاء حکم) | int64 |
+| مدت‌ها | `working_hours` (ساعت کاری)، `leave_per_month` (مرخصی استحقاقی در ماه)، `max_delay_month` (سقف تأخیر مجاز ماهانه)، `rest_during_work` (استراحت حین کار)، `max_hourly_leave`، `min_hourly_leave`، `over_floating_hour` (اضافه‌کار منعطف)، `sick_leave`، `holiday_leave`، `marriage_leave`، `leave_transfer_total` (انتقال مرخصی) | همه int64. **واحد هیچ‌کدام در پورتال اعلام نشده** — همان ابهامی که در `leaveTransferGet.value` هم هست. |
+| پرچم‌ها (int32) | `taxable`، `insurable`، `floating_enabled`، `overtime_confirm`، `overtime_disabled`، `pre_overtime_confirm`، `pre_overtime_disabled`، `telework_request`، `cal_daily_vacation`، `break_calculate_type`، `take_leave`، `unemployment_insurance_exemption` | مقادیر ۰/۱ — بدون ابهام واحد، مستقیماً قابل نمایش. |
+| پارامترهای حقوقی | `item_values[] = {value, item_id}` | مقدار هر پارامتر حقوقی حکم |
+
+**استفادهٔ فعلی در `hr_companion_report_bot.lua`:** این API منبع اول «حکم فعال» است (واحد، تقویم،
+سرپرست، بازهٔ حکم) و پرچم‌هایش کارت «تنظیمات حکم من» را می‌سازند. چون API فقط شناسه می‌دهد، نام‌ها با
+یک کوئری کوچک resolve می‌شوند. اگر API خطا داد یا `id` معتبر برنگرداند، fallback به SELECT روی
+`hr_personnel_order` است و منبعِ استفاده‌شده در `employment_source` و در کارت «منبع اطلاعات این صفحه»
+نوشته می‌شود. فیلدهای دستهٔ «مدت‌ها» عمداً فقط در `format=json` هستند (به‌صورت `*_raw`) و در رابط
+کاربری نمایش داده نمی‌شوند تا واحدشان روی دادهٔ زنده تایید شود.
