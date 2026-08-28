@@ -34,16 +34,26 @@
 --
 -- «گفتگوی تبریک» چطور کار می‌کند (create-or-join، بدون هیچ INSERT مستقیم روی جداول هسته):
 --   هیچ بات این ریپو مستقیماً روی جداول Teamyar نمی‌نویسد و این بات هم نمی‌نویسد. نوشتن فقط از راه
---   API رسمی داخلی انجام می‌شود (teamyar.call_api ماژول ۸ = اقدام):
+--   API رسمی داخلی انجام می‌شود (teamyar.call_api ماژول ۹ = گفتگو):
 --     ۱) عنوان گفتگو قطعی (deterministic) ساخته می‌شود: «تبریک تولد <نام> — <تاریخ شمسی>»
---     ۲) با یک SELECT روی todo_task دنبال همان عنوان می‌گردیم (تطبیق دقیق با =، نه LIKE — طبق باگ
---        تاییدشدهٔ پلتفرم، LIKE پارامتری روی این لایه db.query کار نمی‌کند)
---     ۳) اگر گفتگو وجود داشت → کاربر با /api/todo/task/comment/add به همان گفتگو «جوین» می‌شود
---     ۴) اگر وجود نداشت → با /api/todo/taskadd ساخته می‌شود و پیام کاربر اولین کامنت آن است
---   چون taskadd الزاماً wf_id و topic_id معتبرِ هم‌رده می‌خواهد (قانون مستند API)، این دو از
---   bot_config خوانده می‌شوند (celebration_wf_id / celebration_topic_id). اگر تنظیم نشده باشند بات
---   خطا نمی‌دهد و از کار نمی‌افتد: تب تولدها کار می‌کند و فقط دکمهٔ گفتگو با یک پیام راهنما غیرفعال
---   می‌ماند — دقیقاً همان الگوی «چیزی که منبع/تنظیم واقعی ندارد را نساز» که در بقیهٔ بات‌ها رعایت شده.
+--     ۲) با یک SELECT روی chat_dialogs.TOPIC دنبال همان عنوان می‌گردیم (تطبیق دقیق با =، نه LIKE —
+--        طبق باگ تاییدشدهٔ پلتفرم، LIKE پارامتری روی این لایه db.query کار نمی‌کند)
+--     ۳) اگر گفتگو نبود → با /api/dialog/add ساخته می‌شود (شناسهٔ گروه از bot_config یا /api/group/get)
+--     ۴) کاربر با /api/assign/add به همان گفتگو اضافه («جوین») می‌شود
+--   تبریک‌ها بعد از آن داخل خودِ ماژول گفتگو نوشته می‌شوند و این پنل فقط آن‌ها را از chat_message
+--   می‌خواند و نمایش می‌دهد. یعنی همه در یک گفتگوی مشترک جمع می‌شوند، نه چند گفتگوی جدا.
+--
+--   ⚠️ schema درخواست این سه endpoint در TeamyarInternalApiReference.md موجود نیست. نام فیلدهای
+--   payload بر پایهٔ ستون‌های تاییدشدهٔ chat_dialogs/chat_dialog_view نوشته شده و باید با schema
+--   واقعی تطبیق داده شود؛ هر سه payload عمداً در یک جا جمع شده‌اند و پاسخ خام API در خروجی JSON
+--   برمی‌گردد تا در اولین اجرای واقعی دیده و اصلاح شود.
+--
+-- هویت کاربر: خروجی همیشه مربوط به همان کاربری است که بات را اجرا کرده. هیچ ورودی
+-- personnel_id/profile_id پذیرفته نمی‌شود تا کسی نتواند با عوض کردن یک عدد، کارکرد و مرخصی و
+-- اطلاعات پرسنلی دیگران را ببیند.
+--
+-- پیام روز: جدول DAILY_MESSAGES دقیقاً ۳۶۶ پیام دارد و با روزِ سالِ شمسی (report_dimdate.JYDAY)
+-- اندیس می‌شود؛ پس هر روزِ سال پیام یکتای خودش را دارد و تا پایان سال هیچ پیامی تکرار نمی‌شود.
 --
 -- محدودیت‌های شناخته‌شده (عمداً پیاده نشده — منبع دادهٔ تاییدشده نداشتند، نه کارت خالی و نه عدد حدسی):
 --   - «تردد ناموفق / عدم تطبیق اثر انگشت» نمونه: hr_machine_requests جدول درخواست‌های همگام‌سازی
@@ -201,9 +211,6 @@ local function config_number(key)
     return n
 end
 
-local celebration_wf_id = config_number("celebration_wf_id")
-local celebration_topic_id = config_number("celebration_topic_id")
-
 local action_type = input.type
 local format_out = input.format
 
@@ -214,10 +221,18 @@ if days_back > 190 then days_back = 190 end
 local from_date = tonumber(input.from_date) or (to_date - ((days_back - 1) * FT_DAY))
 
 -- ── resolve the signed-in user ───────────────────────────────────────
+-- قانون این پنل: خروجی همیشه مربوط به همان کاربری است که بات را اجرا کرده — نه کسی که در ورودی
+-- نامش را بفرستد. به همین دلیل هیچ ورودی personnel_id/profile_id پذیرفته نمی‌شود؛ اگر پذیرفته
+-- می‌شد، هر کاربری می‌توانست با عوض کردن یک عدد، کارکرد و مرخصی و اطلاعات پرسنلی بقیه را ببیند
+-- (IDOR). شناسه فقط از نشستِ خودِ کاربر می‌آید.
+--
 -- teamyar.get_user_info() روی این پلتفرم مستند نیست (تنها استفادهٔ تاییدشده در این ریپو
--- user_info.timezone است). به‌جای فرضِ یک نام کلید، همهٔ کلیدهای محتمل به‌ترتیب امتحان می‌شوند و
--- اگر هیچ‌کدام نبود، ورودی صریح profile_id/personnel_id جایگزین می‌شود. type=whoami خروجی خام
--- get_user_info را برمی‌گرداند تا روی سرور واقعی در یک اجرا مشخص شود کدام کلید وجود دارد.
+-- user_info.timezone است)، پس به‌جای فرضِ یک نام کلید، سه لایه پشت‌سرهم امتحان می‌شود:
+--   ۱) کلیدهای عددی محتمل (profile_id / user_id / id / ...)
+--   ۲) کلیدهای عددی تودرتو (user.id، profile.id، ...)
+--   ۳) کلیدهای متنی هویتی (username / email / mobile / کد ملی) با جست‌وجو در جدول پروفایل
+-- type=whoami ساختار خام get_user_info را برمی‌گرداند تا روی سرور واقعی در یک اجرا مشخص شود
+-- کدام کلید وجود دارد و در صورت نیاز همین‌جا اضافه شود.
 
 local user_info = {}
 do
@@ -225,7 +240,19 @@ do
     if ok and type(result) == "table" then user_info = result end
 end
 
+local USER_ID_KEYS = {
+    "profile_id", "PROFILE_ID", "profileId",
+    "user_id", "USER_ID", "userId", "userid",
+    "id", "ID", "uid", "UID", "person_id", "PERSON_ID"
+}
+local USER_LOGIN_KEYS = {
+    "username", "USERNAME", "user_name", "login", "LOGIN",
+    "email", "EMAIL", "mobile", "MOBILE", "cell", "national_code", "NATIONAL_CODE"
+}
+local NESTED_KEYS = { "user", "USER", "profile", "PROFILE", "data", "DATA", "info", "INFO" }
+
 local function first_positive_number(source, keys)
+    if type(source) ~= "table" then return nil, nil end
     for _, key in ipairs(keys) do
         local n = tonumber(source[key])
         if n ~= nil and n > 0 then return n, key end
@@ -233,20 +260,47 @@ local function first_positive_number(source, keys)
     return nil, nil
 end
 
-local current_profile_id, profile_id_key = first_positive_number(user_info, {
-    "profile_id", "PROFILE_ID", "user_id", "USER_ID", "userid", "id", "ID"
-})
+local function first_non_empty_string(source, keys)
+    if type(source) ~= "table" then return nil, nil end
+    for _, key in ipairs(keys) do
+        local value = source[key]
+        if type(value) == "string" and value ~= "" and tonumber(value) == nil then
+            return value, key
+        end
+    end
+    return nil, nil
+end
 
-local requested_profile_id = tonumber(input.profile_id)
-local requested_personnel_id = tonumber(input.personnel_id)
+local current_profile_id, profile_id_key = first_positive_number(user_info, USER_ID_KEYS)
+
+if current_profile_id == nil then
+    for _, container in ipairs(NESTED_KEYS) do
+        local nested = user_info[container]
+        local value, key = first_positive_number(nested, USER_ID_KEYS)
+        if value ~= nil then
+            current_profile_id = value
+            profile_id_key = container .. "." .. key
+            break
+        end
+    end
+end
+
+local login_value, login_key = first_non_empty_string(user_info, USER_LOGIN_KEYS)
 
 if action_type == "whoami" then
+    local seen_keys = {}
+    for key, value in pairs(user_info) do
+        table.insert(seen_keys, tostring(key) .. " (" .. type(value) .. ")")
+    end
     teamyar.write_result(json.encode({
         ok = true,
         user_info = user_info,
+        user_info_keys = seen_keys,
         resolved_profile_id = current_profile_id,
         resolved_from_key = profile_id_key,
-        note = "اگر resolved_profile_id خالی است، کلید صحیح را از user_info بردارید و به لیست کلیدهای بات اضافه کنید"
+        login_candidate = login_value,
+        login_candidate_key = login_key,
+        note = "اگر resolved_profile_id خالی است، کلید درست را از user_info_keys بردارید و به USER_ID_KEYS بات اضافه کنید"
     }))
     return
 end
@@ -256,36 +310,43 @@ end
 local personnel = nil
 local identity_err = nil
 
+local PERSONNEL_SELECT = [[
+SELECT h.PERSONNEL_ID, h.PERSONNEL_CODE, h.PROFILE_ID, h.ORG_ID, p.FULLNAME,
+       h.MARITAL_STATUS, h.WORK_PLACE, h.HIRING_STATUS, h.START_DATE, uf.SEX, uf.BIRTHDAY
+FROM hr_personnels h
+JOIN profile_main p ON p.id = h.PROFILE_ID
+LEFT JOIN profile_user_info uf ON uf.id = p.id
+]]
+
 do
     local ok, err = pcall(function()
         local rows, query_err
-        if requested_personnel_id ~= nil and requested_personnel_id > 0 then
-            rows, query_err = fetch_rows([[
-SELECT h.PERSONNEL_ID, h.PERSONNEL_CODE, h.PROFILE_ID, h.ORG_ID, p.FULLNAME,
-       h.MARITAL_STATUS, h.WORK_PLACE, h.HIRING_STATUS, h.START_DATE, uf.SEX, uf.BIRTHDAY
-FROM hr_personnels h
-JOIN profile_main p ON p.id = h.PROFILE_ID
-LEFT JOIN profile_user_info uf ON uf.id = p.id
-WHERE h.PERSONNEL_ID = ?
-LIMIT 1
-]], { requested_personnel_id })
-        else
-            local lookup_profile_id = requested_profile_id or current_profile_id
-            if lookup_profile_id == nil then
-                identity_err = "کاربر جاری شناسایی نشد. لطفاً personnel_id یا profile_id را به بات بدهید " ..
-                    "(یا یک‌بار بات را با type=whoami اجرا کنید تا کلید شناسهٔ کاربر مشخص شود)."
-                return
-            end
-            rows, query_err = fetch_rows([[
-SELECT h.PERSONNEL_ID, h.PERSONNEL_CODE, h.PROFILE_ID, h.ORG_ID, p.FULLNAME,
-       h.MARITAL_STATUS, h.WORK_PLACE, h.HIRING_STATUS, h.START_DATE, uf.SEX, uf.BIRTHDAY
-FROM hr_personnels h
-JOIN profile_main p ON p.id = h.PROFILE_ID
-LEFT JOIN profile_user_info uf ON uf.id = p.id
+        if current_profile_id ~= nil then
+            rows, query_err = fetch_rows(PERSONNEL_SELECT .. [[
 WHERE h.PROFILE_ID = ?
 ORDER BY h.PERSONNEL_ID DESC
 LIMIT 1
-]], { lookup_profile_id })
+]], { current_profile_id })
+        elseif login_value ~= nil then
+            -- لایهٔ آخر: نشست فقط یک شناسهٔ متنی داده است (ایمیل/موبایل/کد ملی). جدول لاگین
+            -- جداگانه‌ای در این اسکیما نیست؛ این سه، جدول‌های تاییدشدهٔ نگه‌دارندهٔ همین مقادیرند و
+            -- همگی با USER_ID به شناسهٔ پروفایل وصل می‌شوند. تطبیق دقیق با = انجام می‌شود
+            -- (نه LIKE — باگ تاییدشدهٔ پلتفرم).
+            rows, query_err = fetch_rows(PERSONNEL_SELECT .. [[
+JOIN (
+  SELECT USER_ID FROM profile_email WHERE EMAIL = ?
+  UNION
+  SELECT USER_ID FROM profile_mobile WHERE MOBILE = ?
+  UNION
+  SELECT USER_ID FROM profile_nationalcode WHERE NATIONAL_CODE = ?
+) login_match ON login_match.USER_ID = p.id
+ORDER BY h.PERSONNEL_ID DESC
+LIMIT 1
+]], { login_value, login_value, login_value })
+        else
+            identity_err = "کاربر جاری از نشست شناسایی نشد. یک‌بار بات را با ورودی type=whoami " ..
+                "اجرا کنید تا کلید شناسهٔ کاربر در این سرور مشخص شود."
+            return
         end
 
         if rows == nil then
@@ -315,141 +376,232 @@ LIMIT 1
     if not ok then identity_err = tostring(err) end
 end
 
--- ── celebration thread (create-or-join) ──────────────────────────────
+-- ── celebration dialog (create-or-join, ماژول گفتگو) ─────────────────
+-- گفتگوی تبریک یک «گفتگوی گروهی» واقعی در ماژول گفتگوی Teamyar است (module_id = 9)، نه یک اقدام
+-- و نه یک لیست داخل خود بات. جریان کار:
+--   ۱) عنوان قطعی ساخته می‌شود: «تبریک تولد <نام> — <تاریخ شمسی>»
+--   ۲) با یک SELECT روی chat_dialogs دنبال همان TOPIC می‌گردیم (تطبیق دقیق با =، نه LIKE —
+--      طبق باگ تاییدشدهٔ پلتفرم، LIKE پارامتری روی این لایهٔ db.query کار نمی‌کند)
+--   ۳) اگر نبود، با /api/dialog/add ساخته می‌شود (در صورت نیاز group_id از /api/group/get)
+--   ۴) کاربر با /api/assign/add به همان گفتگو اضافه («جوین») می‌شود
+-- بعد از آن، تبریک‌ها داخل خودِ ماژول گفتگو نوشته می‌شوند و این پنل فقط آن‌ها را از chat_message
+-- می‌خواند و نمایش می‌دهد. یعنی بات هیچ‌وقت مستقیماً روی جداول هسته نمی‌نویسد.
+--
+-- ⚠️ نکتهٔ صریح: schema درخواست این سه endpoint در docs/context/TeamyarInternalApiReference.md
+-- موجود نیست (نه dialog/add، نه group/get، نه assign/add ماژول گفتگو). نام فیلدهای payload زیر
+-- بر پایهٔ ستون‌های تاییدشدهٔ chat_dialogs/chat_dialog_view حدس زده شده و باید با schema واقعی
+-- تطبیق داده شود. هر سه payload عمداً در یک تابع جدا و در یک جا جمع شده‌اند تا اصلاحشان یک تغییر
+-- چندخطی باشد، و پاسخ خام هر فراخوانی در خروجی برمی‌گردد تا در اولین اجرای واقعی دیده شود.
 
-local CELEBRATION_TITLE_PREFIX = "تبریک تولد "
+local CHAT_MODULE_ID = 9
+local DIALOG_TYPE_GROUP = 1 -- chat_dialogs.TYPE: 0=خصوصی، 1=گروهی، 2=عمومی (تاییدشده در بات ۹۴۲)
 
-local function celebration_title(person_name, jalali_date)
-    return CELEBRATION_TITLE_PREFIX .. tostring(person_name) .. " — " .. tostring(jalali_date)
+local celebration_group_id = config_number("celebration_group_id")
+
+local function celebration_topic(person_name, jalali_date)
+    return "تبریک تولد " .. tostring(person_name) .. " — " .. tostring(jalali_date)
 end
 
-local function find_celebration_task(title)
+local function call_chat_api(path, payload)
+    local ok, result = pcall(function()
+        return teamyar.call_api(CHAT_MODULE_ID, path, payload)
+    end)
+    if not ok then
+        return nil, tostring(result)
+    end
+    if type(result) == "table" and result.success == false then
+        local detail = "نامشخص"
+        if type(result.error) == "table" and result.error.message ~= nil then
+            detail = tostring(result.error.message)
+        end
+        return result, detail
+    end
+    return result, nil
+end
+
+-- استخراج شناسه از پاسخ API بدون فرض دربارهٔ شکل دقیق پاسخ (data.id / data.dialog_id / id / ...)
+local function extract_id(response, keys)
+    if type(response) ~= "table" then return nil end
+    local containers = { response, response.data, response.result }
+    for _, container in ipairs(containers) do
+        if type(container) == "table" then
+            for _, key in ipairs(keys) do
+                local n = tonumber(container[key])
+                if n ~= nil and n > 0 then return n end
+            end
+        end
+    end
+    return nil
+end
+
+local function find_celebration_dialog(topic)
     local rows, err = fetch_rows([[
-SELECT t.ID,
-  (SELECT s.ID FROM todo_task_steps s WHERE s.TASK_ID = t.ID ORDER BY s.ID DESC LIMIT 1) AS last_step_id
-FROM todo_task t
-WHERE t.TASK_TITLE = ? AND COALESCE(t.ARCHIVE_FLAG, 0) = 0
-ORDER BY t.ID DESC
+SELECT cd.ID, COALESCE(cd.GROUP_ID, 0) AS group_id
+FROM chat_dialogs cd
+WHERE cd.TOPIC = ? AND COALESCE(cd.deleted, 0) = 0
+ORDER BY cd.ID DESC
 LIMIT 1
-]], { title })
-    if rows == nil then return nil, nil, tostring(err) end
-    if #rows == 0 then return nil, nil, nil end
-    return tonumber(rows[1][1]), tonumber(rows[1][2]), nil
+]], { topic })
+    if rows == nil then return nil, tostring(err) end
+    if #rows == 0 then return nil, nil end
+    return tonumber(rows[1][1]), nil
 end
 
-local function load_celebration_messages(task_id)
+local function load_celebration_messages(dialog_id)
     local rows = fetch_rows([[
-SELECT c.AUTHOR_NAME, COALESCE(pm.fullname, c.AUTHOR_NAME) AS author_full, c.DESCRIPTION,
-  REPORT_FN_JDATE(c.DATE_CREATE, '/') AS jdate,
-  ]] .. sql_time_of_day("c.DATE_CREATE") .. [[ AS jtime
-FROM todo_task_comments c
-LEFT JOIN profile_main pm ON pm.id = c.AUTHOR_ID
-WHERE c.TASK_ID = ?
-ORDER BY c.ID ASC
+SELECT COALESCE(pm.fullname, N'همکار') AS author_name, cm.CONTENT,
+  REPORT_FN_JDATE(cm.DATE_CREATE, '/') AS jdate,
+  ]] .. sql_time_of_day("cm.DATE_CREATE") .. [[ AS jtime
+FROM chat_message cm
+LEFT JOIN profile_main pm ON pm.id = cm.USER_ID
+WHERE cm.DIALOG_ID = ?
+ORDER BY cm.DATE_CREATE ASC, cm.ID ASC
 LIMIT 200
-]], { task_id })
+]], { dialog_id })
     local messages = {}
     if rows ~= nil then
         for _, r in ipairs(rows) do
             table.insert(messages, {
-                author = r[2] or r[1] or "-",
-                text = r[3] or "",
-                date = r[4] or "",
-                clock = r[5] or ""
+                author = r[1] or "همکار",
+                text = r[2] or "",
+                date = r[3] or "",
+                clock = r[4] or ""
             })
         end
     end
     return messages
 end
 
+local function load_celebration_members(dialog_id)
+    local rows = fetch_rows([[
+SELECT COALESCE(pm.fullname, N'همکار') AS member_name
+FROM chat_dialog_view cdv
+LEFT JOIN profile_main pm ON pm.id = cdv.USER_ID
+WHERE cdv.DIALOG_ID = ?
+ORDER BY pm.fullname
+LIMIT 200
+]], { dialog_id })
+    local members = {}
+    if rows ~= nil then
+        for _, r in ipairs(rows) do table.insert(members, r[1] or "همکار") end
+    end
+    return members
+end
+
+-- گروه پیش‌فرض گفتگو: اول از bot_config، وگرنه اولین گروه فعالی که /api/group/get برمی‌گرداند
+local function resolve_group_id()
+    if celebration_group_id ~= nil then return celebration_group_id, nil end
+    local response, err = call_chat_api("/api/group/get", {})
+    if err ~= nil then return nil, err end
+    local direct = extract_id(response, { "group_id", "id", "ID", "GROUP_ID" })
+    if direct ~= nil then return direct, nil end
+    if type(response) == "table" then
+        local lists = { response.data, response.result, response.groups, response }
+        for _, list in ipairs(lists) do
+            if type(list) == "table" and type(list[1]) == "table" then
+                local first = extract_id({ data = list[1] }, { "group_id", "id", "ID", "GROUP_ID" })
+                if first ~= nil then return first, nil end
+            end
+        end
+    end
+    return nil, "گروه گفتگویی برای ساخت گفتگوی تبریک پیدا نشد"
+end
+
 -- POST type=celebrate → «به گفتگوی تبریک بپیوند» (اگر گفتگو نبود، ساخته می‌شود)
 if action_type == "celebrate" then
     local target_name = tostring(input.person_name or "")
     local target_date = tostring(input.person_date or "")
-    local message = tostring(input.message or "")
 
     if target_name == "" or target_date == "" then
         teamyar.write_result(json.encode({ ok = false, error = "نام و تاریخ تولد مشخص نشده است" }))
         return
-    end
-    if message == "" then
-        teamyar.write_result(json.encode({ ok = false, error = "متن تبریک را بنویسید" }))
-        return
-    end
-    if #message > 4000 then
-        message = message:sub(1, 4000)
     end
     if personnel == nil then
         teamyar.write_result(json.encode({ ok = false, error = identity_err or "کاربر شناسایی نشد" }))
         return
     end
 
-    local title = celebration_title(target_name, target_date)
-    local task_id, step_id, lookup_err = find_celebration_task(title)
+    local topic = celebration_topic(target_name, target_date)
+    local dialog_id, lookup_err = find_celebration_dialog(topic)
     if lookup_err ~= nil then
         teamyar.write_result(json.encode({ ok = false, error = "خطا در جست‌وجوی گفتگو: " .. lookup_err }))
         return
     end
 
-    local api_ok, api_res
-    if task_id ~= nil and step_id ~= nil then
-        api_ok, api_res = pcall(function()
-            return teamyar.call_api(8, "/api/todo/task/comment/add", {
-                task_id = task_id,
-                task_step_id = step_id,
-                comment_content = message,
-                type = 0,
-                author_id = personnel.profile_id
-            })
-        end)
-    else
-        if celebration_wf_id == nil or celebration_topic_id == nil then
+    local created = false
+    local create_response = nil
+    if dialog_id == nil then
+        local group_id, group_err = resolve_group_id()
+        if group_id == nil then
             teamyar.write_result(json.encode({
                 ok = false,
-                error = "گفتگوی تبریک هنوز ساخته نشده و تنظیمات ساخت آن کامل نیست. " ..
-                    "لطفاً celebration_wf_id و celebration_topic_id را در bot_config این بات تنظیم کنید."
+                error = "گفتگو ساخته نشد: " .. tostring(group_err) ..
+                    " — می‌توانید celebration_group_id را در bot_config این بات تنظیم کنید."
             }))
             return
         end
-        api_ok, api_res = pcall(function()
-            return teamyar.call_api(8, "/api/todo/taskadd", {
-                wf_id = celebration_wf_id,
-                topic_id = celebration_topic_id,
-                task_title = title,
-                comment = message,
-                task_type = 1
-            })
-        end)
-    end
-
-    if not api_ok then
-        teamyar.write_result(json.encode({ ok = false, error = "خطا در ثبت پیام: " .. tostring(api_res) }))
-        return
-    end
-    if type(api_res) == "table" and api_res.success == false then
-        local detail = "نامشخص"
-        if type(api_res.error) == "table" and api_res.error.message ~= nil then
-            detail = tostring(api_res.error.message)
+        local response, api_err = call_chat_api("/api/dialog/add", {
+            topic = topic,
+            group_id = group_id,
+            type = DIALOG_TYPE_GROUP,
+            author_id = personnel.profile_id,
+            status = 0
+        })
+        create_response = response
+        if api_err ~= nil then
+            teamyar.write_result(json.encode({
+                ok = false,
+                error = "ساخت گفتگو انجام نشد: " .. api_err,
+                api_response = response
+            }))
+            return
         end
-        teamyar.write_result(json.encode({ ok = false, error = "ثبت پیام انجام نشد: " .. detail }))
-        return
+        dialog_id = extract_id(response, { "dialog_id", "id", "ID", "DIALOG_ID" })
+        if dialog_id == nil then
+            -- بعضی APIها فقط success برمی‌گردانند؛ گفتگوی تازه‌ساخته را با همان TOPIC پیدا می‌کنیم
+            dialog_id = select(1, find_celebration_dialog(topic))
+        end
+        if dialog_id == nil then
+            teamyar.write_result(json.encode({
+                ok = false,
+                error = "گفتگو ساخته شد ولی شناسهٔ آن برگردانده نشد",
+                api_response = response
+            }))
+            return
+        end
+        created = true
     end
 
-    local new_task_id = task_id
-    if new_task_id == nil then
-        new_task_id = select(1, find_celebration_task(title))
+    local assign_response, assign_err = call_chat_api("/api/assign/add", {
+        dialog_id = dialog_id,
+        user_id = personnel.profile_id,
+        user_ids = { personnel.profile_id }
+    })
+    if assign_err ~= nil then
+        teamyar.write_result(json.encode({
+            ok = false,
+            error = "پیوستن به گفتگو انجام نشد: " .. assign_err,
+            dialog_id = dialog_id,
+            created = created,
+            api_response = assign_response
+        }))
+        return
     end
 
     teamyar.write_result(json.encode({
         ok = true,
-        joined = (task_id ~= nil),
-        task_id = new_task_id,
-        messages = new_task_id and load_celebration_messages(new_task_id) or {}
+        created = created,
+        joined = true,
+        dialog_id = dialog_id,
+        members = load_celebration_members(dialog_id),
+        messages = load_celebration_messages(dialog_id),
+        create_response = create_response,
+        assign_response = assign_response
     }))
     return
 end
 
--- GET type=celebration_thread → خواندن پیام‌های یک گفتگوی تبریک
+-- GET type=celebration_thread → وضعیت و پیام‌های یک گفتگوی تبریک
 if action_type == "celebration_thread" then
     local target_name = tostring(input.person_name or "")
     local target_date = tostring(input.person_date or "")
@@ -457,17 +609,18 @@ if action_type == "celebration_thread" then
         teamyar.write_result(json.encode({ ok = false, error = "نام و تاریخ تولد مشخص نشده است" }))
         return
     end
-    local title = celebration_title(target_name, target_date)
-    local task_id, _, lookup_err = find_celebration_task(title)
+    local topic = celebration_topic(target_name, target_date)
+    local dialog_id, lookup_err = find_celebration_dialog(topic)
     if lookup_err ~= nil then
         teamyar.write_result(json.encode({ ok = false, error = "خطا در جست‌وجوی گفتگو: " .. lookup_err }))
         return
     end
     teamyar.write_result(json.encode({
         ok = true,
-        exists = (task_id ~= nil),
-        task_id = task_id,
-        messages = task_id and load_celebration_messages(task_id) or {}
+        exists = (dialog_id ~= nil),
+        dialog_id = dialog_id,
+        members = dialog_id and load_celebration_members(dialog_id) or {},
+        messages = dialog_id and load_celebration_messages(dialog_id) or {}
     }))
     return
 end
@@ -1035,32 +1188,397 @@ end
 -- پیام روزانه: چرخشی و قطعی بر پایهٔ روزِ سال شمسی (JYDAY از report_dimdate) — نه تصادفی، تا همهٔ
 -- همکاران در یک روز پیام یکسان ببینند و پیام هر روز عوض شود.
 local DAILY_MESSAGES = {
-    "امروز لازم نیست کامل باشی؛ همین که هستی و ادامه می‌دهی کافی است.",
-    "یک نفس عمیق، یک لیوان آب، و بعد اولین کار کوچک. روز از همین‌جا راه می‌افتد.",
-    "کار خوب معمولاً بی‌سروصداست. اگر کسی امروز ندیدش، بی‌ارزش نشده.",
-    "هر روز لازم نیست روز اوج باشد؛ روزهای معمولی هم ما را جلو می‌برند.",
-    "اگر جایی گیر کردی، پرسیدن نشانهٔ ضعف نیست — سریع‌ترین راه است.",
-    "به همکارت که امروز کارش را خوب انجام داد، بگو دیدی‌اش. دیده‌شدن انرژی می‌سازد.",
-    "کار امروز را با کار دیروزت مقایسه کن، نه با کار دیگران.",
-    "استراحت هم بخشی از کار است؛ ذهن خسته تصمیم خوب نمی‌گیرد.",
-    "شروع کردن سخت‌تر از ادامه دادن است. پنج دقیقه شروع کن، بقیه‌اش می‌آید.",
-    "یک «ممنونم» ساده، بیشتر از یک جلسهٔ طولانی روحیه می‌دهد.",
-    "اشتباه امروز، تجربهٔ ماه بعد است — به‌شرطی که پنهانش نکنی.",
-    "کارهای کوچک تمام‌شده، بهتر از کارهای بزرگ نیمه‌تمام‌اند.",
-    "امروز یک چیز را ساده‌تر کن؛ همین یک قدم برای تیم می‌ماند.",
-    "وقتی همه چیز شلوغ است، مهم‌ترین کار را انتخاب کن، نه فوری‌ترین را.",
-    "حال خوبِ تیم از جمع حال خوب آدم‌هاست؛ سهم تو هم مهم است.",
-    "قبل از پایان روز، یک کار را کامل ببند. حس خوبش را با خودت ببر خانه.",
-    "اگر امروز کندتر پیش رفتی، شاید داری چیز سختی را یاد می‌گیری.",
-    "به خودت هم همان‌قدر مهربان باش که به همکارت هستی.",
-    "یک سلام گرم در ابتدای روز، کل فضای کار را عوض می‌کند.",
-    "پایان هفته نزدیک است؛ کارهای باز را بنویس تا ذهنت آزاد شود."
+    -- فروردین
+    "سال نو مبارک. امسال قرار نیست همه‌چیز یک‌شبه عوض شود؛ یک قدم بهتر از پارسال کافی است.", -- 1
+    "روزهای اول سال برای برنامه‌ریزی است، نه برای فشار آوردن به خودت.", -- 2
+    "یک هدف کوچک برای امسال بنویس که واقعاً به آن برسی؛ بهتر از ده هدف بزرگ روی کاغذ است.", -- 3
+    "دید و بازدید عید هم بخشی از کار است: رابطه‌های خوب، کار سال را راحت‌تر می‌کنند.", -- 4
+    "اگر این روزها ریتم کارت کند است، طبیعی است. ریتم برمی‌گردد.", -- 5
+    "بهار یعنی همه‌چیز از نو شروع می‌شود؛ پروژه‌ای که پارسال زمین ماند هم می‌تواند.", -- 6
+    "امسال یک مهارت تازه یاد بگیر — حتی اگر ماهی یک ساعت.", -- 7
+    "تعطیلات برای برگشتن با انرژی است، نه برای عقب افتادن. عقب نیفتادی.", -- 8
+    "اولین روز کاری بعد از تعطیلات را با ساده‌ترین کار شروع کن.", -- 9
+    "میز کارت را مرتب کن؛ ذهن مرتب از همین‌جا شروع می‌شود.", -- 10
+    "اگر همکار تازه‌ای به تیم اضافه شده، اولین کسی باش که به او خوش‌آمد می‌گوید.", -- 11
+    "سالی که گذشت را یک بار مرور کن: چه چیزی واقعاً جواب داد؟", -- 12
+    "روز طبیعت مبارک. یک روز دور از صفحه‌نمایش، بهترین هدیه به ذهنت است.", -- 13
+    "برگشتن به کار بعد از یک روز در طبیعت، همیشه آسان‌تر است.", -- 14
+    "نیمهٔ فروردین است؛ یکی از هدف‌های امسالت را همین هفته شروع کن.", -- 15
+    "روز را با تقویم شروع کن، نه با ایمیل. تقویم می‌گوید چه چیزی مهم است.", -- 16
+    "اگر کاری را مدام عقب می‌اندازی، شاید فقط باید کوچکش کنی.", -- 17
+    "بهار وقت خوبی است برای مرتب کردن فایل‌ها و پوشه‌هایی که سال قبل رها شدند.", -- 18
+    "هفته‌ای یک بار با کسی که کمتر می‌بینی‌اش قهوه بخور؛ بهترین ایده‌ها همان‌جا می‌آیند.", -- 19
+    "پیشرفت همیشه دیدنی نیست؛ گاهی فقط یعنی امروز کمتر گیر کردی.", -- 20
+    "اگر امروز خسته‌ای، کارهای فکری را بگذار برای فردا و کارهای ساده را ببند.", -- 21
+    "هوای خوب بهار را از دست نده؛ ناهار را بیرون بخور.", -- 22
+    "سوال پرسیدن در روزهای اول یک کار، ارزان‌تر از اصلاح کردن در روزهای آخر است.", -- 23
+    "یک کار نیمه‌تمام از پارسال را انتخاب کن و همین هفته تمامش کن.", -- 24
+    "تیم خوب یعنی کسی تنها گیر نمی‌کند. اگر گیر کردی، بگو.", -- 25
+    "برنامهٔ امروزت را صبح بنویس و شب تیک بزن. همین دو دقیقه، روزت را عوض می‌کند.", -- 26
+    "کاری که بلدی را به یک نفر دیگر هم یاد بده؛ دانش وقتی تقسیم شود، بیشتر می‌شود.", -- 27
+    "آخر فروردین است؛ ببین از برنامهٔ اول سال چقدر جلو رفته‌ای — بدون سرزنش، فقط برای اصلاح.", -- 28
+    "کار تکراری داری که می‌شود خودکارش کرد؟ همین امروز نیم ساعت رویش بگذار.", -- 29
+    "تشکر از کسی که کارش را خوب انجام داد، هیچ هزینه‌ای ندارد و همه‌چیز را عوض می‌کند.", -- 30
+    "ماه اول سال تمام شد. شروع خوب یعنی همین‌که هنوز اینجایی.", -- 31
+    -- اردیبهشت
+    "اردیبهشت، بهترین ماه سال است. یک بار هم که شده کار را زودتر تمام کن و از هوا لذت ببر.", -- 32
+    "امروز به‌جای ایمیل، حضوری حرف بزن. سریع‌تر است.", -- 33
+    "یک جلسهٔ اضافه را حذف کن؛ به همه لطف کرده‌ای.", -- 34
+    "اگر کاری بیشتر از دو دقیقه وقت نمی‌برد، همین حالا انجامش بده.", -- 35
+    "نه گفتن به کار اضافه، یعنی بله گفتن به کاری که واقعاً مهم است.", -- 36
+    "کیفیت کار با ساعت کار یکی نیست. هشت ساعت متمرکز از دوازده ساعت پراکنده بهتر است.", -- 37
+    "یک نفر امروز به کمکت نیاز دارد و رویش نمی‌شود بگوید. تو بپرس.", -- 38
+    "کار تیمی یعنی وقتی کار خوب پیش رفت، اسم همه برده شود.", -- 39
+    "تمرکز یعنی بستن ده تب اضافه. همین حالا امتحان کن.", -- 40
+    "کار، وقتی معنا دارد که کسی از نتیجه‌اش راحت‌تر شود. امروز کارِ چه کسی را راحت می‌کنی؟", -- 41
+    "روز کارگر مبارک — به همهٔ کسانی که کار با دستشان ساخته می‌شود.", -- 42
+    "روز معلم مبارک. هرکسی چیزی به تو یاد داده معلم توست؛ امروز یادی از او کن.", -- 43
+    "یاد گرفتن تمام نمی‌شود. هر پروژه یک کلاس است.", -- 44
+    "نصف اردیبهشت گذشت؛ هنوز وقت هست برای کاری که می‌خواستی شروع کنی.", -- 45
+    "اگر جلسه‌ای بدون نتیجه تمام شد، ایراد از آدم‌ها نیست، از نداشتن دستور جلسه است.", -- 46
+    "بازخورد دادن سخت است، نگفتنش سخت‌تر. محترمانه بگو.", -- 47
+    "بازخورد گرفتن هم مهارت است: اول گوش کن، بعد توضیح بده.", -- 48
+    "کارت را طوری بنویس که اگر فردا نبودی، کسی گیج نشود.", -- 49
+    "مستندسازی، هدیه‌ای است که به خودِ شش‌ماه‌بعدت می‌دهی.", -- 50
+    "یک کار سخت را صبح انجام بده؛ بقیهٔ روز سبک می‌شود.", -- 51
+    "اگر خسته‌ای، ده دقیقه پیاده‌روی بهتر از یک قهوهٔ دیگر است.", -- 52
+    "تفاوت آدم حرفه‌ای، در روزهای بی‌حوصلگی معلوم می‌شود.", -- 53
+    "یک کار خوبِ امروز، بهتر از یک برنامهٔ عالی برای فرداست.", -- 54
+    "اگر می‌توانی کار کسی را راحت‌تر کنی، همان مهم‌ترین کار امروزت است.", -- 55
+    "جواب دادن سریع به همکار، خودش یک نوع احترام است.", -- 56
+    "تقویمت را نگاه کن: وقتی برای فکر کردن گذاشته‌ای یا فقط جلسه؟", -- 57
+    "کمال‌گرایی دشمن تحویل دادن است. خوب و تمام‌شده، بهتر از عالی و نیمه‌کاره است.", -- 58
+    "اگر امروز چیزی یاد گرفتی، یک خط بنویسش. سال دیگر ممنون خودت می‌شوی.", -- 59
+    "آدم‌ها یادشان می‌ماند چطور با آن‌ها رفتار کردی، نه اینکه چقدر سریع بودی.", -- 60
+    "یک کار را کامل ببند، بعد سراغ بعدی برو. نیمه‌کارهای زیاد انرژی می‌برند.", -- 61
+    "اردیبهشت رو به پایان است؛ یک عکس از این هوا بگیر، وسط تابستان لازمت می‌شود.", -- 62
+    -- خرداد
+    "خرداد شروع می‌شود و هوا گرم‌تر؛ کار سنگین را برای ساعت‌های خنک‌تر بگذار.", -- 63
+    "آب بیشتری بخور. ساده است ولی روی تمرکزت اثر دارد.", -- 64
+    "اگر بچه‌ات امتحان دارد، بگو؛ تیم می‌فهمد.", -- 65
+    "حواست به همکاری باشد که این روزها ساکت‌تر از همیشه است.", -- 66
+    "کار خوب تکرارشدنی است. اگر یک بار جواب داد، بنویس چطور.", -- 67
+    "سه ماه از سال گذشت؛ یک ربع‌سال کامل. چه چیزی واقعاً جلو رفت؟", -- 68
+    "برنامهٔ سه‌ماههٔ بعدی را ساده بگیر: سه کار، نه سی کار.", -- 69
+    "جلسه‌ای که می‌شد ایمیل باشد، وقت همه را گرفته. دفعهٔ بعد ایمیل بفرست.", -- 70
+    "اگر کاری را دوست نداری ولی لازم است، اولش انجامش بده تا فکرت را نخورد.", -- 71
+    "کسی که سوال می‌پرسد ضعیف نیست؛ کسی که نمی‌پرسد و اشتباه می‌کند گران‌تر تمام می‌شود.", -- 72
+    "یک ساعت بدون اعلان کار کن. ببین چقدر فرق دارد.", -- 73
+    "کارِ درست را انجام دادن، از سریع انجام دادن مهم‌تر است.", -- 74
+    "نیمهٔ خرداد است؛ اگر مرخصی تابستان می‌خواهی، همین حالا هماهنگ کن.", -- 75
+    "مرخصی گرفتن حق توست، نه لطف کسی. ولی زودتر هماهنگ کن تا کار کسی نخوابد.", -- 76
+    "ذهن هم مثل بدن، بعد از تلاش زیاد به ریکاوری نیاز دارد.", -- 77
+    "یک کار قدیمی که همه از آن می‌نالند را امروز درست کن.", -- 78
+    "اگر همه‌چیز فوری است، یعنی هیچ‌چیز فوری نیست. اولویت‌بندی کن.", -- 79
+    "صادق بودن دربارهٔ زمان‌بندی، از خوش‌بین بودن بهتر است.", -- 80
+    "تحویل به‌موقعِ کار متوسط، از تحویل دیرِ کار عالی ارزشمندتر است.", -- 81
+    "یک نفر امروز کارش را بی‌سروصدا خوب انجام داد. پیدایش کن و بگو دیدی.", -- 82
+    "با خودت هم صادق باش: کدام کار را داری از آن فرار می‌کنی؟", -- 83
+    "تغییر عادت سخت است؛ از یک عادت کوچک شروع کن.", -- 84
+    "کار گروهی یعنی گاهی راه دیگری را قبول کنی، حتی اگر راه خودت بهتر بود.", -- 85
+    "اگر پروژه‌ای بوی خطر می‌دهد، همین حالا بگو. زودتر گفتن یعنی ارزان‌تر حل کردن.", -- 86
+    "فهرستی از کارهایی بنویس که دیگر لازم نیست انجام شوند. حذف هم پیشرفت است.", -- 87
+    "آخر هفته را واقعاً آخر هفته کن؛ ذهن خاموش‌نشده، شنبه گران تمام می‌شود.", -- 88
+    "کسی که تازه آمده هنوز سوال‌های ساده دارد. صبور باش؛ تو هم داشتی.", -- 89
+    "کیفیت رابطه‌های کاری، سرعت کار را تعیین می‌کند.", -- 90
+    "آخرین روزهای بهار است؛ یک کار نیمه‌تمام بهاری را ببند.", -- 91
+    "تابستان دارد می‌آید و ریتم کار عوض می‌شود. آماده باش، غافلگیر نشو.", -- 92
+    "بهار تمام شد. ربع اول سال را بستی — همین یعنی جلو رفتی.", -- 93
+    -- تیر
+    "تابستان شروع شد. گرما بهانه نیست، ولی حواست به خودت باشد.", -- 94
+    "ساعت‌های اول صبح بهترین ساعت‌های تابستان‌اند. کار مهم را همان‌جا بگذار.", -- 95
+    "اگر همکارت مرخصی است، کارش را زمین نگذار — و از او هم همین انتظار را داشته باش.", -- 96
+    "جای خالی یک نفر در تیم، فرصت یاد گرفتن کار اوست.", -- 97
+    "یک لیوان آب، یک کشش کوتاه، و برگرد سر کار.", -- 98
+    "کار از راه دور یا حضوری فرقی نمی‌کند؛ قابل‌اعتماد بودن مهم است.", -- 99
+    "صدمین روز سال است. صد روز دیگر هم می‌گذرد؛ امروز را حساب کن.", -- 100
+    "اگر برنامهٔ سالت را فراموش کرده‌ای، همین حالا یک بار بازش کن.", -- 101
+    "کارهای تکراری را دسته‌بندی کن و یکجا انجام بده؛ وقت کمتری می‌برد.", -- 102
+    "تمرکز مهارت است نه استعداد. با تمرین بیشتر می‌شود.", -- 103
+    "یک کار سخت را به سه کار کوچک بشکن. ترسش می‌ریزد.", -- 104
+    "اگر جلسه طول کشید، احتمالاً تصمیم‌گیرنده در جلسه نبوده.", -- 105
+    "تصمیم گرفتن با اطلاعات ناقص بخشی از کار است. منتظر کامل شدن نمان.", -- 106
+    "اشتباه را زود اعلام کن؛ پنهانش کنی بزرگ‌تر می‌شود.", -- 107
+    "کسی که اشتباهش را می‌گوید قابل‌اعتمادتر است، نه ضعیف‌تر.", -- 108
+    "یک روز در هفته را بدون جلسه نگه دار. کار عمیق همان‌جا اتفاق می‌افتد.", -- 109
+    "نیمهٔ تیر است؛ گرمای اوج نزدیک است. برنامهٔ کاری‌ات را واقع‌بینانه ببند.", -- 110
+    "سلام کردن به همه، حتی کسانی که با آن‌ها کار نداری، فضا را عوض می‌کند.", -- 111
+    "یک کار خوبِ کوچک، از یک ایدهٔ بزرگِ اجرانشده ارزشمندتر است.", -- 112
+    "اگر امروز حالت خوب نیست، لازم نیست وانمود کنی. فقط کارِ سبک‌تر انتخاب کن.", -- 113
+    "به قولت دربارهٔ زمان، مثل قولت دربارهٔ کیفیت پایبند باش.", -- 114
+    "ماهی یک بار مسیر کارت را با مدیرت مرور کن. حدس زدن انرژی می‌برد.", -- 115
+    "هیچ‌کس ذهن تو را نمی‌خواند. اگر چیزی می‌خواهی، بگو.", -- 116
+    "کارِ دیده‌نشده هم اثر دارد؛ زیربنا همیشه زیر خاک است.", -- 117
+    "یک همکار را امروز به ناهار دعوت کن. همین.", -- 118
+    "کاری که بلد نیستی را قبول کن، ولی بگو که بلد نیستی و می‌خواهی یاد بگیری.", -- 119
+    "سرعت بدون جهت فقط خستگی است. مطمئن شو مسیر درست است.", -- 120
+    "یک ساعت مرتب کردن اطلاعات، ده ساعت جست‌وجو را حذف می‌کند.", -- 121
+    "اگر روزت خراب شد، لازم نیست هفته‌ات را هم خراب کنی.", -- 122
+    "آخر تیر است؛ نصف تابستان مانده. برنامهٔ مرخصی‌ات را قطعی کن.", -- 123
+    "ماه چهارم تمام شد؛ یک‌سوم سال گذشت.", -- 124
+    -- مرداد
+    "مرداد، گرم‌ترین ماه. انتظار زیاد از خودت در گرما منصفانه نیست.", -- 125
+    "کولر خنک است ولی هوای تازه لازم داری؛ چند دقیقه بیرون برو.", -- 126
+    "تابستان وقت خوبی برای کارهای عقب‌افتاده است، چون جلسه‌ها کمترند.", -- 127
+    "یک فرایند کاری را ساده کن؛ همه سال بعد ازت ممنون می‌شوند.", -- 128
+    "تمرکز روی چیزی که در کنترل توست، آرامش می‌آورد.", -- 129
+    "نگرانی برای چیزی که هنوز نشده، انرژی امروز را می‌گیرد.", -- 130
+    "یک کار را امروز کامل تمام کن، حتی اگر کوچک باشد.", -- 131
+    "کسی که همیشه در دسترس است، معمولاً وقت فکر کردن ندارد. مرزت را داشته باش.", -- 132
+    "«الان نمی‌توانم، دو ساعت دیگر» هم یک جواب محترمانه است.", -- 133
+    "اگر پیام کاری بعد از ساعت کار می‌فرستی، بنویس «فوری نیست».", -- 134
+    "استراحت ناهار را واقعاً استراحت کن؛ پشت میز غذا خوردن استراحت نیست.", -- 135
+    "نصف مرداد گذشت. یک کار خوب برای خودت انجام بده، نه فقط برای کار.", -- 136
+    "یاد گرفتن از همکار، سریع‌ترین راه یاد گرفتن است.", -- 137
+    "اگر کسی کارش را بهتر از تو انجام می‌دهد، ازش بپرس چطور.", -- 138
+    "رقابت درون تیم، تیم را کند می‌کند. همکاری سریع‌ترش می‌کند.", -- 139
+    "ایدهٔ کوچکی برای بهتر شدن کارت داری؟ بنویس و بفرست.", -- 140
+    "هیچ ایده‌ای احمقانه نیست وقتی هدفش بهتر شدن کار باشد.", -- 141
+    "صبر هم مهارت است؛ بعضی کارها فقط زمان می‌خواهند.", -- 142
+    "اگر امروز کند پیش رفتی، شاید داری چیز سختی یاد می‌گیری.", -- 143
+    "سکوت طولانی در کار تیمی معمولاً یعنی کسی گیر کرده. بپرس.", -- 144
+    "یک نفر امروز به یک تشویق ساده نیاز دارد. حدس بزن کیست.", -- 145
+    "کاری که به تعویق می‌اندازی هر روز سنگین‌تر می‌شود. امروز شروعش کن.", -- 146
+    "تفاوت شلوغی و بهره‌وری را بدان؛ شلوغی خستگی می‌آورد، بهره‌وری نتیجه.", -- 147
+    "جلسهٔ تکراری‌ای در تقویمت هست که دیگر لازم نیست؟ حذفش کن.", -- 148
+    "اگر کارت را دوست داری، مراقب باش زیاده‌روی نکنی. فرسودگی سراغ همه می‌آید.", -- 149
+    "صد و پنجاهمین روز سال. ایستادن و نگاه کردن به مسیر، ضرر نیست.", -- 150
+    "تشکر کتبی از یک همکار، بیشتر از تشکر شفاهی می‌ماند.", -- 151
+    "یک کار را طوری انجام بده که سال بعد هم به آن افتخار کنی.", -- 152
+    "کیفیت، جمعِ تصمیم‌های کوچکِ درست است.", -- 153
+    "آخر مرداد است؛ گرما کم‌کم می‌شکند. ریتمت را دوباره تنظیم کن.", -- 154
+    "ماه پنجم تمام شد. دو ماه دیگر، نصف سال پشت سر است.", -- 155
+    -- شهریور
+    "شهریور، آخرین ماه تابستان. کارهای تابستانی‌ات را ببند.", -- 156
+    "مدرسه‌ها نزدیک است؛ اگر بچه داری، برنامه‌ات را از حالا تنظیم کن.", -- 157
+    "نیمهٔ دوم سال نزدیک است. هدف‌های اول سال را یک بار مرور کن.", -- 158
+    "اگر به هدفی نرسیدی، یا هدف بزرگ بوده یا مسیر اشتباه. هیچ‌کدام یعنی تو ناتوانی نیست.", -- 159
+    "کار خوب نتیجهٔ تکرار است، نه الهام.", -- 160
+    "یک مهارت را انتخاب کن و تا آخر سال رویش کار کن.", -- 161
+    "مرتب کردن ایمیل‌های عقب‌افتاده، ذهن را سبک می‌کند.", -- 162
+    "کارهایی که هیچ‌وقت انجام نمی‌دهی را از فهرست حذف کن.", -- 163
+    "اگر پروژه‌ای بی‌نتیجه مانده، تمامش کن یا رسماً ببندش. بلاتکلیفی بدترین حالت است.", -- 164
+    "یک ساعت برنامه‌ریزی، ده ساعت دوباره‌کاری را حذف می‌کند.", -- 165
+    "با کسی که با او اختلاف داشتی حرف بزن. کدورت کاری، کار را کند می‌کند.", -- 166
+    "عذرخواهی کردن اعتبار را کم نمی‌کند؛ زیادش می‌کند.", -- 167
+    "کسی که همیشه حق با اوست، معمولاً کسی است که کم می‌پرسد.", -- 168
+    "یک تصمیم قدیمی را بازبینی کن؛ شرایط عوض شده است.", -- 169
+    "نیمهٔ شهریور. سه ماه تا پایان پاییز؛ برنامهٔ واقع‌بینانه بریز.", -- 170
+    "کاری که فقط تو بلدی، ریسک تیم است. به یک نفر دیگر هم یادش بده.", -- 171
+    "تعطیلات تابستان تمام شد؛ انرژی‌اش را برای پاییز نگه دار.", -- 172
+    "یک روز بدون شکایت. فقط امتحان کن.", -- 173
+    "کار سخت را با یک همکار انجام بده؛ نصف می‌شود.", -- 174
+    "اگر خسته‌ای، بگو خسته‌ام. تظاهر به انرژی، خسته‌کننده‌تر است.", -- 175
+    "یک جلسه را کوتاه‌تر تمام کن؛ همه ممنونت می‌شوند.", -- 176
+    "یاد گرفتن ابزار جدید اول کند است و بعد همه‌چیز را سریع می‌کند.", -- 177
+    "یک گزارش را ساده‌تر بنویس؛ اگر کسی نفهمد، گزارش کار نکرده.", -- 178
+    "نوشتن خوب، فکر کردن خوب است روی کاغذ.", -- 179
+    "کارِ نیمه‌تمامِ زیاد یعنی شروع کردن آسان‌تر از تمام کردن است. یکی را ببند.", -- 180
+    "یک نفر امسال خیلی به تو کمک کرده. امروز بهش بگو.", -- 181
+    "آخرین روزهای تابستان است؛ یک بار دیگر آفتاب را ببین.", -- 182
+    "برای پاییز یک هدف مشخص بنویس، نه یک آرزو.", -- 183
+    "مرور کارکرد ماهت را جدی بگیر؛ عدد درست حق توست.", -- 184
+    "اگر در کارکردت مغایرتی دیدی، همین حالا پیگیری کن، نه آخر سال.", -- 185
+    "تابستان تمام شد. نیمهٔ اول سال بسته شد — نصف راه را آمده‌ای.", -- 186
+    -- مهر
+    "مهر آمد. حال‌وهوای شروع دوباره فقط مال مدرسه نیست.", -- 187
+    "اول پاییز، بهترین وقت برای یک شروع تازه در کار است.", -- 188
+    "اگر بچه‌ات امروز اولین روز مدرسه‌اش است، روز مهمی داری. مبارک باشد.", -- 189
+    "پاییز یعنی ریتم منظم‌تر. از همین هفته برنامه‌ات را ثابت کن.", -- 190
+    "هوای خنک تمرکز را برمی‌گرداند. از این فرصت استفاده کن.", -- 191
+    "یک عادت خوب کاری را از امروز شروع کن؛ سه ماه تا پایان فصل وقت داری.", -- 192
+    "لباس گرم بردار؛ سرماخوردگی بهره‌وری را بیشتر از هر چیزی کم می‌کند.", -- 193
+    "اگر مریضی، بمان خانه. هم برای خودت بهتر است، هم برای بقیه.", -- 194
+    "مرخصی استعلاجی یعنی سلامت مهم‌تر از حضور است.", -- 195
+    "همکار جدیدی در تیم داری؟ اسمش را درست یاد بگیر و درست صدایش کن.", -- 196
+    "جزئیات کوچک، احترام بزرگ می‌سازند.", -- 197
+    "یک فرایند را مستند کن تا تازه‌واردها زودتر راه بیفتند.", -- 198
+    "آموزش دادن، بهترین راه فهمیدن است.", -- 199
+    "دویستمین روز سال. یک نفس عمیق و ادامه بده.", -- 200
+    "اگر کاری بیش از حد طول کشید، شاید تعریفش واضح نبوده. دوباره تعریفش کن.", -- 201
+    "سوال خوب، نصف جواب است.", -- 202
+    "برنامهٔ هفتگی داشته باش، نه فقط روزانه. تصویر بزرگ‌تر آرامش می‌دهد.", -- 203
+    "کاری را که سال‌هاست همان‌طور انجام می‌دهید، یک بار زیر سوال ببر.", -- 204
+    "«همیشه همین‌طور بوده» دلیل نیست.", -- 205
+    "نیمهٔ مهر است؛ هدف پاییزی‌ات چقدر جلو رفته؟", -- 206
+    "یک بازخورد مثبت به کسی بده که انتظارش را ندارد.", -- 207
+    "بازخورد منفی را خصوصی بده، تشویق را جلوی جمع.", -- 208
+    "حواست به تعادل باشد: کاری که همهٔ زندگی‌ات شود، دیر یا زود خسته‌ات می‌کند.", -- 209
+    "یک شب زودتر بخواب؛ فردا کل روزت فرق می‌کند.", -- 210
+    "کارت را با انرژی کامل شروع کن، نه با آخرین توان.", -- 211
+    "اگر جلسه‌ای برایت مفید نیست، محترمانه بگو و وقتت را پس بگیر.", -- 212
+    "نه گفتن محترمانه، مهارتی است که همه لازم داریم.", -- 213
+    "یک کار عقب‌افتاده را امروز ببند و خودت را راحت کن.", -- 214
+    "پاییز وقت جمع‌بندی است؛ فایل‌های امسالت را مرتب کن.", -- 215
+    "ماه اول پاییز تمام شد.", -- 216
+    -- آبان
+    "آبان، وسط پاییز. ریتم کار حالا باید جا افتاده باشد.", -- 217
+    "اگر هنوز ریتم پیدا نکرده‌ای، از یک برنامهٔ ساده شروع کن: سه کار در روز.", -- 218
+    "سه کار مهم در روز، از بیست کار در فهرست بهتر است.", -- 219
+    "هوای ابری دلیل نمی‌شود روزت خاکستری باشد.", -- 220
+    "یک موسیقی آرام هنگام کار، گاهی معجزه می‌کند.", -- 221
+    "اگر تمرکزت پریده، پنج دقیقه چشم‌هایت را از صفحه بگیر.", -- 222
+    "کار پشت میز بدن را خسته می‌کند حتی وقتی حرکت نمی‌کنی. هر ساعت بلند شو.", -- 223
+    "یک همکار امروز خبر خوبی دارد؛ برایش خوشحال باش.", -- 224
+    "حسادت کاری، انرژی خودت را می‌سوزاند نه دیگری را.", -- 225
+    "موفقیت همکارت، تهدید تو نیست.", -- 226
+    "یاد بگیر از دیگران بدون «ولی» تعریف کنی.", -- 227
+    "یک کار سخت را امروز شروع کن، حتی ده دقیقه.", -- 228
+    "شروع کردن سخت‌ترین بخش است. ادامه‌اش آسان‌تر می‌شود.", -- 229
+    "نیمهٔ آبان است. تا پایان سال کمتر از پنج ماه مانده.", -- 230
+    "اگر برنامهٔ امسالت جواب نداد، برنامهٔ سال بعد را از حالا واقع‌بینانه‌تر بنویس.", -- 231
+    "هفته‌ای یک ساعت برای یاد گرفتن بگذار؛ همین یک ساعت، سال بعد را می‌سازد.", -- 232
+    "کاری که امروز یاد می‌گیری، فردا وقتت را آزاد می‌کند.", -- 233
+    "مرتب بودن اطلاعات، احترام به وقت بقیه است.", -- 234
+    "یک فایل با اسم درست، ساعت‌ها جست‌وجو را حذف می‌کند.", -- 235
+    "اگر کسی از کارت تعریف کرد، فقط بگو ممنون. لازم نیست کوچکش کنی.", -- 236
+    "پذیرفتن تعریف هم مهارت است.", -- 237
+    "ماهی یک بار به خودت بگو چه کاری را خوب انجام دادی.", -- 238
+    "سخت‌گیری بی‌جا به خودت کیفیت را بالا نمی‌برد؛ فقط انرژی را می‌گیرد.", -- 239
+    "مقایسه کردن خودت با کسی که مسیرش فرق دارد، بی‌فایده است.", -- 240
+    "همکار قدیمی‌ای که مدت‌هاست ندیده‌ای را یک پیام بده.", -- 241
+    "رابطه‌های کاری هم مثل گیاه‌اند: بی‌رسیدگی خشک می‌شوند.", -- 242
+    "یک کار را امروز به کسی بسپار که بتواند یاد بگیرد.", -- 243
+    "سپردن کار ضعف نیست؛ ساختن تیم است.", -- 244
+    "آخر آبان است؛ هوا سردتر می‌شود، مراقب سلامتی‌ات باش.", -- 245
+    "ماه هشتم تمام شد.", -- 246
+    -- آذر
+    "آذر آمد و سرما جدی شد. صبح‌ها زودتر راه بیفت.", -- 247
+    "تاریکی زودهنگام غروب حالِ آدم را می‌گیرد؛ محیط کارت را روشن‌تر کن.", -- 248
+    "کم‌نور بودن محیط خستگی می‌آورد. جای روشن‌تری برای کار پیدا کن.", -- 249
+    "یک چای گرم با یک همکار وسط یک روز سرد، ارزشش را دارد.", -- 250
+    "آخر سال نزدیک است؛ کارهای بلاتکلیف را دسته‌بندی کن.", -- 251
+    "فهرستی از کارهایی بنویس که باید تا پایان سال تمام شوند.", -- 252
+    "واقع‌بین باش: هر چیزی که در فهرست است تا پایان سال تمام نمی‌شود.", -- 253
+    "حذف کردن از فهرست، به‌اندازهٔ اضافه کردن مهم است.", -- 254
+    "اگر پروژه‌ای تا پایان سال تمام نمی‌شود، همین حالا بگو، نه اسفند.", -- 255
+    "خبر بد را زود بده؛ زود گفتن راه‌حل می‌سازد.", -- 256
+    "نیمهٔ آذر است. سه هفته تا زمستان.", -- 257
+    "یک کار خوب برای سلامتی‌ات انجام بده؛ زمستان سخت‌تر می‌گذرد اگر بی‌حال باشی.", -- 258
+    "آب خوردن در زمستان هم مهم است، حتی وقتی تشنه نیستی.", -- 259
+    "اگر همکارت سرما خورده، به‌جای اصرار به آمدن، بگو استراحت کن.", -- 260
+    "تیم سالم، از تیم پرکار مهم‌تر است.", -- 261
+    "تصمیمی را که مدت‌هاست عقب انداخته‌ای، امروز بگیر.", -- 262
+    "تصمیم نگرفتن هم یک تصمیم است، معمولاً بدترینش.", -- 263
+    "کارِ خوبِ امروز را جشن بگیر، حتی کوچک.", -- 264
+    "جشن گرفتن پیروزی‌های کوچک، تیم را زنده نگه می‌دارد.", -- 265
+    "یک نفر امسال خیلی زحمت کشیده و کسی ندیده. تو ببین.", -- 266
+    "آخر سال وقت قدردانی است، نه فقط ارزیابی.", -- 267
+    "کارنامهٔ امسالت را خودت بنویس، قبل از اینکه کسی برایت بنویسد.", -- 268
+    "مرور کارکرد و مرخصی‌ات را عقب نینداز؛ آخر سال شلوغ می‌شود.", -- 269
+    "اگر مانده مرخصی داری، برنامه‌ریزی کن؛ سوختنش حیف است.", -- 270
+    "یک روز مرخصی در زمستان، به‌اندازهٔ یک هفته در تابستان می‌ارزد.", -- 271
+    "شب‌های بلند، وقت خوبی برای کتاب خواندن است.", -- 272
+    "یاد گرفتن فقط از کار نیست؛ از کتاب و آدم‌ها هم هست.", -- 273
+    "آخرین روزهای پاییز است؛ یک کار پاییزی را ببند.", -- 274
+    "فردا شب بلندترین شب سال است. زودتر کارت را جمع کن.", -- 275
+    "شب یلدا مبارک؛ امشب کنار خانواده باش، نه کنار لپ‌تاپ.", -- 276
+    -- دی
+    "زمستان شروع شد. سه ماه تا پایان سال.", -- 277
+    "اولین روز زمستان، وقت خوبی برای یک تصمیم کوچک و شدنی است.", -- 278
+    "سرما بهانه نیست، ولی بدنت را گرم نگه دار.", -- 279
+    "زمستان یعنی کارهای عمیق؛ جلسه‌ها کمترند، تمرکز بیشتر.", -- 280
+    "پروژهٔ فکری‌ای که وقت می‌خواست را همین حالا شروع کن.", -- 281
+    "اگر صبح‌ها بلند شدن سخت شده، شب زودتر بخواب. راه دیگری ندارد.", -- 282
+    "کار در سرما کندتر است؛ برنامه‌ات را واقع‌بینانه ببند.", -- 283
+    "یک قهوهٔ گرم و یک کار تمام‌شده، ترکیب خوبی است.", -- 284
+    "اگر امروز فقط یک کار مهم را تمام کنی، روز موفقی داشته‌ای.", -- 285
+    "کار زیاد نشانهٔ ارزشمند بودن نیست. نتیجه است که مهم است.", -- 286
+    "سالی یک بار، کل روند کارت را از بیرون نگاه کن.", -- 287
+    "اگر مسیرت را دوست نداری، حالا وقت گفتن است، نه سال بعد.", -- 288
+    "با مدیرت دربارهٔ سال بعد حرف بزن؛ حدس زدن به نفع کسی نیست.", -- 289
+    "هدفی برای سال بعد بنویس که کاملاً در کنترل خودت باشد.", -- 290
+    "نیمهٔ دی است. برنامهٔ سال بعد دارد بسته می‌شود؛ حرفت را بزن.", -- 291
+    "سکوت در جلسهٔ برنامه‌ریزی یعنی موافقت. اگر موافق نیستی، بگو.", -- 292
+    "ایده‌ای برای کم کردن هزینه یا وقت داری؟ همین امروز مطرحش کن.", -- 293
+    "کارِ ساده‌شده، بهترین هدیه به تیم سال بعد است.", -- 294
+    "مستندات را قبل از پایان سال به‌روز کن.", -- 295
+    "کارِ تحویل‌دادنی را زودتر از موعد آماده کن؛ آخر سال همه‌چیز شلوغ می‌شود.", -- 296
+    "اگر روزت خراب شد، فردا از نو. هر روز یک صفحهٔ تازه است.", -- 297
+    "مقایسهٔ امروزت با دیروزت، تنها مقایسهٔ منصفانه است.", -- 298
+    "یک همکار امروز به شنیده شدن نیاز دارد، نه به راه‌حل. فقط گوش کن.", -- 299
+    "سیصدمین روز سال. کمتر از دو ماه مانده.", -- 300
+    "اگر امسال چیزی یاد گرفتی که پارسال نمی‌دانستی، سال موفقی داشته‌ای.", -- 301
+    "فهرست دستاوردهای امسالت را بنویس؛ بیشتر از آن است که فکر می‌کنی.", -- 302
+    "فراموش نکن که خیلی از کارهای امسال بی‌سروصدا انجام شدند.", -- 303
+    "کسی را که امسال کمکت کرد، رسماً از او تشکر کن.", -- 304
+    "آخر دی است؛ ماه دهم هم تمام شد.", -- 305
+    "ده ماه پشت سر، دو ماه پیش رو. تمامش کن.", -- 306
+    -- بهمن
+    "بهمن آمد؛ سردترین روزها معمولاً همین‌جاست.", -- 307
+    "دو ماه تا سال نو. کارهای واقعی را از آرزوها جدا کن.", -- 308
+    "یک کار بزرگ را انتخاب کن و تا آخر سال تمامش کن. فقط یکی.", -- 309
+    "تمرکز روی یک چیز، بهتر از پراکندگی روی ده چیز است.", -- 310
+    "اگر کاری تا امروز شروع نشده، شاید اصلاً مهم نبوده. حذفش کن.", -- 311
+    "حذف کردن کارهای بی‌اهمیت، بزرگ‌ترین افزایش بهره‌وری است.", -- 312
+    "یک نفر در تیم امسال خیلی رشد کرده. بهش بگو که دیده‌ای.", -- 313
+    "دیدن رشد دیگران، خودش یک مهارت مدیریتی است.", -- 314
+    "اگر امسال کسی به تو یاد داد، سال بعد تو به کسی یاد بده.", -- 315
+    "نیمهٔ بهمن. برنامهٔ نوروز و مرخصی‌ها را از حالا هماهنگ کن.", -- 316
+    "هماهنگی زودهنگام مرخصی یعنی کسی آخر سال غافلگیر نشود.", -- 317
+    "کارهای تحویلی پایان سال را از امروز تکه‌تکه جلو ببر.", -- 318
+    "تلنبار کردن کار برای اسفند، یعنی اسفند بدی داشته باشی.", -- 319
+    "یک فایل، یک گزارش، یک فرایند: هر روز یکی را مرتب کن.", -- 320
+    "نظم، جمعِ کارهای کوچک روزانه است، نه یک نظافت بزرگ سالانه.", -- 321
+    "اگر چیزی امسال خوب پیش نرفت، بنویس چرا. همین یادداشت سال بعد را نجات می‌دهد.", -- 322
+    "شکستِ مستندنشده، دوباره تکرار می‌شود.", -- 323
+    "یک ریسک کوچک بپذیر؛ یاد گرفتن بدون ریسک سخت است.", -- 324
+    "اشتباه کردن در کارِ جدید طبیعی است؛ تکرارش نه.", -- 325
+    "کار تیمی یعنی هیچ‌کس تنها شکست نمی‌خورد.", -- 326
+    "اگر تیم به نتیجه رسید، نتیجهٔ همه است.", -- 327
+    "یک تشکر کوچک، ماه‌ها در ذهن آدم می‌ماند.", -- 328
+    "امروز به یک نفر بگو کارش چه تاثیری روی کار تو داشته.", -- 329
+    "آدم‌ها وقتی بدانند کارشان به چه درد می‌خورد، بهتر کار می‌کنند.", -- 330
+    "هدف روشن، از انگیزهٔ زیاد مهم‌تر است.", -- 331
+    "اگر نمی‌دانی چرا کاری را انجام می‌دهی، بپرس. حق توست.", -- 332
+    "یک ماه تا سال نو. جمع‌بندی را از همین حالا شروع کن.", -- 333
+    "آخرین ماه سال، ماه بستن است نه شروع کردن.", -- 334
+    "آخر بهمن است؛ ماه یازدهم هم گذشت.", -- 335
+    "یازده ماه پشت سر گذاشتی. ماه آخر را با آرامش تمام کن.", -- 336
+    -- اسفند
+    "اسفند آمد. آخرین ماه سال شلوغ‌ترین ماه است؛ آرام و منظم پیش برو.", -- 337
+    "فهرست کارهای پایان سال را بنویس و اولویت‌بندی کن.", -- 338
+    "هر کاری را نمی‌شود تا عید تمام کرد؛ همین حالا انتخاب کن کدام‌ها.", -- 339
+    "صادق بودن دربارهٔ آنچه تمام نمی‌شود، از قول دادن الکی بهتر است.", -- 340
+    "کارِ عقب‌افتاده را با یک همکار تقسیم کن؛ تنهایی سخت‌تر است.", -- 341
+    "یک روز را فقط به بستن کارهای کوچک اختصاص بده.", -- 342
+    "کارهای کوچکِ باز، بیشتر از کارهای بزرگ ذهن را مشغول می‌کنند.", -- 343
+    "خانه‌تکانی فقط برای خانه نیست؛ فایل‌ها و ایمیل‌هایت را هم تکان بده.", -- 344
+    "اشتراک‌ها و دسترسی‌های بی‌استفاده را همین حالا ببند.", -- 345
+    "یک گزارش سالانه از کارت بنویس، حتی اگر کسی نخواسته.", -- 346
+    "نوشتن دستاوردها، اعتمادبه‌نفس سال بعد را می‌سازد.", -- 347
+    "مانده مرخصی‌ات را بررسی کن؛ فرصت استفاده دارد تمام می‌شود.", -- 348
+    "کارکرد سالت را یک بار کامل مرور کن و مغایرت‌ها را پیگیری کن.", -- 349
+    "حقِ خودت را با آرامش و مستند پیگیری کن، نه با عجله در روزهای آخر.", -- 350
+    "نیمهٔ اسفند. بازار شلوغ است و ذهن‌ها پراکنده؛ حواست به کیفیت کار باشد.", -- 351
+    "در روزهای شلوغ اشتباه بیشتر می‌شود. یک بار بیشتر چک کن.", -- 352
+    "عجله دشمن کیفیت است. یک نفس عمیق و دوباره.", -- 353
+    "اگر امسال سخت گذشت، تو تنها نبودی. تمامش کردی.", -- 354
+    "یک نفر امسال کنارت بوده؛ قبل از عید ازش تشکر کن.", -- 355
+    "تحویل کار قبل از تعطیلات یعنی تعطیلات راحت‌تر.", -- 356
+    "کاری را نیمه‌کاره تحویل تعطیلات نده؛ بعد از عید سنگین‌تر می‌شود.", -- 357
+    "یادداشتی برای خودت بگذار که بعد از تعطیلات از کجا شروع کنی.", -- 358
+    "میزت را قبل از تعطیلات مرتب کن؛ برگشتن به میز مرتب حال خوبی دارد.", -- 359
+    "یک بار دیگر به همکارانت سر بزن و خداحافظی کن؛ دو هفته نمی‌بینی‌شان.", -- 360
+    "سال کاری خوبی داشتی یا نه، تمامش کردی. همین کم نیست.", -- 361
+    "آنچه امسال یاد گرفتی، سال بعد با تو می‌آید.", -- 362
+    "برای سال بعد یک قول کوچک به خودت بده، نه یک فهرست بلند.", -- 363
+    "سال نو فرصت دوباره است؛ نه برای عوض شدن، برای ادامه دادن.", -- 364
+    "سال کهنه تمام شد. ممنون که امسال بخشی از این تیم بودی.", -- 365
+    "آخرین روز سال؛ سال نو پیشاپیش مبارک. با آرامش وارد سال تازه شو.", -- 366
 }
 
+-- انتخاب پیام روز: مستقیماً با روزِ سالِ شمسی (JYDAY از report_dimdate) اندیس می‌شود، پس برای هر
+-- روزِ سال یک پیام یکتا وجود دارد و تا پایان سال هیچ پیامی تکرار نمی‌شود. جدول ۳۶۶ عضوی است تا
+-- سال کبیسه هم پوشش داده شود؛ mod فقط یک محافظ در برابر مقدار خارج از بازه است.
 local daily_message
 do
-    local index = (today_meta.jyday % #DAILY_MESSAGES) + 1
-    daily_message = DAILY_MESSAGES[index]
+    local day_index = tonumber(today_meta.jyday) or 0
+    if day_index < 1 or day_index > #DAILY_MESSAGES then
+        day_index = ((day_index - 1) % #DAILY_MESSAGES) + 1
+    end
+    if day_index < 1 then day_index = 1 end
+    daily_message = DAILY_MESSAGES[day_index] or DAILY_MESSAGES[1]
 end
 
 local first_name = tostring(personnel.fullname):match("^%S+") or tostring(personnel.fullname)
@@ -1094,7 +1612,7 @@ if format_out == "json" then
         birthdays_month = birthdays_month,
         birth_setting = birth_setting,
         daily_message = daily_message,
-        celebration_configured = (celebration_wf_id ~= nil and celebration_topic_id ~= nil),
+        celebration_group_id = celebration_group_id,
         errors = {
             identity = identity_err,
             employment = employment_err,
@@ -1369,7 +1887,7 @@ do
         else
             action = '<button type="button" class="btn-action" ' ..
                 'onclick="openCelebration(\'' .. js_str(b.name) .. '\',\'' ..
-                js_str(today_meta.jdate) .. '\')">تبریک بگو و به گفتگو بپیوند</button>'
+                js_str(today_meta.jdate) .. '\')">پیوستن به گفتگوی تبریک</button>'
         end
         table.insert(today_cards,
             '<div class="birthday-card"><div class="birthday-avatar">' ..
@@ -1420,11 +1938,10 @@ do
     end
 
     local celebration_config_note = ""
-    if celebration_wf_id == nil or celebration_topic_id == nil then
-        celebration_config_note = '<div class="notice">گفتگوی تبریک هنوز پیکربندی نشده است. ' ..
-            'برای فعال شدن دکمهٔ «تبریک بگو»، مقدار <code>celebration_wf_id</code> و ' ..
-            '<code>celebration_topic_id</code> (شناسهٔ جریان کار و موضوع هم‌رده در ماژول اقدام) ' ..
-            'را در تنظیمات همین بات ثبت کنید. تا آن زمان فهرست تولدها کار می‌کند.</div>'
+    if celebration_group_id == nil then
+        celebration_config_note = '<div class="notice">گروه گفتگوی پیش‌فرض تنظیم نشده است؛ هنگام ' ..
+            'ساخت گفتگوی تبریک، اولین گروه فعالِ ماژول گفتگو استفاده می‌شود. برای انتخاب گروه ' ..
+            'مشخص، مقدار <code>celebration_group_id</code> را در تنظیمات همین بات ثبت کنید.</div>'
     end
 
     celebration_html = '<section id="celebration" class="page">' ..
@@ -1731,13 +2248,16 @@ local html_tail = [==[
         <li><b>اطلاعات پرسنلی</b> — واحد، سرپرست، تقویم کاری، موظفی و سقف مرخصی طبق حکم جاری.</li>
         <li><b>همراهِ روز و تولدها</b> — پیام روز، تولدهای امروز و تولدهای این ماه، و گفتگوی تبریک.</li>
       </ul>
-      <p><b>گفتگوی تبریک چطور کار می‌کند؟</b> با زدن «تبریک بگو»، اگر برای تولد آن همکار در آن روز
-      گفتگویی باز شده باشد، پیام شما به همان گفتگو اضافه می‌شود و شما هم عضو آن می‌شوید؛ اگر هنوز
-      باز نشده باشد، گفتگو با پیام شما ساخته می‌شود. یعنی همه در یک گفتگوی مشترک جمع می‌شوند، نه
-      چند گفتگوی جدا.</p>
+      <p><b>گفتگوی تبریک چطور کار می‌کند؟</b> با زدن «پیوستن به گفتگوی تبریک»، اگر برای تولد آن
+      همکار در آن روز گفتگویی باز شده باشد شما به همان گفتگو اضافه می‌شوید؛ اگر هنوز باز نشده باشد،
+      گفتگو ساخته می‌شود و شما اولین عضو آن هستید. گفتگو یک گفتگوی واقعی در ماژول «گفتگو»ی Teamyar
+      است، پس پیام تبریک را همان‌جا بنویسید — پیام‌ها در همین پنل هم نمایش داده می‌شوند. همه در یک
+      گفتگوی مشترک جمع می‌شوند، نه چند گفتگوی جدا.</p>
+      <p><b>پیام امروز:</b> برای هر روزِ سالِ شمسی یک پیام یکتا وجود دارد (۳۶۶ پیام)، پس تا پایان
+      سال هیچ پیامی تکرار نمی‌شود و همهٔ همکاران در یک روز پیام یکسان می‌بینند.</p>
       <p><b>ورودی‌ها:</b> <code>days</code> (طول بازه، پیش‌فرض ۳۱ روز)، <code>from_date</code> و
-      <code>to_date</code> (FILETIME عددی)، <code>personnel_id</code> یا <code>profile_id</code>
-      (فقط وقتی می‌خواهید پروندهٔ فرد دیگری را باز کنید)، <code>format=json</code> برای خروجی داده.</p>
+      <code>to_date</code> (FILETIME عددی)، <code>format=json</code> برای خروجی داده. پنل همیشه
+      اطلاعات کاربرِ واردشده را نشان می‌دهد و شناسهٔ فرد دیگری را از ورودی نمی‌پذیرد.</p>
       <p><b>تعامل‌ها:</b> کلیک روی عنوان هر ستون جدول را مرتب می‌کند؛ «خروجی Excel» جدول‌های همین
       صفحه را به فایل CSV می‌دهد؛ «تمام صفحه» صفحه را بدون وابستگی به قابلیت fullscreen مرورگر
       بزرگ می‌کند؛ کلید Esc پنجره‌های باز را می‌بندد.</p>
@@ -1759,14 +2279,13 @@ local html_tail = [==[
     </div>
     <div class="modal-body">
       <p class="note" id="celebrationHint">در حال بارگذاری گفتگو...</p>
+      <p class="note" id="celebrationMembers"></p>
       <div class="thread" id="celebrationThread"></div>
-      <label for="celebrationMessage">پیام تبریک شما</label>
-      <textarea id="celebrationMessage" maxlength="1000" placeholder="یک جملهٔ کوتاه و از ته دل کافی است"></textarea>
       <div class="modal-foot">
-        <button type="button" class="btn-action" id="celebrationSend" onclick="sendCelebration()">ثبت و پیوستن به گفتگو</button>
+        <button type="button" class="btn-action" id="celebrationJoin" onclick="joinCelebration()">پیوستن به گفتگو</button>
         <button type="button" class="btn-action" onclick="closeCelebration()">بستن</button>
       </div>
-      <p class="note" id="celebrationResult"></p>
+      <p class="note" id="celebrationResult">پس از پیوستن، پیام تبریک را داخل خودِ گفتگو بنویسید؛ همین‌جا هم نمایش داده می‌شود.</p>
     </div>
   </div>
 </div>
@@ -1775,8 +2294,8 @@ local html_tail = [==[
 
 <script>
 var RUN_URL = (location.pathname.indexOf('/bot/run/') === 0) ? location.pathname : location.pathname;
-var celebrationTarget = { name: '', date: '' };
-var CELEBRATION_ENABLED = __CELEBRATION_ENABLED__;
+var celebrationTarget = { name: '', date: '', dialogId: 0 };
+var CELEBRATION_GROUP_ID = __CELEBRATION_GROUP_ID__;
 
 document.querySelectorAll('.nav button').forEach(function (btn) {
   btn.addEventListener('click', function () { goToPage(btn.dataset.page); });
@@ -1941,14 +2460,35 @@ function renderThread(messages) {
   }).join('');
 }
 
+function setCelebrationState(res) {
+  var hint = document.getElementById('celebrationHint');
+  var members = document.getElementById('celebrationMembers');
+  var joinBtn = document.getElementById('celebrationJoin');
+  celebrationTarget.dialogId = (res && res.dialog_id) ? res.dialog_id : 0;
+  if (res && res.exists === false && !res.created) {
+    hint.textContent = 'هنوز گفتگویی برای این تولد باز نشده؛ با زدن دکمه، تو آن را باز می‌کنی و بقیه به همان می‌پیوندند.';
+    joinBtn.textContent = 'باز کردن گفتگو و پیوستن';
+  } else {
+    hint.textContent = 'گفتگو باز است؛ با زدن دکمه به همان گفتگو می‌پیوندی.';
+    joinBtn.textContent = 'پیوستن به گفتگو';
+  }
+  joinBtn.disabled = false;
+  var list = (res && res.members) ? res.members : [];
+  members.textContent = list.length
+    ? ('تا اینجا در گفتگو: ' + list.join('، '))
+    : 'هنوز کسی به گفتگو نپیوسته است.';
+  renderThread(res ? res.messages : []);
+}
+
 function openCelebration(name, dateLabel) {
-  celebrationTarget = { name: name, date: dateLabel };
+  celebrationTarget = { name: name, date: dateLabel, dialogId: 0 };
   document.getElementById('celebrationTitle').textContent = 'گفتگوی تبریک تولد ' + name;
-  document.getElementById('celebrationMessage').value = '';
-  document.getElementById('celebrationResult').textContent = '';
   document.getElementById('celebrationThread').innerHTML = '';
+  document.getElementById('celebrationMembers').textContent = '';
   document.getElementById('celebrationHint').textContent = 'در حال بارگذاری گفتگو...';
-  document.getElementById('celebrationSend').disabled = false;
+  document.getElementById('celebrationResult').textContent =
+    'پس از پیوستن، پیام تبریک را داخل خودِ گفتگو بنویسید؛ همین‌جا هم نمایش داده می‌شود.';
+  document.getElementById('celebrationJoin').disabled = true;
   document.getElementById('celebrationOverlay').classList.add('open');
 
   botRequest({ type: 'celebration_thread', person_name: name, person_date: dateLabel },
@@ -1958,49 +2498,41 @@ function openCelebration(name, dateLabel) {
           (res && res.error) ? res.error : 'گفتگو بارگذاری نشد.';
         return;
       }
-      document.getElementById('celebrationHint').textContent = res.exists
-        ? 'این گفتگو باز است؛ با ثبت پیام به آن می‌پیوندی.'
-        : (CELEBRATION_ENABLED
-            ? 'هنوز گفتگویی باز نشده؛ با ثبت پیام، تو آن را باز می‌کنی.'
-            : 'گفتگوی تبریک هنوز پیکربندی نشده است؛ فعلاً امکان ثبت پیام نیست.');
-      if (!res.exists && !CELEBRATION_ENABLED) {
-        document.getElementById('celebrationSend').disabled = true;
-      }
-      renderThread(res.messages);
+      setCelebrationState(res);
     },
     function () {
       document.getElementById('celebrationHint').textContent = 'خطا در ارتباط با سرور.';
     });
 }
+
 function closeCelebration() {
   document.getElementById('celebrationOverlay').classList.remove('open');
 }
-function sendCelebration() {
-  var message = document.getElementById('celebrationMessage').value.trim();
+
+function joinCelebration() {
+  var joinBtn = document.getElementById('celebrationJoin');
   var result = document.getElementById('celebrationResult');
-  if (message === '') {
-    result.textContent = 'متن تبریک را بنویسید.';
-    return;
-  }
-  var sendBtn = document.getElementById('celebrationSend');
-  sendBtn.disabled = true;
-  result.textContent = 'در حال ثبت...';
+  joinBtn.disabled = true;
+  result.textContent = 'در حال پیوستن...';
   botRequest({
     type: 'celebrate',
     person_name: celebrationTarget.name,
-    person_date: celebrationTarget.date,
-    message: message
+    person_date: celebrationTarget.date
   }, function (res) {
-    sendBtn.disabled = false;
     if (!res || !res.ok) {
-      result.textContent = (res && res.error) ? res.error : 'ثبت پیام انجام نشد.';
+      joinBtn.disabled = false;
+      result.textContent = (res && res.error) ? res.error : 'پیوستن به گفتگو انجام نشد.';
       return;
     }
-    result.textContent = res.joined ? 'پیام شما به گفتگو اضافه شد.' : 'گفتگو ساخته شد و پیام شما ثبت شد.';
-    document.getElementById('celebrationMessage').value = '';
-    renderThread(res.messages);
+    result.textContent = res.created
+      ? 'گفتگو ساخته شد و تو عضو آن شدی. حالا پیام تبریکت را داخل گفتگو بنویس.'
+      : 'به گفتگو پیوستی. پیام تبریکت را داخل گفتگو بنویس.';
+    setCelebrationState({ exists: true, created: res.created, dialog_id: res.dialog_id,
+                          members: res.members, messages: res.messages });
+    joinBtn.textContent = 'عضو این گفتگو هستی';
+    joinBtn.disabled = true;
   }, function () {
-    sendBtn.disabled = false;
+    joinBtn.disabled = false;
     result.textContent = 'خطا در ارتباط با سرور.';
   });
 }
@@ -2029,8 +2561,8 @@ html_head = replace_token(html_head, "__PENDING_COUNT__", fmt_num(request_counts
 html_head = replace_token(html_head, "__PERSON_NAME__", escape_html(personnel.fullname))
 html_head = replace_token(html_head, "__PERSON_UNIT__", person_unit)
 
-html_tail = replace_token(html_tail, "__CELEBRATION_ENABLED__",
-    (celebration_wf_id ~= nil and celebration_topic_id ~= nil) and "true" or "false")
+html_tail = replace_token(html_tail, "__CELEBRATION_GROUP_ID__",
+    celebration_group_id and tostring(celebration_group_id) or "0")
 
 local html = html_head .. topbar_html .. error_html ..
     section_overview .. section_attendance .. section_requests .. section_profile ..
