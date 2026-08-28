@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/06 13:16
+-- Last Edit = 1405/06/06 13:21
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -46,15 +46,34 @@ local c_project_code = 0
 local c_kind = "4";
 local c_day_befor = 0
 local c_org_id = 0
+
+-- کانفیگ بات مقادیر عددی رو با ارقام فارسی (۰۱۲۳۴۵۶۷۸۹) ذخیره می‌کنه، نه ارقام
+-- انگلیسی — دقیقاً همین چیزی بود که «نوع تسویه را مشخص کنید» رو باعث می‌شد (kind="۴"
+-- فارسی، نه "4" انگلیسی که bot_config انتظار داشت). account_code هم همین مشکل رو
+-- دارد ("۱۰۱۰۰۱۰۰۴") — خطای مشابهی نداده، ولی برای اطمینان (چون کد حساب واقعی روی
+-- تسویه‌ی مالی واقعی اثر می‌گذارد) همه‌ی کدهای کانفیگ رو به ارقام انگلیسی تبدیل می‌کنیم.
+local _FA_TO_EN_DIGITS = {
+  ["۰"] = "0", ["۱"] = "1", ["۲"] = "2", ["۳"] = "3", ["۴"] = "4",
+  ["۵"] = "5", ["۶"] = "6", ["۷"] = "7", ["۸"] = "8", ["۹"] = "9",
+};
+function toAsciiDigits(v)
+  if v == nil then return v; end
+  local s = tostring(v);
+  for fa, en in pairs(_FA_TO_EN_DIGITS) do
+    s = string.gsub(s, fa, en);
+  end
+  return s;
+end
+
 if config ~= nil then
   config_data = config.data
-  c_account_code = config_data.account_code
-  c_client_code = config_data.client_code
-  c_float_code = config_data.float_code
-  c_center_code = config_data.center_code
-  c_project_code = config_data.project_code
-  c_day_befor = tonumber(config_data.day_befor) or 0
-  c_org_id = tonumber(config_data.org_id) or 0
+  c_account_code = toAsciiDigits(config_data.account_code)
+  c_client_code = toAsciiDigits(config_data.client_code)
+  c_float_code = toAsciiDigits(config_data.float_code)
+  c_center_code = toAsciiDigits(config_data.center_code)
+  c_project_code = toAsciiDigits(config_data.project_code)
+  c_day_befor = tonumber(toAsciiDigits(config_data.day_befor)) or 0
+  c_org_id = tonumber(toAsciiDigits(config_data.org_id)) or 0
 end
 teamyar.write_log("backfill config_data raw: " .. json.encode(config_data)
   .. " | type(kind)=" .. type(c_kind));
