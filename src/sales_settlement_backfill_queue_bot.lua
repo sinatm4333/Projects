@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/06 10:31
+-- Last Edit = 1405/06/06 10:48
 -- botName = sales_settlement_backfill_queue
 -- creator = Cascade (کپی بات 582 — بدون UI/پیوست، برای بک‌فیل یک‌باره‌ی حجم انبوه)
 -- date = 1405/06/05
@@ -25,9 +25,12 @@ local _MAX_RUNTIME_SECONDS = 16200;
 -- سقف تعداد ردیف در همان یک کوئری SELECT (صرفاً برای محدود نگه‌داشتن حافظه‌ی یک اجرا؛
 -- در عمل به‌خاطر سقف زمانی بالا معمولاً خیلی زودتر از این عدد اجرا متوقف می‌شود)
 local _QUERY_ROW_LIMIT = 50000;
--- بازه‌ی تسویه = کل سال مالی زیر همین رشته (نه day_befor از کانفیگ). برای اجرای بعدی
--- روی سال مالی ۱۴۰۵، فقط این رشته را عوض کنید و دوباره دیپلوی کنید.
-local _TARGET_FISCAL_YEAR = "1404";
+-- بازه‌ی تسویه = کل یک سال مالی (نه day_befor از کانفیگ)، مشخص‌شده به‌صورت نسبت به
+-- سال مالی «جاری» (همانی که شامل امروز است): 0 = جاری، 1 = یک سال قبل از جاری (۱۴۰۴
+-- وقتی جاری ۱۴۰۵ باشد). برای اجرای بعدی روی سال مالی ۱۴۰۵، این را 0 کنید و دوباره
+-- دیپلوی کنید. (REPORT_FN_JDATE عمداً استفاده نشده — روی این پلتفرم از طریق db.query
+-- خام همیشه «sql error» می‌داد، چه با LIKE چه با CASE محافظت‌شده روی NULL/0.)
+local _FISCAL_YEARS_BACK = 1;
 --------------------------------------------
 local config = teamyar.get_config()
 local config_data = {}
@@ -60,26 +63,21 @@ local currentdate_time = time.get_filetime([[{"year":]] .. year .. [[,"month":]]
 local temp_time = time.get_filetime([[{"year":]] .. year .. [[,"month":]] .. month .. [[,"day":]] .. day .. [[,"hour":0,"minute":0,"second":0}]])
 local currentdate = string.format("%18.0f", temp_time);
 
--- بازه‌ی تسویه: ابتدا تلاش برای گرفتن بازه‌ی دقیق سال مالی _TARGET_FISCAL_YEAR از
--- pa_fiscal_year (همان جدول/الگویی که سایر بات‌های این ریپو برای «سال مالی جاری»
--- استفاده می‌کنند — اینجا به‌جای «جاری»، سال مشخص‌شده را می‌خواهیم). اگر برای این
--- org_id چنین سالی پیدا نشد (کانفیگ ناقص یا سال اشتباه)، برمی‌گردیم به رفتار قبلی
--- (day_befor نسبت به امروز) تا بات بی‌صدا روی کل تاریخچه اجرا نشود.
-function fetchFiscalYearRange(orgId, jalaliYear)
-  -- REPORT_FN_JDATE فقط داخل SELECT کار می‌کند (همان الگویی که بات‌های دیگر این ریپو
-  -- استفاده می‌کنند) — گذاشتنش داخل WHERE ... LIKE با «sql error» شکست خورد. پس همه‌ی
-  -- سال‌های مالی این سازمان را می‌گیریم (بدون فیلتر تابع در SQL) و تطبیق «کدام سال
-  -- ۱۴۰۴ است» را در خود Lua روی رشته‌ی تبدیل‌شده انجام می‌دهیم.
-  -- REPORT_FN_JDATE روی مقدار NULL/0 خطا می‌دهد (دیده‌شده در fmt_jalali_datetime،
-  -- EghdamPerId_bot.lua، که دقیقاً همین را با CASE محافظت کرده) — این همان چیزی بود که
-  -- «sql error» می‌داد: بدون فیلتر روی اعتبار START_DATE، اگر یک ردیف سال مالی این
-  -- سازمان START_DATE خالی/صفر داشته باشد، کل کوئری می‌شکند. همان الگوی CASE اینجا هم.
+-- بازه‌ی تسویه: بازه‌ی دقیق یک سال مالی از pa_fiscal_year، بدون هیچ استفاده‌ای از
+-- REPORT_FN_JDATE (که روی این پلتفرم از طریق db.query خام، هم با LIKE و هم با CASE
+-- محافظت‌شده روی NULL/0، همیشه «sql error» می‌داد — به نظر می‌رسد این تابع فقط از
+-- مسیر داخلی گزارش‌ساز Teamyar قابل‌فراخوانی است، نه از db.query دلخواه). به‌جایش:
+-- همه‌ی سال‌های مالی این سازمان را با ستون‌های خام (بدون هیچ تابعی) می‌گیریم، سال
+-- مالیِ «جاری» (شاملِ امروز) را در خود Lua پیدا می‌کنیم، و بر اساس _FISCAL_YEARS_BACK
+-- چند ردیف عقب‌تر می‌رویم. اگر برای این org_id چیزی پیدا نشد، برمی‌گردیم به رفتار
+-- قدیمی (day_befor نسبت به امروز) تا بات بی‌صدا روی کل تاریخچه اجرا نشود.
+function fetchFiscalYearRange(orgId, yearsBack, todayTicks)
   local q = [[
-    SELECT fy.START_DATE, fy.END_DATE,
-      CASE WHEN fy.START_DATE IS NULL OR fy.START_DATE = 0 THEN NULL ELSE REPORT_FN_JDATE(fy.START_DATE, '-') END AS start_jalali
+    SELECT fy.START_DATE, fy.END_DATE
     FROM pa_fiscal_year fy
     WHERE fy.ORG_ID = ]] .. tostring(tonumber(orgId) or 0) .. [[
       AND fy.START_DATE IS NOT NULL AND fy.START_DATE <> 0
+      AND fy.END_DATE IS NOT NULL AND fy.END_DATE <> 0
     ORDER BY fy.START_DATE DESC
   ]];
   local ok, err = pcall(function()
@@ -93,40 +91,55 @@ function fetchFiscalYearRange(orgId, jalaliYear)
   end
 
   -- الگوی while db.query_fetch(record) با جدول از پیش ساخته‌شده — همان الگوی
-  -- امتحان‌پس‌داده‌ی queryResultFact در همین فایل؛ فراخوانی db.query_fetch() بدون
-  -- آرگومان در حلقه امتحان نشده بود و مشکوک به عدم پیشروی درست بین ردیف‌هاست.
-  local yearPrefixLen = string.len(jalaliYear);
-  local foundStart, foundEnd = nil, nil;
-  local seenRows = {};
+  -- امتحان‌پس‌داده‌ی queryResultFact در همین فایل.
+  local rows = {};
   local record = {};
   while db.query_fetch(record) do
-    local startJalali = record[3];
-    table.insert(seenRows, tostring(startJalali));
-    if foundStart == nil and startJalali ~= nil and string.sub(tostring(startJalali), 1, yearPrefixLen) == jalaliYear then
-      foundStart = record[1];
-      foundEnd = record[2];
-    end
+    table.insert(rows, { startDate = record[1], endDate = record[2] });
   end
   db.query_free();
-  teamyar.write_log("fetchFiscalYearRange rows for org_id=" .. tostring(orgId) .. " (start_jalali values): "
-    .. json.encode(seenRows));
-  if foundStart == nil or foundEnd == nil then
+
+  teamyar.write_log("fetchFiscalYearRange rows for org_id=" .. tostring(orgId) .. ": "
+    .. json.encode(rows));
+
+  -- rows بر اساس START_DATE نزولی مرتب است (جدیدترین سال مالی اول). سال «جاری» یعنی
+  -- ردیفی که امروز بین START_DATE و END_DATEاش قرار می‌گیرد.
+  local currentIdx = nil;
+  for i, row in ipairs(rows) do
+    local s = tonumber(row.startDate);
+    local e = tonumber(row.endDate);
+    if s ~= nil and e ~= nil and todayTicks >= s and todayTicks <= e then
+      currentIdx = i;
+      break;
+    end
+  end
+  if currentIdx == nil then
+    teamyar.write_log("fetchFiscalYearRange: no fiscal year row for org_id=" .. tostring(orgId)
+      .. " contains today (rows found=" .. #rows .. ")");
     return nil, nil;
   end
-  return tostring(foundStart), tostring(foundEnd);
+
+  local targetIdx = currentIdx + yearsBack;
+  local target = rows[targetIdx];
+  if target == nil then
+    teamyar.write_log("fetchFiscalYearRange: no row at index " .. targetIdx
+      .. " (current fiscal year index=" .. currentIdx .. ", yearsBack=" .. yearsBack .. ", total rows=" .. #rows .. ")");
+    return nil, nil;
+  end
+  return tostring(target.startDate), tostring(target.endDate);
 end
 
 local from_date, to_date;
-local fy_start, fy_end = fetchFiscalYearRange(c_org_id, _TARGET_FISCAL_YEAR);
+local fy_start, fy_end = fetchFiscalYearRange(c_org_id, _FISCAL_YEARS_BACK, temp_time);
 if fy_start ~= nil and fy_end ~= nil then
   from_date = fy_start;
   to_date = fy_end;
-  teamyar.write_log("backfill using fiscal year " .. _TARGET_FISCAL_YEAR .. " for org_id=" .. tostring(c_org_id)
+  teamyar.write_log("backfill using fiscal year (yearsBack=" .. _FISCAL_YEARS_BACK .. ") for org_id=" .. tostring(c_org_id)
     .. " — from_date=" .. from_date .. " to_date=" .. to_date);
 else
   from_date = string.format("%18.0f", (temp_time - ((60 * 60 * 24 * 10000000 * c_day_befor) + (60 * 60 * 24 * 10000000))))
   to_date = tostring(currentdate + (60 * 60 * 3 * 10000000))
-  teamyar.write_log("backfill: fiscal year " .. _TARGET_FISCAL_YEAR .. " not found for org_id=" .. tostring(c_org_id)
+  teamyar.write_log("backfill: fiscal year (yearsBack=" .. _FISCAL_YEARS_BACK .. ") not found for org_id=" .. tostring(c_org_id)
     .. " — falling back to day_befor range: from_date=" .. from_date .. " to_date=" .. to_date);
 end
 
