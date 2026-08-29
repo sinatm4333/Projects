@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 15:04
+-- Last Edit = 1405/06/07 15:08
 
 -- botName = hr_companion
 -- description = همراه ۱۴۰ — پنل پرسنلی (تردد و کارکرد، درخواست‌ها، اطلاعات پرسنلی، همراهِ روز و تولدها)
@@ -337,6 +337,89 @@ if from_date == nil or from_date < FT_MIN_VALID or from_date > to_date then
     from_date = to_date - ((days_back - 1) * FT_DAY)
 else
     days_back = math.floor((to_date - from_date) / FT_DAY) + 1
+end
+
+-- ── type=sqlprobe — تشخیص گام‌به‌گام علت «sql error» ─────────────────
+-- لایهٔ db.query این پلتفرم فقط رشتهٔ عمومی «sql error» برمی‌گرداند و هیچ جزئیاتی نمی‌دهد، پس
+-- تنها راه قطعیِ پیدا کردن قطعهٔ مقصر، اجرای کوئری به‌صورت تکه‌تکه و دیدن اولین تکه‌ای است که
+-- می‌شکند. هر گام دقیقاً یک ساختار SQL بیشتر از گام قبل دارد.
+if action_type == "sqlprobe" then
+    local steps = {}
+
+    local function probe(label, query, params)
+        local rows, err = fetch_rows(query, params, 1)
+        table.insert(steps, {
+            step = #steps + 1,
+            label = label,
+            ok = (rows ~= nil),
+            rows = rows and #rows or 0,
+            value = (rows ~= nil and #rows > 0) and tostring(rows[1][1]) or nil,
+            error = (rows == nil) and tostring(err) or nil,
+            sql = query
+        })
+    end
+
+    probe("۱ ساده‌ترین کوئری ممکن", "SELECT 1", {})
+    probe("۲ تاریخ از دیتابیس (UNIX_TIMESTAMP)",
+        "SELECT (UNIX_TIMESTAMP() + 11644473600) * 10000000", {})
+    probe("۳ همان + MOD با لیترال بزرگ",
+        "SELECT MOD((UNIX_TIMESTAMP() + 11644473600) * 10000000, 864000000000)", {})
+    probe("۴ FLOOR روی تقسیم", "SELECT FLOOR(864000000000 / 10000000)", {})
+    probe("۵ ROUND روی تقسیم دوگانه", "SELECT ROUND(864000000000 / 10000000 / 60, 0)", {})
+    probe("۶ REPORT_FN_JDATE با جداکنندهٔ اسلش",
+        "SELECT COALESCE(REPORT_FN_JDATE((UNIX_TIMESTAMP() + 11644473600) * 10000000, '/'), '')", {})
+    probe("۷ لیترال N با فارسی", "SELECT COALESCE(NULL, N'نامشخص')", {})
+    probe("۸ خواندن ساده از hr_work_time", "SELECT COUNT(*) FROM hr_work_time", {})
+    probe("۹ hr_work_time با پارامتر عددی کوچک",
+        "SELECT COUNT(*) FROM hr_work_time w WHERE w.PERSONNEL_ID = ?", { 1 })
+    probe("۱۰ hr_work_time با بازهٔ تاریخ لیترال",
+        "SELECT COUNT(*) FROM hr_work_time w WHERE w.WORK_DATE BETWEEN " ..
+        sql_filetime(0) .. " AND " .. sql_filetime(133700000000000000), {})
+    probe("۱۱ ستون FIRST_IN با FLOOR/MOD",
+        "SELECT " .. sql_seconds_of_day("w.FIRST_IN") .. " FROM hr_work_time w LIMIT 1", {})
+    probe("۱۲ ستون TOTAL_WORK با ROUND",
+        "SELECT " .. sql_ticks_to_minutes("w.TOTAL_WORK") .. " FROM hr_work_time w LIMIT 1", {})
+    probe("۱۳ CASE با FINAL_OVER_TIME",
+        "SELECT " .. sql_ticks_to_minutes(
+            "CASE WHEN w.FINAL_OVER_TIME = -1 THEN w.OVER_TIME ELSE w.FINAL_OVER_TIME END") ..
+        " FROM hr_work_time w LIMIT 1", {})
+    probe("۱۴ جمع ستون‌های ماموریت",
+        "SELECT " .. sql_ticks_to_minutes("w.MISSION + w.MISSION_OUT_CITY + w.MISSION_OUT_COUNTRY") ..
+        " FROM hr_work_time w LIMIT 1", {})
+    probe("۱۵ ستون ABSENT", "SELECT COALESCE(w.ABSENT, 0) FROM hr_work_time w LIMIT 1", {})
+    probe("۱۶ JOIN با report_dimdate",
+        "SELECT COALESCE(rd.JTDAY, '') FROM hr_work_time w " ..
+        "LEFT JOIN report_dimdate rd ON rd.DATEKEY = w.WORK_DATE LIMIT 1", {})
+    probe("۱۷ CTE با WITH", "WITH t AS (SELECT 1 AS a) SELECT a FROM t", {})
+    probe("۱۸ CTE روی hr_day_details",
+        "WITH shift_day AS (SELECT d.CALENDAR_ID, d.DAY_DATE, MIN(d.TIME_FROM) AS shift_from " ..
+        "FROM hr_day_details d WHERE d.CALENDAR_ID = ? GROUP BY d.CALENDAR_ID, d.DAY_DATE) " ..
+        "SELECT COUNT(*) FROM shift_day", { 1 })
+    probe("۱۹ hr_ext_time ساده", "SELECT COUNT(*) FROM hr_ext_time", {})
+    probe("۲۰ hr_vacation ساده", "SELECT COUNT(*) FROM hr_vacation", {})
+    probe("۲۱ hr_vacation با JOIN نوع",
+        "SELECT COUNT(*) FROM hr_vacation v " ..
+        "LEFT JOIN hr_vacation_type vt ON vt.TYPE = v.TYPE", {})
+    probe("۲۲ زیرکوئری همبسته در SELECT",
+        "SELECT (SELECT COUNT(*) FROM hr_leave_verify lv WHERE lv.LEAVE_ID = v.ID) " ..
+        "FROM hr_vacation v LIMIT 1", {})
+    probe("۲۳ hr_machine JOIN", "SELECT COALESCE(m.NAME, N'—') FROM hr_machine m LIMIT 1", {})
+    probe("۲۴ GREATEST روی تفریق",
+        "SELECT " .. sql_ticks_to_minutes("GREATEST(e.TIME_TO - e.TIME_FROM, 0)") ..
+        " FROM hr_ext_time e LIMIT 1", {})
+
+    local first_failure = nil
+    for _, st in ipairs(steps) do
+        if not st.ok and first_failure == nil then first_failure = st.step end
+    end
+
+    teamyar.write_result(json.encode({
+        ok = true,
+        first_failing_step = first_failure,
+        total_steps = #steps,
+        steps = steps
+    }))
+    return
 end
 
 -- ── resolve the signed-in user ───────────────────────────────────────
