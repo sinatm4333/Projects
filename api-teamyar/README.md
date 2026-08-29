@@ -51,6 +51,7 @@
 | [document/getInfo](اسناد/document_getInfo.md) | `/api/document/getInfo` | گرفتن اطلاعات یک سند |
 | [document/getName](اسناد/document_getName.md) | `/api/document/getName` | دریافت نام سند |
 | [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
+| [folder/getDisplayName](اسناد/folder_getDisplayName.md) | `/api/folder/getDisplayName` | گرفتن نام فولدر |
 | [document/attach](اسناد/document_attach.md) | `/api/document/attach` | منگنه کردن فایل |
 | [document/detach](اسناد/document_detach.md) | `/api/document/detach` | بازکردن منگنه |
 | [client/getRootId](اسناد/client_getRootId.md) | `/api/client/getRootId` | گرفتن پوشه‌ی مشتریان |
