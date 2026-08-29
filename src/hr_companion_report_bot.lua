@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 15:47
+-- Last Edit = 1405/06/07 15:51
 
 -- botName = hr_companion
 -- description = همراه ۱۴۰ — پنل پرسنلی (تردد و کارکرد، درخواست‌ها، اطلاعات پرسنلی، همراهِ روز و تولدها)
@@ -1329,7 +1329,12 @@ SELECT
   ]] .. sql_seconds_of_day("sd.shift_from") .. [[ AS shift_from,
   ]] .. sql_seconds_of_day("sd.shift_to") .. [[ AS shift_to,
   ]] .. sql_ticks_to_minutes("sd.shift_duration") .. [[ AS shift_minutes,
-  w.WORK_DATE AS work_date_raw
+  w.WORK_DATE AS work_date_raw,
+  w.FIRST_IN AS first_in_raw,
+  w.LAST_OUT AS last_out_raw,
+  w.TOTAL_WORK AS total_work_raw,
+  COALESCE(sd.shift_from, 0) AS shift_from_raw,
+  COALESCE(sd.shift_to, 0) AS shift_to_raw
 FROM hr_work_time w
 LEFT JOIN report_dimdate rd ON rd.DATEKEY = w.WORK_DATE
 LEFT JOIN shift_day sd ON sd.DAY_DATE = w.WORK_DATE
@@ -1337,7 +1342,7 @@ WHERE w.PERSONNEL_ID = ? AND w.WORK_DATE BETWEEN ]] .. sql_filetime(from_date) .
       [[ AND ]] .. sql_filetime(to_date) .. [[
 ORDER BY w.WORK_DATE DESC
 LIMIT 200
-]], { employment.calendar_id or 0, personnel.personnel_id }, 16)
+]], { employment.calendar_id or 0, personnel.personnel_id }, 21)
 
         if rows == nil then
             attendance_err = tostring(query_err)
@@ -1392,7 +1397,12 @@ LIMIT 200
                 deficit_minutes = deficit,
                 incomplete = incomplete,
                 status = status,
-                work_date_raw = r[16]
+                work_date_raw = r[16],
+                first_in_raw = r[17],
+                last_out_raw = r[18],
+                total_work_raw = r[19],
+                shift_from_raw = r[20],
+                shift_to_raw = r[21]
             })
 
             totals.work = totals.work + work_minutes
@@ -2849,6 +2859,52 @@ local section_overview = '<section id="overview" class="page active">' ..
     '<p class="note">فهرست کامل با وضعیت زنجیرهٔ تایید در تب «درخواست‌های من» است.</p>' ..
     '</article></div></section>'
 
+-- کارت تشخیص: فقط وقتی ظاهر می‌شود که عددها از نظر منطقی ممکن نباشند (ورود برابر خروج،
+-- شیفت بلندتر از ۱۴ ساعت، یا ورودِ ثبت‌شده با کارکرد صفر). در حالت سالم اصلاً دیده نمی‌شود، پس
+-- کارمند عادی هرگز با آن روبه‌رو نمی‌شود؛ ولی وقتی چیزی خراب است، یک اسکرین‌شات برای عیب‌یابی کافی است.
+local diagnostic_needed = false
+for _, d in ipairs(daily) do
+    -- «روز ناقص» (ورود بدون خروج) وضعیت واقعی و مجاز است، پس علامت خطا نیست.
+    -- فقط چیزهایی که از نظر منطقی ناممکن‌اند کارت را فعال می‌کنند.
+    local both_punches = (d.first_in ~= nil and d.last_out ~= nil)
+    if (both_punches and d.first_in == d.last_out)
+        or (d.shift_minutes > 14 * 60)
+        or (both_punches and d.work_minutes == 0 and d.leave_minutes == 0 and d.mission_minutes == 0) then
+        diagnostic_needed = true
+    end
+end
+
+local diagnostic_card = ""
+if diagnostic_needed then
+    local rows_html = {}
+    for index, d in ipairs(daily) do
+        if index > 5 then break end
+        table.insert(rows_html,
+            '<tr><td>' .. escape_html(d.jdate) .. '</td>' ..
+            '<td>' .. escape_html(tostring(d.work_date_raw)) .. '</td>' ..
+            '<td>' .. escape_html(tostring(d.first_in_raw)) .. '</td>' ..
+            '<td>' .. escape_html(tostring(d.last_out_raw)) .. '</td>' ..
+            '<td>' .. escape_html(tostring(d.total_work_raw)) .. '</td>' ..
+            '<td>' .. escape_html(tostring(d.shift_from_raw)) .. '</td>' ..
+            '<td>' .. escape_html(tostring(d.shift_to_raw)) .. '</td>' ..
+            '<td>' .. escape_html(d.first_in or "—") .. '</td>' ..
+            '<td>' .. escape_html(d.last_out or "—") .. '</td></tr>')
+    end
+    diagnostic_card = '<article class="card" style="margin-top:14px;">' ..
+        '<div class="title">مقادیر خام — فقط برای عیب‌یابی</div>' ..
+        '<p class="note">این کارت خودکار ظاهر شده چون عددهای این صفحه از نظر منطقی ممکن نیستند. ' ..
+        'یک تصویر از همین جدول برای واحد فناوری اطلاعات بفرستید. وقتی مشکل رفع شود، این کارت ' ..
+        'خودبه‌خود ناپدید می‌شود.</p>' ..
+        '<div class="table-wrap"><table class="data-table"><thead><tr>' ..
+        '<th>تاریخ</th><th>WORK_DATE</th><th>FIRST_IN</th><th>LAST_OUT</th><th>TOTAL_WORK</th>' ..
+        '<th>SHIFT_FROM</th><th>SHIFT_TO</th><th>ورود تفسیرشده</th><th>خروج تفسیرشده</th>' ..
+        '</tr></thead><tbody>' .. table.concat(rows_html, "") .. '</tbody></table></div>' ..
+        '<p class="note">مرجع مقیاس — امروز طبق دیتابیس: <code>' ..
+        escape_html(sql_filetime(to_date)) .. '</code> | تقویم کاری: <code>' ..
+        escape_html(tostring(employment.calendar_id or "—")) .. '</code></p>' ..
+        '</article>'
+end
+
 local section_attendance = '<section id="attendance" class="page">' ..
     '<article class="card">' ..
     '<div class="title">تردد و کارکرد من</div>' ..
@@ -2894,7 +2950,7 @@ local section_attendance = '<section id="attendance" class="page">' ..
     detail_row("مجموع کسری محاسبه‌شده", minutes_to_hm(totals.deficit)) ..
     '<p class="note">روز ناقص یعنی فقط یکی از دو رویداد ورود/خروج ثبت شده است. این حالت به‌خودی‌خود ' ..
     'غیبت نیست و باید با درخواست اصلاح در ماژول منابع انسانی بررسی شود.</p>' ..
-    '</article></div></section>'
+    '</article></div>' .. diagnostic_card .. '</section>'
 
 local section_requests = '<section id="requests" class="page">' ..
     '<article class="card"><div class="title">پیگیری درخواست‌ها</div>' ..
