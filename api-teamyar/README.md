@@ -15,11 +15,11 @@
 
 | API | آدرس | توضیح |
 |-----|------|-------|
-| [add_linkmodule](%D8%AF%D8%A7%D8%B4%D8%A8%D9%88%D8%B1%D8%AF%20%D9%85%D9%86%20(%D8%AE%D8%A7%D9%86%D9%87)/add_linkmodule.md) | `/api/add_linkmodule` | ایجاد لینک بین ماژول ها |
-| [deleteLinks](%D8%AF%D8%A7%D8%B4%D8%A8%D9%88%D8%B1%D8%AF%20%D9%85%D9%86%20(%D8%AE%D8%A7%D9%86%D9%87)/deleteLinks.md) | `/api/deleteLinks` | حذف لینک تیمیاری |
-| [removeLinkModule](%D8%AF%D8%A7%D8%B4%D8%A8%D9%88%D8%B1%D8%AF%20%D9%85%D9%86%20(%D8%AE%D8%A7%D9%86%D9%87)/removeLinkModule.md) | `/api/removeLinkModule` | حذف لینک تیمیاری |
-| [removePopup](%D8%AF%D8%A7%D8%B4%D8%A8%D9%88%D8%B1%D8%AF%20%D9%85%D9%86%20(%D8%AE%D8%A7%D9%86%D9%87)/removePopup.md) | `/api/removePopup` | حذف پاپ آپ |
-| [show_popup](%D8%AF%D8%A7%D8%B4%D8%A8%D9%88%D8%B1%D8%AF%20%D9%85%D9%86%20(%D8%AE%D8%A7%D9%86%D9%87)/show_popup.md) | `/api/show_popup` | ایجاد popup |
+| [add_linkmodule](%D8%AF%D8%A7%D8%B4%D8%A8%D9%88%D8%B1%D8%AF%20%D9%85%D9%86%20%28%D8%AE%D8%A7%D9%86%D9%87%29/add_linkmodule.md) | `/api/add_linkmodule` | ایجاد لینک بین ماژول ها |
+| [deleteLinks](%D8%AF%D8%A7%D8%B4%D8%A8%D9%88%D8%B1%D8%AF%20%D9%85%D9%86%20%28%D8%AE%D8%A7%D9%86%D9%87%29/deleteLinks.md) | `/api/deleteLinks` | حذف لینک تیمیاری |
+| [removeLinkModule](%D8%AF%D8%A7%D8%B4%D8%A8%D9%88%D8%B1%D8%AF%20%D9%85%D9%86%20%28%D8%AE%D8%A7%D9%86%D9%87%29/removeLinkModule.md) | `/api/removeLinkModule` | حذف لینک تیمیاری |
+| [removePopup](%D8%AF%D8%A7%D8%B4%D8%A8%D9%88%D8%B1%D8%AF%20%D9%85%D9%86%20%28%D8%AE%D8%A7%D9%86%D9%87%29/removePopup.md) | `/api/removePopup` | حذف پاپ آپ |
+| [show_popup](%D8%AF%D8%A7%D8%B4%D8%A8%D9%88%D8%B1%D8%AF%20%D9%85%D9%86%20%28%D8%AE%D8%A7%D9%86%D9%87%29/show_popup.md) | `/api/show_popup` | ایجاد popup |
 
 ## سایت
 
