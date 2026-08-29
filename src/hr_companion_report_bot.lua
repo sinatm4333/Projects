@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 19:26
+-- Last Edit = 1405/06/07 21:15
 
 -- botName = hr_companion
 -- description = همراه ۱۴۰ — پنل پرسنلی (تردد و کارکرد، درخواست‌ها، اطلاعات پرسنلی، همراهِ روز و تولدها)
@@ -273,20 +273,38 @@ end
 -- ساعتِ روز از یک ستون FILETIME یا tick-since-midnight، بدون فرض دربارهٔ این‌که کدام‌یک است:
 -- MOD(col, ticks_of_day) برای FILETIME کامل «ساعت همان روز» را می‌دهد و برای مقدار درون‌روزی
 -- خودِ مقدار را دست‌نخورده برمی‌گرداند. پس هر دو حالت درست رندر می‌شوند.
--- ⚠️ ساعتِ روز حتماً با FROM_UNIXTIME گرفته می‌شود، نه با MOD (تاییدشده روی دادهٔ زنده ۱۴۰۵/۰۶/۰۷).
--- نسخهٔ قبلی MOD(col, 864000000000) می‌زد که حساب خام است و ساعت را به وقت UTC می‌دهد؛ نتیجه
--- ۳ ساعت و ۳۰ دقیقه عقب‌تر از پنل رسمی بود (بات ۰۵:۲۱ نشان می‌داد، پنل رسمی ۰۸:۵۱).
--- FROM_UNIXTIME منطقهٔ زمانی نشست MySQL را اعمال می‌کند و ساعت محلی می‌دهد. این دقیقاً همان
--- الگوی بات ۹۲۷ (مستقر و سالم) است:
---   DATE_FORMAT(FROM_UNIXTIME(col / 10000000 - 11644473600), '%H:%i:%s')
--- دو نوع ستون زمانی در این اسکیما هست و با اندازه از هم تشخیص داده می‌شوند:
---   FILETIME کامل (مثل hr_work_time.FIRST_IN، حدود 1.3e17) → منهای مبدأ ۱۶۰۱ می‌شود
---   تیک از نیمه‌شب (مثل hr_day_details.TIME_FROM، حدود 9e10) → مستقیم ثانیه است
+-- ⚠️ دو نوع ستون زمانی در این اسکیما هست و هرکدام محاسبهٔ متفاوتی می‌خواهد — قاطی‌کردن‌شان همان
+-- کلاس باگ ۳:۳۰ ساعته را دوباره (این‌بار روی دستهٔ دیگر) برمی‌گرداند:
+--   ۱) FILETIME کامل (مثل hr_work_time.FIRST_IN، حدود 1.3e17): تیک‌شمار خام از مبدأ ۱۶۰۱ به وقت
+--      UTC است — بدون تبدیل، MOD ساعت را به‌جای وقت محلی به وقت UTC می‌دهد؛ تاییدشده روی دادهٔ
+--      زندهٔ ۱۴۰۵/۰۶/۰۷ (بات ۰۵:۲۱ نشان می‌داد، پنل رسمی ۰۸:۵۱ — دقیقاً ۳:۳۰ عقب‌تر). این ستون‌ها
+--      باید از FROM_UNIXTIME رد شوند تا منطقهٔ زمانی نشست MySQL اعمال شود — الگوی بات ۹۲۷
+--      (مستقر و سالم): DATE_FORMAT(FROM_UNIXTIME(col / 10000000 - 11644473600), '%H:%i:%s')
+--   ۲) تیک از نیمهٔ‌شبِ محلی (مثل hr_day_details.TIME_FROM و مشابه‌هایش — hr_ext_time،
+--      hr_vacation، hr_overtime_request، hr_telework_request، حدود 9e10): این مقدار از قبل وقت
+--      محلی است، نه ثانیهٔ epoch. اگر همین مقدار به FROM_UNIXTIME داده شود، تابع آن را «ثانیهٔ
+--      epoch UTC» تعبیر می‌کند و منطقهٔ زمانی نشست را رویش دوباره اضافه می‌کند — یعنی همان ۳:۳۰
+--      دقیقه به‌جای رفعِ آفست، اضافه‌اش می‌کند. برای این دسته باید بدون FROM_UNIXTIME، مستقیم از
+--      روی مقدار محلی HH:MM ساخته شود.
+-- ⚠️ TIME_FORMAT/SEC_TO_TIME استفاده نمی‌شوند — تجربهٔ زندهٔ همین بات ثابت کرد این دو تابع با
+-- «sql error» رد می‌شوند. به‌جایش HH:MM با CASE/FLOOR/MOD/CONCAT دستی ساخته می‌شود — همه‌شان
+-- توابعی که همین‌جا (sql_daykey، sql_ticks_to_minutes) و در بات ۹۲۷ (CONCAT) تاییدشده کار می‌کنند.
 local function sql_time_of_day(col)
+    local from_full_filetime = "DATE_FORMAT(FROM_UNIXTIME(" ..
+        col .. " / 10000000 - 11644473600), '%H:%i')"
+
+    local day_seconds = "FLOOR(MOD(COALESCE(" .. col .. ", 0), 864000000000) / 10000000)"
+    local hour_expr = "FLOOR(" .. day_seconds .. " / 3600)"
+    local minute_expr = "MOD(FLOOR(" .. day_seconds .. " / 60), 60)"
+    local function padded(numeric_expr)
+        return "CASE WHEN " .. numeric_expr .. " < 10 THEN CONCAT('0', " .. numeric_expr .. ") " ..
+            "ELSE CONCAT('', " .. numeric_expr .. ") END"
+    end
+    local from_midnight_ticks = "CONCAT(" .. padded(hour_expr) .. ", ':', " .. padded(minute_expr) .. ")"
+
     local expr = "CASE WHEN " .. col .. " IS NULL OR " .. col .. " = 0 THEN NULL " ..
-        "WHEN " .. col .. " > 100000000000000 THEN DATE_FORMAT(FROM_UNIXTIME(" ..
-        col .. " / 10000000 - 11644473600), '%H:%i') " ..
-        "ELSE DATE_FORMAT(FROM_UNIXTIME(" .. col .. " / 10000000), '%H:%i') END"
+        "WHEN " .. col .. " > 100000000000000 THEN " .. from_full_filetime .. " " ..
+        "ELSE " .. from_midnight_ticks .. " END"
     return "COALESCE(" .. expr .. ", '')"
 end
 
@@ -422,7 +440,7 @@ if action_type == "sqlprobe" then
     probe("10 date range literal",
         "SELECT COUNT(*) FROM hr_work_time w WHERE w.WORK_DATE BETWEEN " ..
         sql_filetime(0) .. " AND " .. sql_filetime(133700000000000000), {})
-    probe("11 FIRST_IN floor/mod",
+    probe("11 FIRST_IN time-of-day",
         "SELECT " .. sql_time_of_day("w.FIRST_IN") .. " FROM hr_work_time w LIMIT 1", {})
     probe("12 TOTAL_WORK round",
         "SELECT " .. sql_ticks_to_minutes("w.TOTAL_WORK") .. " FROM hr_work_time w LIMIT 1", {})
