@@ -70,6 +70,7 @@
 | [todo/customform/update](اقدام/todo_customform_update.md) | `/api/todo/customform/update` | به‌روزرسانی فرم سفارشی |
 | [todo/registerform](اقدام/todo_registerform.md) | `/api/todo/registerform` | فراخوانی فرم ماژول‌های دیگر در اقدام |
 | [todo/section/get](اقدام/todo_section_get.md) | `/api/todo/section/get` | دریافت اطلاعات بخش |
+| [todo/section/list/get](اقدام/todo_section_list_get.md) | `/api/todo/section/list/get` | دریافت لیست بخش‌های اقدام |
 | [todo/category/list/get](اقدام/todo_category_list_get.md) | `/api/todo/category/list/get` | دریافت لیست رده‌های یک بخش |
 | [todo/category/update](اقدام/todo_category_update.md) | `/api/todo/category/update` | بروزرسانی رده |
 | [todo/delcheck/stock](اقدام/todo_delcheck_stock.md) | `/api/todo/delcheck/stock` | چک وجود انبار در ماژول اقدام |
