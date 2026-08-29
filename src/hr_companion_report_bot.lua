@@ -487,6 +487,24 @@ if chat_module_url == nil or tostring(chat_module_url) == "" then
     chat_module_url = "/?page=/chat/index"
 end
 chat_module_url = tostring(chat_module_url)
+
+-- قالب لینک مستقیم به یک گفتگوی مشخص. {id} با شناسهٔ گفتگو جایگزین می‌شود.
+-- ⚠️ رشتهٔ پیش‌فرض عمداً با پیوند ساخته می‌شود و نه به‌صورت یک literal پیوسته: در متن پیوسته،
+-- «&dialog_id» با «&dia» شروع می‌شود که پیشوند entity نام‌دار «&diams;» است و طبق باگ تاییدشدهٔ
+-- این پلتفرم، هنگام ذخیرهٔ command بی‌سروصدا decode و خراب می‌شد.
+-- این پلتفرم دو الگوی لینک‌دهی دارد (هر دو در بات‌های زندهٔ همین ریپو دیده می‌شوند):
+--   شناسه در مسیر    → /?page=/sales/invoice/view_invoice/{id}
+--   شناسه در پارامتر → /?page=/pm/service_request/view/view_request/&id={id}
+-- اگر شکل واقعی ماژول گفتگو با پیش‌فرض زیر فرق داشت، فقط کافی است
+-- chat_dialog_url_template در bot_config عوض شود؛ نیازی به تغییر کد نیست.
+-- پیش‌فرض عمداً خالی است. شکل واقعی این آدرس هنوز تایید نشده و سه حالت ممکن دارد که هر سه در
+-- بات‌های زندهٔ همین ریپو دیده می‌شوند؛ یک لینک اشتباه روی باتی که با دادهٔ پرسنلی کار می‌کند بدتر
+-- از نبودِ لینک است. تا وقتی این مقدار در bot_config ثبت نشود، دکمه همان ماژول گفتگو را باز می‌کند
+-- و عنوان قطعی گفتگو هم کنارش نشان داده می‌شود. نمونهٔ مقدار پس از تایید:
+--   { "chat_dialog_url_template": "/?page=/chat/index&dialog_id={id}" }
+local chat_dialog_url_template = config_data.chat_dialog_url_template
+if chat_dialog_url_template == nil then chat_dialog_url_template = "" end
+chat_dialog_url_template = tostring(chat_dialog_url_template)
 if celebration_show_in_portal ~= 1 then celebration_show_in_portal = 0 end
 
 -- ⛔ کلید ایمنی نوشتن روی ماژول گفتگو — پیش‌فرض خاموش.
@@ -2704,7 +2722,7 @@ local html_tail = [==[
       <p class="note" id="celebrationTopic"></p>
       <div class="modal-foot">
         <button type="button" class="btn-action" id="celebrationJoin" onclick="joinCelebration()">پیوستن به گفتگو</button>
-        <button type="button" class="btn-action" id="celebrationOpenModule" onclick="openChatModule()">باز کردن ماژول گفتگو</button>
+        <button type="button" class="btn-action" id="celebrationOpenModule" onclick="openChatModule()">باز کردن گفتگو</button>
         <button type="button" class="btn-action" onclick="closeCelebration()">بستن</button>
       </div>
       <p class="note" id="celebrationResult">پس از پیوستن، پیام تبریک را داخل خودِ گفتگو بنویسید؛ همین‌جا هم نمایش داده می‌شود.</p>
@@ -2720,6 +2738,7 @@ var celebrationTarget = { name: '', date: '', dialogId: 0 };
 var CELEBRATION_GROUP_ID = __CELEBRATION_GROUP_ID__;
 var CELEBRATION_ENABLED = __CELEBRATION_ENABLED__;
 var CHAT_MODULE_URL = '__CHAT_MODULE_URL__';
+var CHAT_DIALOG_URL_TEMPLATE = '__CHAT_DIALOG_URL_TEMPLATE__';
 
 document.querySelectorAll('.nav button').forEach(function (btn) {
   btn.addEventListener('click', function () { goToPage(btn.dataset.page); });
@@ -2903,9 +2922,16 @@ function setCelebrationState(res) {
   }
   var topicBox = document.getElementById('celebrationTopic');
   if (celebrationTarget.dialogId) {
-    topicBox.textContent = 'این گفتگو در ماژول گفتگو با همین عنوان پیدا می‌شود: «تبریک تولد ' +
-      celebrationTarget.name + ' — ' + celebrationTarget.date +
-      '». گفتگوها پاپ‌آپ باز می‌شوند و لینک مستقیم به یک گفتگو ندارند.';
+    var openBtn = document.getElementById('celebrationOpenModule');
+    if (CHAT_DIALOG_URL_TEMPLATE) {
+      openBtn.textContent = 'باز کردن گفتگو';
+      topicBox.textContent = 'عنوان این گفتگو: «تبریک تولد ' + celebrationTarget.name +
+        ' — ' + celebrationTarget.date + '» (شناسه ' + celebrationTarget.dialogId + ').';
+    } else {
+      openBtn.textContent = 'باز کردن ماژول گفتگو';
+      topicBox.textContent = 'این گفتگو در ماژول گفتگو با همین عنوان پیدا می‌شود: «تبریک تولد ' +
+        celebrationTarget.name + ' — ' + celebrationTarget.date + '».';
+    }
   } else {
     topicBox.textContent = '';
   }
@@ -2942,7 +2968,11 @@ function openCelebration(name, dateLabel) {
 }
 
 function openChatModule() {
-  window.open(CHAT_MODULE_URL, '_blank');
+  var url = CHAT_MODULE_URL;
+  if (celebrationTarget.dialogId && CHAT_DIALOG_URL_TEMPLATE) {
+    url = CHAT_DIALOG_URL_TEMPLATE.replace('{id}', String(celebrationTarget.dialogId));
+  }
+  window.open(url, '_blank');
 }
 
 function closeCelebration() {
@@ -3006,6 +3036,7 @@ html_tail = replace_token(html_tail, "__CELEBRATION_GROUP_ID__",
 html_tail = replace_token(html_tail, "__CELEBRATION_ENABLED__",
     celebration_enabled and "true" or "false")
 html_tail = replace_token(html_tail, "__CHAT_MODULE_URL__", js_str(chat_module_url))
+html_tail = replace_token(html_tail, "__CHAT_DIALOG_URL_TEMPLATE__", js_str(chat_dialog_url_template))
 
 local html = html_head .. topbar_html .. error_html ..
     section_overview .. section_attendance .. section_requests .. section_profile ..
