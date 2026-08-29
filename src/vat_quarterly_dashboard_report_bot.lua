@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 23:55
+-- Last Edit = 1405/06/08 00:09
 
 -- botName = vat_quarterly_dashboard
 -- version = v01
@@ -38,6 +38,18 @@
 -- ============================================================
 
 local MODULE_ID_DOCUMENTS = 7 -- ماژول «اسناد» طبق docs/context/TeamyarInternalApiReference.md
+
+-- شناسه‌های سند پیش‌فرض (هاردکد) — اگر ورودی مربوطه در Query String/فرم داده نشود، همین‌ها استفاده می‌شوند.
+-- عمداً هاردکد است، نه از تب «پیکربندی» بات: طبق تجربهٔ مستندشدهٔ همین پروژه (ر.ک. یادداشت بات‌های
+-- moadian_index_m*_bot.lua در TeamyarBotsCatalog.md)، مقدار «پیکربندی» بات‌ها روی این نمونهٔ Teamyar
+-- هرگز به‌طور قابل‌اتکا ذخیره/خوانده نمی‌شود — استفاده از آن باعث کرش HTTP 500 در چند بات دیگر شده.
+-- برای تغییر شناسه‌ها: فقط همین ۸ مقدار را ویرایش کنید (nil = آن اسلات خالی بماند)، نیازی به تغییر جای
+-- دیگری از فایل نیست. اگر document_id واقعی را در Query String آدرس اجرا هم بدهید، آن مقدار اولویت دارد.
+local DEFAULT_DOC_IDS = {
+    sale_q1 = 19025, sale_q2 = nil, sale_q3 = nil, sale_q4 = nil,
+    purchase_q1 = 19024, purchase_q2 = nil, purchase_q3 = nil, purchase_q4 = nil,
+}
+
 local SEASON_KEYS = { "q1", "q2", "q3", "q4" }
 local SEASON_LABELS = { "فصل ۱ (بهار)", "فصل ۲ (تابستان)", "فصل ۳ (پاییز)", "فصل ۴ (زمستان)" }
 local SEASON_SHORT = { "فصل ۱", "فصل ۲", "فصل ۳", "فصل ۴" }
@@ -123,6 +135,9 @@ pcall(function() input = teamyar.get_input() or {} end)
 local function read_doc_id(key)
     local v = input[key]
     local n = tonumber(v)
+    if n == nil or n <= 0 then
+        n = DEFAULT_DOC_IDS[key] -- بدون ورودی صریح، به مقدار هاردکد بالا برگرد
+    end
     if n == nil or n <= 0 then return nil end
     return math.floor(n)
 end
