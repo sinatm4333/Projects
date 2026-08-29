@@ -389,7 +389,7 @@
                      "result_type":  1,
                      "run_count":  29,
                      "categories":  "آنالیزور بات",
-                     "local_src":  "src/action_mgmt_dashboard_bot.lua",
+                     "local_src":  "src/action_management_dashboard_report_bot.lua",
                      "input_fields":  [
 
                                       ],
@@ -596,7 +596,7 @@
                      "result_type":  1,
                      "run_count":  55,
                      "categories":  "آنالیزور بات",
-                     "local_src":  "src/crm_geo_sales_dashboard_bot_bot.lua",
+                     "local_src":  "src/crm_geo_sales_dashboard_bot.lua",
                      "input_fields":  [
 
                                       ],
@@ -619,7 +619,7 @@
                      "result_type":  1,
                      "run_count":  0,
                      "categories":  "آنالیزور بات",
-                     "local_src":  "src/crm_customer_ui_v01_bot.lua",
+                     "local_src":  "src/crm_customer_ui_bot.lua",
                      "input_fields":  [
 
                                       ],
@@ -642,7 +642,7 @@
                      "result_type":  1,
                      "run_count":  0,
                      "categories":  "آنالیزور بات",
-                     "local_src":  "src/sales_revenue_center_dashboard_bot.lua",
+                     "local_src":  "src/sales_revenue_center_dashboard_report_bot.lua",
                      "input_fields":  [
 
                                       ],
