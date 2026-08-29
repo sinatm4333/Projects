@@ -68,6 +68,7 @@
 | [todo/customform/get](اقدام/todo_customform_get.md) | `/api/todo/customform/get` | دریافت فرم سفارشی |
 | [todo/customform/multi_get](اقدام/todo_customform_multi_get.md) | `/api/todo/customform/multi_get` | دریافت فرم سفارشی توضیحات |
 | [todo/customform/update](اقدام/todo_customform_update.md) | `/api/todo/customform/update` | به‌روزرسانی فرم سفارشی |
+| [todo/registerform](اقدام/todo_registerform.md) | `/api/todo/registerform` | فراخوانی فرم ماژول‌های دیگر در اقدام |
 | [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
 | [folder/getDisplayName](اسناد/folder_getDisplayName.md) | `/api/folder/getDisplayName` | گرفتن نام فولدر |
 | [getAutoName](اسناد/getAutoName.md) | `/api/getAutoName` | ساخت نام خودکار سند |
