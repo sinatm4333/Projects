@@ -47,3 +47,4 @@
 | [document/detach](اسناد/document_detach.md) | `/api/document/detach` | بازکردن منگنه |
 | [client/getRootId](اسناد/client_getRootId.md) | `/api/client/getRootId` | گرفتن پوشه‌ی مشتریان |
 | [client/getFolderId](اسناد/client_getFolderId.md) | `/api/client/getFolderId` | گرفتن شناسه پوشه مشتری |
+| [client/getSubfolderId](اسناد/client_getSubfolderId.md) | `/api/client/getSubfolderId` | گرفتن زیرپوشه‌های پوشه مشتری |
