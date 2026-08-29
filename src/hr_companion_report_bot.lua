@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 00:31
+-- Last Edit = 1405/06/07 14:57
 
 -- botName = hr_companion
 -- description = همراه ۱۴۰ — پنل پرسنلی (تردد و کارکرد، درخواست‌ها، اطلاعات پرسنلی، همراهِ روز و تولدها)
@@ -222,6 +222,22 @@ end
 local function sql_time_of_day(col)
     return "COALESCE(CASE WHEN " .. col .. " IS NULL OR " .. col .. " <= 0 THEN NULL ELSE " ..
         "TIME_FORMAT(SEC_TO_TIME(MOD(" .. col .. ", 864000000000) / 10000000), '%H:%i') END, '')"
+end
+
+-- ⚠️ تاریخ‌ها هرگز به‌عنوان پارامتر «?» فرستاده نمی‌شوند (تاییدشده روی سرور زنده ۱۴۰۵/۰۶/۰۷).
+-- FILETIME یک عدد ۱۸ رقمی است (مثل 133700000000000000) و لایهٔ db.query این پلتفرم نمی‌تواند
+-- عددی با این اندازه را bind کند: کوئری با همان خطای عمومی «sql error» رد می‌شود، دقیقاً مثل باگ
+-- تاییدشدهٔ «LIKE ?». روی بات ۶۲۲ همبستگی کامل دیده شد: هر کوئری که تاریخ پارامتری داشت شکست و هر
+-- کوئری که نداشت کار کرد. همهٔ بات‌های مستقر و سالم این ریپو هم تاریخ را داخل خود SQL می‌سازند
+-- (الگوی (UNIX_TIMESTAMP() + 11644473600) * 10000000).
+-- این کار امن است چون مقدار هرگز رشتهٔ کاربر نیست: یا از time.get_filetime می‌آید یا از ورودی‌ای
+-- که قبلش با tonumber و بازهٔ معتبر اعتبارسنجی شده. خروجی همیشه فقط رقم است.
+-- خروجی عمداً با فاصله در دو طرف پد می‌شود. Lua اولین newline بعد از [[ را حذف می‌کند، پس بدون
+-- این فاصله عدد به کلمهٔ بعدی می‌چسبید و «...000000ORDER BY» می‌شد — یک sql error دیگر.
+local function sql_filetime(value)
+    local n = tonumber(value)
+    if n == nil or n ~= n or n < 0 then n = 0 end
+    return " " .. string.format("%.0f", n) .. " "
 end
 
 local function sql_ticks_to_minutes(col)
@@ -880,15 +896,15 @@ local function resolve_order_names(unit_id, calendar_id, supervisor_id, date_fro
 SELECT COALESCE(ou.NAME, N'نامشخص') AS unit_name,
        COALESCE(hc.NAME, N'—') AS calendar_name,
        COALESCE(sup.FULLNAME, N'—') AS supervisor_name,
-       COALESCE(REPORT_FN_JDATE(?, '/'), '') AS date_from_j,
-       COALESCE(REPORT_FN_JDATE(?, '/'), '') AS date_to_j
+       COALESCE(REPORT_FN_JDATE(]] .. sql_filetime(date_from) .. [[, '/'), '') AS date_from_j,
+       COALESCE(REPORT_FN_JDATE(]] .. sql_filetime(date_to) .. [[, '/'), '') AS date_to_j
 FROM (SELECT 1) seed
 LEFT JOIN org_organization_unit oou ON oou.ID = ?
 LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
 LEFT JOIN hr_calendar hc ON hc.ID = ?
 LEFT JOIN profile_main sup ON sup.id = ?
 LIMIT 1
-]], { date_from or 0, date_to or 0, unit_id or 0, calendar_id or 0, supervisor_id or 0 }, 5)
+]], { unit_id or 0, calendar_id or 0, supervisor_id or 0 }, 5)
     if rows == nil or #rows == 0 then return nil end
     return {
         unit_name = rows[1][1] or "نامشخص",
@@ -967,10 +983,11 @@ do
         end
 
         local rows, query_err = fetch_rows(ORDER_SELECT .. [[
-WHERE o.PERSONNEL_ID = ? AND o.DATE_FROM <= ? AND o.DATE_TO >= ?
+WHERE o.PERSONNEL_ID = ? AND o.DATE_FROM <= ]] .. sql_filetime(to_date) .. [[
+  AND o.DATE_TO >= ]] .. sql_filetime(to_date) .. [[
 ORDER BY o.ID DESC
 LIMIT 1
-]], { personnel.personnel_id, to_date, to_date }, 11)
+]], { personnel.personnel_id }, 11)
         if rows == nil then
             employment_err = (employment_err and (employment_err .. " | ") or "") .. tostring(query_err)
             return
@@ -1059,7 +1076,8 @@ WITH shift_day AS (
          MAX(d.TIME_TO) AS shift_to,
          SUM(GREATEST(d.TIME_TO - d.TIME_FROM, 0)) AS shift_duration
   FROM hr_day_details d
-  WHERE d.CALENDAR_ID = ? AND d.DAY_DATE BETWEEN ? AND ?
+  WHERE d.CALENDAR_ID = ? AND d.DAY_DATE BETWEEN ]] .. sql_filetime(from_date) ..
+        [[ AND ]] .. sql_filetime(to_date) .. [[
   GROUP BY d.CALENDAR_ID, d.DAY_DATE
 )
 SELECT
@@ -1082,10 +1100,11 @@ SELECT
 FROM hr_work_time w
 LEFT JOIN report_dimdate rd ON rd.DATEKEY = w.WORK_DATE
 LEFT JOIN shift_day sd ON sd.DAY_DATE = w.WORK_DATE
-WHERE w.PERSONNEL_ID = ? AND w.WORK_DATE BETWEEN ? AND ?
+WHERE w.PERSONNEL_ID = ? AND w.WORK_DATE BETWEEN ]] .. sql_filetime(from_date) ..
+      [[ AND ]] .. sql_filetime(to_date) .. [[
 ORDER BY w.WORK_DATE DESC
 LIMIT 200
-]], { employment.calendar_id or 0, from_date, to_date, personnel.personnel_id, from_date, to_date }, 16)
+]], { employment.calendar_id or 0, personnel.personnel_id }, 16)
 
         if rows == nil then
             attendance_err = tostring(query_err)
@@ -1193,10 +1212,11 @@ SELECT
 FROM hr_ext_time e
 LEFT JOIN hr_machine mf ON mf.ID = e.MACHINE_ID_FROM
 LEFT JOIN hr_machine mt ON mt.ID = e.MACHINE_ID_TO
-WHERE e.PERSONNEL_ID = ? AND e.EXT_DATE BETWEEN ? AND ?
+WHERE e.PERSONNEL_ID = ? AND e.EXT_DATE BETWEEN ]] .. sql_filetime(from_date) ..
+      [[ AND ]] .. sql_filetime(to_date) .. [[
 ORDER BY e.EXT_DATE DESC, e.TIME_FROM DESC
 LIMIT 300
-]], { personnel.personnel_id, from_date, to_date }, 9)
+]], { personnel.personnel_id }, 9)
         if rows == nil then
             events_err = tostring(query_err)
             return
@@ -1259,10 +1279,11 @@ SELECT
 FROM hr_vacation v
 LEFT JOIN hr_vacation_type vt_by_type ON vt_by_type.TYPE = v.TYPE
 LEFT JOIN hr_vacation_type vt_by_id ON vt_by_id.ID = v.TYPE
-WHERE v.PERSONNEL_ID = ? AND v.DATE_VACATOIN BETWEEN ? AND ?
+WHERE v.PERSONNEL_ID = ? AND v.DATE_VACATOIN BETWEEN ]] .. sql_filetime(from_date) ..
+      [[ AND ]] .. sql_filetime(to_date) .. [[
 ORDER BY v.DATE_VACATOIN DESC, v.ID DESC
 LIMIT 200
-]], { personnel.personnel_id, from_date, to_date }, 13)
+]], { personnel.personnel_id }, 13)
         if rows == nil then
             requests_err = tostring(query_err)
         else
@@ -1297,10 +1318,11 @@ SELECT r.ID,
   COALESCE(REPORT_FN_JDATE(r.DATE_CREATE, '/'), '') AS created_j,
   r.DAY_DATE AS day_raw
 FROM hr_overtime_request r
-WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ? AND ?
+WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ]] .. sql_filetime(from_date) ..
+      [[ AND ]] .. sql_filetime(to_date) .. [[
 ORDER BY r.DAY_DATE DESC, r.ID DESC
 LIMIT 100
-]], { personnel.personnel_id, from_date, to_date }, 9)
+]], { personnel.personnel_id }, 9)
         if ot_rows ~= nil then
             for _, r in ipairs(ot_rows) do
                 table.insert(requests, {
@@ -1333,10 +1355,11 @@ SELECT r.ID,
   COALESCE(REPORT_FN_JDATE(r.DATE_CREATE, '/'), '') AS created_j,
   r.DAY_DATE AS day_raw
 FROM hr_telework_request r
-WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ? AND ?
+WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ]] .. sql_filetime(from_date) ..
+      [[ AND ]] .. sql_filetime(to_date) .. [[
 ORDER BY r.DAY_DATE DESC, r.ID DESC
 LIMIT 100
-]], { personnel.personnel_id, from_date, to_date }, 9)
+]], { personnel.personnel_id }, 9)
         if tw_rows ~= nil then
             for _, r in ipairs(tw_rows) do
                 table.insert(requests, {
@@ -1492,9 +1515,10 @@ SELECT COALESCE(REPORT_FN_JDATE(rd.DATEKEY, '/'), '') AS jdate, COALESCE(rd.JTDA
        COALESCE(rd.JYDAY, 0) AS jyday, COALESCE(rd.JMONTH, 0) AS jmonth,
        COALESCE(rd.JMDAY, 0) AS jmday, COALESCE(rd.JTMONTH, '—') AS jmonth_name
 FROM report_dimdate rd
-WHERE rd.DATEKEY = (? - MOD(?, 864000000000))
+WHERE rd.DATEKEY = (]] .. sql_filetime(to_date) .. [[ - MOD(]] .. sql_filetime(to_date) ..
+      [[, 864000000000))
 LIMIT 1
-]], { to_date, to_date }, 6)
+]], {}, 6)
         if rows ~= nil and #rows > 0 then
             today_meta.jdate = rows[1][1] or "—"
             today_meta.jday_name = rows[1][2] or "—"
@@ -1518,14 +1542,16 @@ JOIN profile_user_info uf ON uf.id = p.id
 JOIN report_dimdate rd ON rd.DATEKEY = (uf.BIRTHDAY - MOD(uf.BIRTHDAY, 864000000000))
 LEFT JOIN hr_personnel_order o ON o.ID = (
   SELECT o2.ID FROM hr_personnel_order o2
-  WHERE o2.PERSONNEL_ID = h.PERSONNEL_ID AND o2.DATE_FROM <= ? AND o2.DATE_TO >= ?
+  WHERE o2.PERSONNEL_ID = h.PERSONNEL_ID
+    AND o2.DATE_FROM <= ]] .. sql_filetime(to_date) .. [[
+    AND o2.DATE_TO >= ]] .. sql_filetime(to_date) .. [[
   ORDER BY o2.ID DESC LIMIT 1)
 LEFT JOIN org_organization_unit oou ON oou.ID = o.UNIT_ID
 LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
 WHERE h.HIRING_STATUS = 2 AND h.ORG_ID = ? AND uf.BIRTHDAY > 0 AND rd.JMONTH = ?
 ORDER BY rd.JMDAY, p.FULLNAME
 LIMIT 200
-]], { to_date, to_date, personnel.org_id or 0, today_meta.jmonth }, 7)
+]], { personnel.org_id or 0, today_meta.jmonth }, 7)
             if bd_rows ~= nil then
                 for _, r in ipairs(bd_rows) do
                     local entry = {
@@ -2373,19 +2399,28 @@ do
         '</article></div></section>'
 end
 
--- Error banner
+-- نوار خطا — فقط وقتی چیزی واقعاً از قلم افتاده باشد.
+-- نسخهٔ قبلی هر خطای داخلی را نشان می‌داد، از جمله ACCESS_DENIED فراخوانی APIهایی که fallback
+-- دیتابیس‌شان موفق شده بود. نتیجه‌اش یک نوار قرمزِ ترسناک بود در حالی که هیچ داده‌ای کم نبود.
+-- حالا اگر منبع جایگزین جواب داده باشد، خطای همان بخش گزارش نمی‌شود.
 local error_html = ""
 do
     local messages = {}
-    if employment_err then table.insert(messages, "حکم کاری: " .. tostring(employment_err)) end
-    if attendance_err then table.insert(messages, "کارکرد: " .. tostring(attendance_err)) end
-    if events_err then table.insert(messages, "رویدادهای تردد: " .. tostring(events_err)) end
-    if requests_err then table.insert(messages, "درخواست‌ها: " .. tostring(requests_err)) end
-    if leave_balance_err then table.insert(messages, "مانده مرخصی: " .. tostring(leave_balance_err)) end
-    if celebration_err then table.insert(messages, "تولدها: " .. tostring(celebration_err)) end
+    local function report(label, err, data_is_present)
+        if err ~= nil and not data_is_present then
+            table.insert(messages, label .. ": " .. tostring(err))
+        end
+    end
+    report("حکم کاری", employment_err, employment.order_id ~= nil)
+    report("کارکرد", attendance_err, #daily > 0)
+    report("رویدادهای تردد", events_err, #events > 0)
+    report("درخواست‌ها", requests_err, #requests > 0)
+    report("مانده مرخصی", leave_balance_err, leave_balance ~= nil)
+    report("تولدها", celebration_err, today_meta.jyday > 0)
     if #messages > 0 then
         error_html = '<div class="error-box"><b>بخشی از اطلاعات بارگذاری نشد:</b> ' ..
-            escape_html(table.concat(messages, " | ")) .. '</div>'
+            escape_html(table.concat(messages, " | ")) ..
+            '<br>بقیهٔ بخش‌های این صفحه سالم‌اند. لطفاً همین متن را به واحد فناوری اطلاعات بدهید.</div>'
     end
 end
 
@@ -2733,7 +2768,8 @@ local html_tail = [==[
 <div class="footer">همراه ۱۴۰ — پنل پرسنلی منابع انسانی</div>
 
 <script>
-var RUN_URL = (location.pathname.indexOf('/bot/run/') === 0) ? location.pathname : location.pathname;
+var RUN_URL = location.pathname;          // برای POSTهای داخلی بات
+var SELF_URL = location.href;             // برای باز کردن همین گزارش در تب جدید (با query کامل)
 var celebrationTarget = { name: '', date: '', dialogId: 0 };
 var CELEBRATION_GROUP_ID = __CELEBRATION_GROUP_ID__;
 var CELEBRATION_ENABLED = __CELEBRATION_ENABLED__;
@@ -2779,7 +2815,19 @@ document.querySelectorAll('[data-reqfilter]').forEach(function (btn) {
   });
 });
 
+// این گزارش داخل iframe پنل تیم‌یار اجرا می‌شود و position:fixed نسبت به همان iframe محاسبه
+// می‌شود، نه پنجرهٔ مرورگر — یعنی کلاس CSS فقط داخل قاب کوچک پخش می‌شد و عملاً تمام‌صفحه نمی‌شد.
+// (تاییدشده روی بات ۶۲۲.) پس وقتی داخل iframe هستیم، همین گزارش را در تب جدید باز می‌کنیم که
+// واقعاً تمام‌صفحه است و نه به iframe وابسته است نه به Fullscreen API که روی این پلتفرم
+// غیرقابل‌اتکا بودنش قبلاً ثبت شده. اگر مستقیم (بدون iframe) باز شده باشد، همان کلاس CSS کافی است.
+function isInsideFrame() {
+  try { return window.self !== window.top; } catch (e) { return true; }
+}
 function toggleFullScreen() {
+  if (isInsideFrame()) {
+    window.open(SELF_URL, '_blank');
+    return;
+  }
   var root = document.getElementById('reportRoot');
   var btn = document.getElementById('btnFullscreen');
   var isFull = root.classList.toggle('fullscreen');
