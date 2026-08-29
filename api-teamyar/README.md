@@ -49,6 +49,7 @@
 | [document/list](اسناد/document_list.md) | `/api/document/list` | فهرست اسناد |
 | [document/getByMetadata](اسناد/document_getByMetadata.md) | `/api/document/getByMetadata` | گرفتن سند از طریق متادیتا |
 | [document/getInfo](اسناد/document_getInfo.md) | `/api/document/getInfo` | گرفتن اطلاعات یک سند |
+| [document/getName](اسناد/document_getName.md) | `/api/document/getName` | دریافت نام سند |
 | [document/attach](اسناد/document_attach.md) | `/api/document/attach` | منگنه کردن فایل |
 | [document/detach](اسناد/document_detach.md) | `/api/document/detach` | بازکردن منگنه |
 | [client/getRootId](اسناد/client_getRootId.md) | `/api/client/getRootId` | گرفتن پوشه‌ی مشتریان |
