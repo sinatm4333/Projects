@@ -1,6 +1,6 @@
-# فراخوانی فرم ماژول‌های دیگر در اقدام
+# فراخوانی فرم ماژول های دیگر در اقدام
 
-ثبت و فراخوانی فرم متعلق به ماژول دیگر در اقدام.
+فراخوانی فرم ماژول های دیگر در اقدام (مثلا خرید)
 
 ## آدرس
 
@@ -22,30 +22,32 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `form_id` | number | شناسه فرم |
+| `form_id` | integer (int64) | شناسه فرم |
+| `form_path` | string | urlی که فرم را لود میکند |
+| `module_id` | integer (int64) | شناسه ی ماژول |
 | `form_title` | string | عنوان فرم |
-| `form_path` | string | مسیر فرم |
-| `module_id` | number | شناسه ماژول |
-| `other_module_form_id` | number | شناسه فرم در ماژول دیگر |
+| `other_module_form_id` | integer (int64) | شناسه ی ایجاد کننده فرم ماژول |
 
 ## پاسخ
 
 ```json
 {
-  "data": { "err": "" },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "data": {
+    "err": ""
+  },
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.err` | string | خطای فراخوانی فرم |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [دریافت فرم سفارشی](todo_customform_get.md)
-- [به‌روزرسانی فرم سفارشی](todo_customform_update.md)
+| `data` | object | آبجکت پاسخ |
+| `data.err` | string | در صورت وجود پیام خطا در back end، پیام نمایش داده میشود |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

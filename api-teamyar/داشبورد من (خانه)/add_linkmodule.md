@@ -1,6 +1,4 @@
-# ایجاد لینک بین ماژول‌ها
-
-ایجاد پیوند (link) میان دو رکورد در دو ماژول مبدأ و مقصد.
+# ایجاد لینک بین ماژول ها
 
 ## آدرس
 
@@ -14,33 +12,37 @@
 {
   "dst_type": 0,
   "src_type": 0,
-  "dst_link_id": 0,
-  "src_link_id": 0,
-  "dst_module_id": 0,
-  "src_module_id": 0
+  "dst_link_id*": 0,
+  "src_link_id*": 0,
+  "dst_module_id*": 0,
+  "src_module_id*": 0
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `src_module_id` | number | شناسه ماژول مبدأ |
-| `src_link_id` | number | شناسه رکورد مبدأ |
-| `src_type` | number | نوع مبدأ |
-| `dst_module_id` | number | شناسه ماژول مقصد |
-| `dst_link_id` | number | شناسه رکورد مقصد |
-| `dst_type` | number | نوع مقصد |
+| `dst_type` | integer (int32) | نوع آیتم مقصد که میخواهیم لینک شود |
+| `src_type` | integer (int32) | نوع آیتم مبدا که میخواهیم لینک شود |
+| `dst_link_id*` | integer (int64) | شناسه آیتم مقصد که میخواهیم لینک شود |
+| `src_link_id*` | integer (int64) | شناسه آیتم مبدا که میخواهیم لینک شود |
+| `dst_module_id*` | integer (int32) | شناسه ماژول مقصد |
+| `src_module_id*` | integer (int32) | شناسه ماژول مبدا |
 
 ## پاسخ
 
 ```json
 {
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

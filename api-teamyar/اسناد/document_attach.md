@@ -1,6 +1,6 @@
 # منگنه کردن فایل
 
-پیوست (منگنه) کردن یک یا چند فایل به یک سند.
+منگنه کردن یک یا چند فایل به فایل دیگر
 
 ## آدرس
 
@@ -12,31 +12,33 @@
 
 ```json
 {
-  "attach_ids": [0],
-  "document_id": 0
+  "attach_ids*": [
+    0
+  ],
+  "document_id*": 0
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `document_id` | number | شناسه سند مقصد |
-| `attach_ids` | array\<number\> | شناسه فایل‌هایی که منگنه می‌شوند |
+| `attach_ids*[]` | array | لیست فایل هایی که قرار است منگنه شوند |
+| `document_id*` | integer (int64) | شناسه فایلی که فایل ها به آن منگنه می شوند |
 
 ## پاسخ
 
 ```json
 {
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [فهرست اسناد](document_list.md)
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

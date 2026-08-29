@@ -1,6 +1,6 @@
 # افزودن مرحله در اقدام
 
-افزودن یک یا چند مرحله (step) به اقدام.
+فعال کردن مراحل داخل جریان کار خود تسک در اقدام
 
 ## آدرس
 
@@ -20,30 +20,30 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `task_id` | number | شناسه اقدام |
-| `step_ids` | string | شناسه مراحل |
-| `task_step_id` | number | شناسه مرحله اقدام |
-
-`step_ids` از نوع **string** است، نه آرایه — مانند `todo/task/assignadd`.
+| `task_id` | integer (int64) | شناسه اقداماین فیلد اجباری می باشد. |
+| `step_ids` | string | شناسه مراحل جریان کارِ اقدام مورد نظراز مراحلی که درون جریان کاری که اقدام با آن ایجاد شده است میتوان انتخاب کرد که با اجرا شدن بات فعال شوند. |
+| `task_step_id` | integer (int64) | مرحله ای که فعال می باشد |
 
 ## پاسخ
 
 ```json
 {
-  "data": { "task_id": 0 },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "data": {
+    "task_id": 0
+  },
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.task_id` | number | شناسه اقدام |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [ایجاد اقدام](todo_taskadd.md) — `task_id` از خروجی آن گرفته می‌شود.
-- [اساین کردن کاربران در اقدام](todo_task_assignadd.md)
+| `data` | object | دیتا |
+| `data.task_id` | integer (int64) | شناسه اقدام |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

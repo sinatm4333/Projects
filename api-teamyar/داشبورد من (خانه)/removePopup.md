@@ -1,6 +1,6 @@
-# حذف پاپ‌آپ
+# حذف پاپ آپ
 
-حذف یک popup ایجادشده برای کاربر یا کاربران مشخص.
+حذف پاپ آپ برای کاربر (ها)
 
 ## آدرس
 
@@ -12,31 +12,33 @@
 
 ```json
 {
-  "popup_id": 0,
-  "user_ids": [0]
+  "popup_id*": 0,
+  "user_ids": [
+    0
+  ]
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `popup_id` | number | شناسه popup که باید حذف شود (خروجی `/api/show_popup`) |
-| `user_ids` | array\<number\> | شناسه کاربرانی که popup از آن‌ها حذف می‌شود |
+| `popup_id*` | integer (int64) | شناسه پاپ آپ |
+| `user_ids[]` | array | انتخاب کاربر برای حذف پاپ آپ. درصورتی که فرستاده نشود پاپ آپ برای همه حذف می شود |
 
 ## پاسخ
 
 ```json
 {
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [ایجاد popup](show_popup.md) — `popup_id` از پاسخ آن گرفته می‌شود.
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

@@ -1,6 +1,6 @@
 # فراموشی رمز عبور
 
-تعیین رمز عبور جدید در فرایند بازیابی رمز، با کد امنیتی ارسال‌شده به موبایل یا ایمیل.
+فراموشی رمز عبور این api فقط یکی از دوحالت ایمیل یا شماره تلفن را دریافت میکند.
 
 ## آدرس
 
@@ -22,27 +22,27 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `portal_id` | number | شناسه پورتال |
-| `mobile_email` | string | موبایل یا ایمیل کاربر |
+| `portal_id` | integer (int64) | شناسه پورتال |
+| `mobile_email` | string | شماره موبایل یا ایمیل |
+| `new_password` | string | پسورد جدید |
 | `security_code` | string | کد امنیتی |
-| `new_password` | string | رمز عبور جدید |
-| `confirm_password` | string | تکرار رمز عبور جدید |
+| `confirm_password` | string | تایید پسورد |
 
 ## پاسخ
 
 ```json
 {
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [تغییر رمز کاربر](user_password_change.md) — تغییر رمز با داشتن رمز فعلی.
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

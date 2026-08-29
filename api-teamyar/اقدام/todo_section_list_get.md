@@ -1,6 +1,4 @@
-# دریافت لیست بخش‌های اقدام
-
-دریافت فهرست بخش‌های (section) ماژول اقدام.
+# دریافت لیست بخش های اقدام
 
 ## آدرس
 
@@ -18,7 +16,7 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `id` | number | شناسه |
+| `id` | integer (int64) | شناسه کتگوری |
 
 ## پاسخ
 
@@ -34,24 +32,24 @@
       "section_description": ""
     }
   ],
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data[].id` | number | شناسه بخش |
+| `data[]` | array | آرایه ای از بخش ها |
+| `data[].id` | integer (int64) | شناسه بخش |
+| `data[].order` | integer (int32) | تقدم بخش |
+| `data[].author_id` | integer (int64) | ایجاد کننده (جدول profile_main) |
+| `data[].date_create` | integer (int64) | تاریخ ایجاد |
 | `data[].section_name` | string | نام بخش |
 | `data[].section_description` | string | توضیحات بخش |
-| `data[].order` | number | ترتیب |
-| `data[].author_id` | number | شناسه ایجادکننده |
-| `data[].date_create` | number | تاریخ ایجاد |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [دریافت اطلاعات بخش](todo_section_get.md) — همان فیلدها برای یک بخش.
-- [دریافت لیست رده‌های یک بخش](todo_category_list_get.md)
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

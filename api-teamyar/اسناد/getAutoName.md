@@ -1,6 +1,4 @@
-# ساخت نام خودکار سند
-
-تولید نام خودکار برای سند بر اساس تنظیمات نام‌گذاری.
+# ساخت نام خوکار سند
 
 ## آدرس
 
@@ -12,7 +10,9 @@
 
 ```json
 {
-  "client_ids": [0],
+  "client_ids": [
+    0
+  ],
   "manual_name": "",
   "naming_setting": {
     "id": 0,
@@ -27,39 +27,36 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `client_ids` | array\<number\> | شناسه مشتریان |
+| `client_ids[]` | array | آرایه ای از شناسه های مشتری و پرسنلی |
 | `manual_name` | string | نام دستی |
-| `naming_setting` | object | تنظیمات نام‌گذاری (ساختار زیر) |
-
-`naming_setting` — همان ساختار خروجی [گرفتن نام خودکار سند](folder_getAutoNamingSetting.md):
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `id` | number | شناسه تنظیمات |
-| `document_id` | number | شناسه سند |
-| `mt_id` | number | شناسه فیلد متادیتا |
-| `entity_type` | number | نوع موجودیت |
-| `entity_path` | number | مسیر موجودیت |
-| `flags` | number | فلگ‌ها |
+| `naming_setting` | object | آبجکت تنظیمات نام خودکار |
+| `naming_setting.id` | integer (int64) | بلا استفاده ولی باید حتما مقداری داشته باشد |
+| `naming_setting.flags` | integer (int64) | NAMING_SETTING_FLAG_PORTAL = 1 , پورتالNAMING_SETTING_FLAG_ESSENTIAL = 2 , الزامیNAMING_SETTING_FLAG_MANUAL_NAME = 4 , نام دستی NAMING_SETTING_FLAG_COUNTER = 8 , شمارنده |
+| `naming_setting.mt_id` | integer (int64) | شناسه متا دیتا |
+| `naming_setting.document_id` | integer (int64) | شناسه سند |
+| `naming_setting.entity_path` | integer (int64) | مقدار ماهیت-جهت |
+| `naming_setting.entity_type` | integer (int64) | مقدار ماهیت-نوع |
 
 ## پاسخ
 
 ```json
 {
-  "data": { "autoname": "" },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "data": {
+    "autoname": ""
+  },
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.autoname` | string | نام تولیدشده |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [گرفتن نام خودکار سند](folder_getAutoNamingSetting.md) — خروجی آن به‌عنوان `naming_setting` استفاده می‌شود.
-- [ایجاد سند](createDocumentFile.md)
+| `data` | object | data |
+| `data.autoname` | string | نام خودکار سند |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

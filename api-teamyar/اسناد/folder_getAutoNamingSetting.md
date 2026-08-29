@@ -1,6 +1,6 @@
 # گرفتن نام خودکار سند
 
-دریافت تنظیمات نام‌گذاری خودکار یک پوشه.
+گرفتن نام خودکار سند از طریق شناسه
 
 ## آدرس
 
@@ -18,7 +18,7 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `id` | number | شناسه پوشه |
+| `id` | integer (int64) | شناسه سند |
 
 ## پاسخ
 
@@ -32,24 +32,24 @@
     "entity_path": 0,
     "entity_type": 0
   },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.id` | number | شناسه تنظیمات |
-| `data.document_id` | number | شناسه سند |
-| `data.mt_id` | number | شناسه فیلد متادیتا |
-| `data.entity_type` | number | نوع موجودیت |
-| `data.entity_path` | number | مسیر موجودیت |
-| `data.flags` | number | فلگ‌ها |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [ایجاد سند](createDocumentFile.md) — فیلد `auto_name_id` در ورودی آن.
-- [فهرست اسناد](document_list.md) — فیلدهای `file_autonum` و `folder_autonum` در خروجی آن.
+| `data` | object | data |
+| `data.id` | integer (int64) | شناسه سند |
+| `data.flags` | integer (int64) | NAMING_SETTING_FLAG_PORTAL = 1 , پورتالNAMING_SETTING_FLAG_ESSENTIAL = 2 , الزامیNAMING_SETTING_FLAG_MANUAL_NAME = 4 , نام دستی NAMING_SETTING_FLAG_COUNTER = 8 , شمارنده |
+| `data.mt_id` | integer (int64) | شناسه متادیتا (شناسه جدول DOCUMENTS_META_DATA) |
+| `data.document_id` | integer (int64) | شناسه سند |
+| `data.entity_path` | integer (int64) | مقدار ماهیت-جهت |
+| `data.entity_type` | integer (int64) | مقدار ماهیت-نوع |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

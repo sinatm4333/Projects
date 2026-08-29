@@ -1,6 +1,6 @@
 # دریافت اطلاعات پروفایل
 
-دریافت اطلاعات کامل یک پروفایل.
+دریافت اطلاعات کامل پروفایل یک کاربر
 
 ## آدرس
 
@@ -20,9 +20,9 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `id` | number | شناسه پروفایل |
-| `type` | number | نوع |
-| `module_id` | number | شناسه ماژول |
+| `id` | integer (int64) | شناسه پروفایل |
+| `type` | integer (int32) | نوع پروفایل1=کاربر 2=گروه |
+| `module_id` | integer (int32) | شناسه ماژول |
 
 ## پاسخ
 
@@ -32,14 +32,50 @@
     "id": 0,
     "name": "",
     "type": 0,
-    "email": [{ "id": 0, "email": "", "verified": 0 }],
-    "phone": [{ "id": 0, "type": 0, "phone": "", "extensions": "", "country_code": 0 }],
+    "email": [
+      {
+        "id": 0,
+        "email": "",
+        "verified": 0
+      }
+    ],
+    "phone": [
+      {
+        "id": 0,
+        "type": 0,
+        "phone": "",
+        "extensions": "",
+        "country_code": 0
+      }
+    ],
     "gender": 0,
-    "mobile": [{ "id": 0, "mobile": "", "country_code": 0 }],
+    "mobile": [
+      {
+        "id": 0,
+        "mobile": "",
+        "country_code": 0
+      }
+    ],
     "status": 0,
     "address": {
-      "home": { "x": 0, "y": 0, "city": "", "state": "", "address": "", "postal_code": "", "country_code": 0 },
-      "work": { "x": 0, "y": 0, "city": "", "state": "", "address": "", "postal_code": "", "country_code": 0 }
+      "home": {
+        "x": 0,
+        "y": 0,
+        "city": "",
+        "state": "",
+        "address": "",
+        "postal_code": "",
+        "country_code": 0
+      },
+      "work": {
+        "x": 0,
+        "y": 0,
+        "city": "",
+        "state": "",
+        "address": "",
+        "postal_code": "",
+        "country_code": 0
+      }
     },
     "is_role": 0,
     "surname": "",
@@ -58,98 +94,106 @@
     "signature_id": 0,
     "date_of_issue": 0,
     "master_module": 0,
-    "national_code": [{ "id": 0, "branch_code": 0, "country_code": 0, "national_code": "" }],
+    "national_code": [
+      {
+        "id": 0,
+        "branch_code": 0,
+        "country_code": 0,
+        "national_code": ""
+      }
+    ],
     "place_of_issue": "",
     "small_photo_id": 0,
-    "social_network": [{ "id": 0, "type": 0, "value": "" }],
+    "social_network": [
+      {
+        "id": 0,
+        "type": 0,
+        "value": ""
+      }
+    ],
     "identity_serial_no": "",
     "last_modified_photo": "",
     "change_password_time": 0
   },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
-### اطلاعات هویتی
-
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.id` | number | شناسه پروفایل |
+| `data` | object |  |
+| `data.id` | integer (int64) | شناسه پروفایل |
 | `data.name` | string | نام |
+| `data.type` | integer (int32) | نوع پروفایل |
+| `data.email[]` | array | لیست ایمیل ها |
+| `data.email[].id` | integer (int64) | شناسه ایمیل |
+| `data.email[].email` | string | ایمیل |
+| `data.email[].verified` | integer (int32) | نشان میدهد ایمیل به تایید شده است یا خیر |
+| `data.phone[]` | array | لیست شماره تلفن ها |
+| `data.phone[].id` | integer (int64) | شناسه شماره تلفن |
+| `data.phone[].type` | integer (int32) | نوع شماره PHONE_TYPE_HOME = 2, PHONE_TYPE_WORK = 3, PHONE_TYPE_FAX = 4 |
+| `data.phone[].phone` | string | شماره تلفن |
+| `data.phone[].extensions` | string | داخلی |
+| `data.phone[].country_code` | integer (int32) | کد کشور |
+| `data.gender` | integer (int32) | جنسیت |
+| `data.mobile[]` | array | لیست شماره موبایل |
+| `data.mobile[].id` | integer (int64) | شناسه شماره موبایل |
+| `data.mobile[].mobile` | string | شماره موبایل |
+| `data.mobile[].country_code` | integer (int32) | کد کشور |
+| `data.status` | integer (int32) | وضعیت پروفایل در ماژول(module_id در ورودی ارسال شده) |
+| `data.address` | object | آدرس ها |
+| `data.address.home` | object | آدرس منزل |
+| `data.address.home.x` | number (double) | عرض جغرافیایی |
+| `data.address.home.y` | number (double) | طول جغرافیایی |
+| `data.address.home.city` | string | شهر |
+| `data.address.home.state` | string | استان |
+| `data.address.home.address` | string | آدرس |
+| `data.address.home.postal_code` | string | کد پستی |
+| `data.address.home.country_code` | integer (int32) | کد کشور |
+| `data.address.work` | object | آدرس محل کار |
+| `data.address.work.x` | number (double) | عرض جغرافیایی |
+| `data.address.work.y` | number (double) | طول جغرافیایی |
+| `data.address.work.city` | string | شهر |
+| `data.address.work.state` | string | استان |
+| `data.address.work.address` | string | آدرس |
+| `data.address.work.postal_code` | string | کد پستی |
+| `data.address.work.country_code` | integer (int32) | کد کشور |
+| `data.is_role` | integer (int32) | نقش |
 | `data.surname` | string | نام خانوادگی |
-| `data.patronymic` | string | نام پدر |
+| `data.birthday` | integer (date) | تاریخ تولد |
 | `data.fullname` | string | نام کامل |
-| `data.gender` | number | جنسیت |
-| `data.birthday` | number | تاریخ تولد |
+| `data.photo_id` | integer (int64) | شناسه تصویر پروفایل |
+| `data.folder_id` | integer (int64) | شناسه پوشه پروفایل |
+| `data.user_type` | integer (int32) | نوع کاربر3 = حقیقی4 = حقوقی |
 | `data.birthplace` | string | محل تولد |
-| `data.nationality` | string | ملیت |
-
-### وضعیت و نوع
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `data.type` | number | نوع |
-| `data.user_type` | number | نوع کاربر |
-| `data.status` | number | وضعیت |
-| `data.is_role` | number | نقش بودن |
-| `data.folder_id` | number | شناسه پوشه |
-| `data.manager_id` | number | شناسه مدیر |
-| `data.master_module` | number | ماژول اصلی |
-
-### راه‌های ارتباطی
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `data.email[]` | array | ایمیل‌ها — `id`، `email`، `verified` |
-| `data.phone[]` | array | تلفن‌ها — `id`، `type`، `phone`، `extensions`، `country_code` |
-| `data.mobile[]` | array | موبایل‌ها — `id`، `mobile`، `country_code` |
-| `data.social_network[]` | array | شبکه‌های اجتماعی — `id`، `type`، `value` |
-
-### آدرس
-
-`data.address` شامل دو کلید `home` (منزل) و `work` (محل کار) با ساختار یکسان:
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `address` | string | نشانی |
-| `city` | string | شهر |
-| `state` | string | استان |
-| `postal_code` | string | کد پستی |
-| `country_code` | number | کد کشور |
-| `x` | number | مختصات جغرافیایی |
-| `y` | number | مختصات جغرافیایی |
-
-### مدارک
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `data.identity_no` | string | شماره شناسنامه |
-| `data.identity_serial_no` | string | سریال شناسنامه |
-| `data.date_of_issue` | number | تاریخ صدور |
-| `data.place_of_issue` | string | محل صدور |
-| `data.passport_no` | string | شماره گذرنامه |
-| `data.national_code[]` | array | کد ملی — `id`، `national_code`، `branch_code`، `country_code` |
-
-### تصویر و امضا
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `data.photo_id` | number | شناسه تصویر |
-| `data.small_photo_id` | number | شناسه تصویر کوچک |
-| `data.last_modified_photo` | string | آخرین تغییر تصویر |
-| `data.signature_id` | number | شناسه امضا |
-
-### سایر
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
+| `data.manager_id` | integer (int64) |  |
+| `data.patronymic` | string | نام پدر |
 | `data.public_key` | string | کلید عمومی |
-| `data.change_password_time` | number | زمان تغییر رمز عبور |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [دریافت پروفایل‌ها](profile_getInfo.md) — اطلاعات خلاصه برای فهرستی از شناسه‌ها.
+| `data.identity_no` | string | شماره شناسنامه |
+| `data.nationality` | string | ملیت |
+| `data.passport_no` | string | شماره پاسپورت |
+| `data.signature_id` | integer (int64) | شناسه امضا |
+| `data.date_of_issue` | integer (int64) | تاریخ صدور شناسنامه |
+| `data.master_module` | integer (int64) | ماژول ایجاد کننده پروفایل |
+| `data.national_code[]` | array | کد ملی |
+| `data.national_code[].id` | integer (int64) | شناسه کد ملی |
+| `data.national_code[].branch_code` | integer (int32) |  |
+| `data.national_code[].country_code` | integer (int32) | کد کشور |
+| `data.national_code[].national_code` | string | کد ملی |
+| `data.place_of_issue` | string | محل صدور شناسنامه |
+| `data.small_photo_id` | integer (int64) | شناسه تصویر پروفایل (سایز کوچک) |
+| `data.social_network[]` | array | لیست حساب شبکه های اجتماعی |
+| `data.social_network[].id` | integer (int64) | شناسه |
+| `data.social_network[].type` | integer (int32) | نوع شبکه اجتماعی SOCIALNETWORK_TYPE_WEBSITE = 1, SOCIALNETWORK_TYPE_WHATSAPP = 2, SOCIALNETWORK_TYPE_LINKEDIN = 3, SOCIALNETWORK_TYPE_INSTAGRAM = 4, SOCIALNETWORK_TYPE_TELEGRAM = 5, SOCIALNETWORK_TYPE_SKYPE = 6, SOCIALNETWORK_TYPE_YAHOO = 7, SOCIALNETWORK_TYPE_TWITTER = 8 |
+| `data.social_network[].value` | string | حساب شبکه اجتماعی |
+| `data.identity_serial_no` | string | سریال شناسنامه |
+| `data.last_modified_photo` | string | زمان ویرایش تصویر |
+| `data.change_password_time` | integer (int64) | زمان تغییر پسورد |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

@@ -1,7 +1,5 @@
 # گرفتن نام فولدر
 
-دریافت نام نمایشی یک پوشه بر اساس شناسه.
-
 ## آدرس
 
 ```
@@ -18,26 +16,28 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `folder_id` | number | شناسه پوشه |
+| `folder_id` | integer (int64) | شناسه پوشه |
 
 ## پاسخ
 
 ```json
 {
-  "data": { "folder_name": "" },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "data": {
+    "folder_name": ""
+  },
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.folder_name` | string | نام نمایشی پوشه |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [دریافت نام سند](document_getName.md) — معادل آن برای سند.
-- [ایجاد پوشه](createDocumentFolder.md)
+| `data` | object | data |
+| `data.folder_name` | string | نام پوشه |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

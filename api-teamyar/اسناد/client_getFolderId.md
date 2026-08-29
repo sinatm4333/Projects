@@ -1,6 +1,6 @@
 # گرفتن شناسه پوشه مشتری
 
-دریافت شناسه پوشه اسناد متعلق به یک مشتری.
+گرفتن شناسه پوشه مشتری(پوشه ای که با نام مشتری در اسناد ساخته می شود.)
 
 ## آدرس
 
@@ -12,31 +12,34 @@
 
 ```json
 {
-  "client_id": 0
+  "client_id*": 0
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `client_id` | number | شناسه مشتری |
+| `client_id*` | integer (int64) | شناسه مشتری |
 
 ## پاسخ
 
 ```json
 {
-  "data": { "folder_id": 0 },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "data": {
+    "folder_id": 0
+  },
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.folder_id` | number | شناسه پوشه مشتری |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [فهرست اسناد](document_list.md) — `folder_id` به‌عنوان `parent_id` قابل استفاده است.
+| `data` | object | داده |
+| `data.folder_id` | integer (int64) | شناسه پوشه مشتری |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

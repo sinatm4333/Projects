@@ -1,6 +1,4 @@
-# حذف لینک تیمیاری (بین دو ماژول)
-
-حذف پیوند (link) میان دو رکورد در ماژول مبدأ و مقصد — عملیات معکوس `add_linkmodule`.
+# حذف لینک تیمیاری
 
 ## آدرس
 
@@ -14,38 +12,37 @@
 {
   "dst_type": 0,
   "src_type": 0,
-  "dst_link_id": 0,
-  "src_link_id": 0,
-  "dst_module_id": 0,
-  "src_module_id": 0
+  "dst_link_id*": 0,
+  "src_link_id*": 0,
+  "dst_module_id*": 0,
+  "src_module_id*": 0
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `src_module_id` | number | شناسه ماژول مبدأ |
-| `src_link_id` | number | شناسه رکورد مبدأ |
-| `src_type` | number | نوع مبدأ |
-| `dst_module_id` | number | شناسه ماژول مقصد |
-| `dst_link_id` | number | شناسه رکورد مقصد |
-| `dst_type` | number | نوع مقصد |
+| `dst_type` | integer (int32) | نوع لینک در ماژول مقصد |
+| `src_type` | integer (int32) | نوع لینک در ماژول مبدا |
+| `dst_link_id*` | integer (int64) | شناسه لینک در ماژول مقصد |
+| `src_link_id*` | integer (int64) | شناسه لینک در ماژول مبدا |
+| `dst_module_id*` | integer (int32) | شناسه ماژول مقصد |
+| `src_module_id*` | integer (int32) | شناسه ماژول مبدا |
 
 ## پاسخ
 
 ```json
 {
-  "dst_type": 0,
-  "src_type": 0,
-  "dst_link_id": 0,
-  "src_link_id": 0,
-  "dst_module_id": 0,
-  "src_module_id": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
-پاسخ همان ساختار درخواست را بازمی‌گرداند (echo).
-
-## مرتبط
-
-- [ایجاد لینک بین ماژول‌ها](add_linkmodule.md) — همان فیلدها، عملیات معکوس.
-- [حذف لینک تیمیاری](deleteLinks.md) — حذف لینک یک رکورد (تک‌طرفه)، نه جفت مبدأ/مقصد.
+| فیلد | نوع | توضیح |
+|------|-----|-------|
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

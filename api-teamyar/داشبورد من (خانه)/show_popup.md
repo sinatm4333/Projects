@@ -1,6 +1,4 @@
-# ایجاد Popup
-
-نمایش یک پیام popup برای کاربر یا کاربران مشخص.
+# ایجاد popup
 
 ## آدرس
 
@@ -12,35 +10,44 @@
 
 ```json
 {
-  "title": "",
+  "title*": "",
   "status": 0,
-  "content": "",
+  "content*": "",
   "timeout": 0,
-  "user_ids": [0]
+  "user_ids*": [
+    0
+  ]
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `title` | string | عنوان popup |
-| `status` | number | وضعیت / نوع نمایش |
-| `content` | string | متن محتوای popup |
-| `timeout` | number | مدت زمان نمایش |
-| `user_ids` | array\<number\> | شناسه کاربران دریافت‌کننده |
+| `title*` | string | عنوان پاپ آپ |
+| `status` | integer (int32) | enum EnPopupFlag { POPUP_FLAG_NORMAL = 0, POPUP_FLAG_WITHOUT_CLOSE = 1, POPUP_FLAG_UPDATE = 2, POPUP_FLAG_BACKGROUND = 4, POPUP_FLAG_HTML = 8}; |
+| `content*` | string | محتوای پاپ آپ |
+| `timeout` | integer (int32) | زمان نمایش پاپ آپ بر حسب ثانیه |
+| `user_ids*[]` | array | شناسه کاربران یا گروه هایی که میخواهیم برای آنها پاپ آپ ارسال شود |
 
 ## پاسخ
 
 ```json
 {
-  "data": { "popup_id": 0 },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "data": {
+    "popup_id": 0
+  },
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.popup_id` | number | شناسه popup ایجادشده |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
+| `data` | object |  |
+| `data.popup_id` | integer (int64) | شناسه پاپ آپ ایجاد شده |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | وضعیت فراخوانی Api |
+| `error.message` | string | در صورتی که Api موفق اجرا نشود در این پارامتر Error برگردانده شده نمایش داده میشود |
+| `success` | boolean | موفق بودن اجرای Api را نشان میدهددر صورتی که api با موفقیت اجرا شود مقدار true دارد در غیر این صورت false |

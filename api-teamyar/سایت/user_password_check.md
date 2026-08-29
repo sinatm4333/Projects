@@ -1,7 +1,5 @@
 # چک پسورد کاربر
 
-بررسی صحت رمز عبور کاربر.
-
 ## آدرس
 
 ```
@@ -19,21 +17,29 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `user_name` | string | نام کاربری |
-| `password` | string | رمز عبور |
+| `password` | string | رمز |
+| `user_name` | string | نام کاربر |
 
 ## پاسخ
 
 ```json
 {
-  "password": "",
-  "user_name": ""
+  "data": {
+    "valid_password": false
+  },
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
-پاسخ همان ساختار درخواست را بازمی‌گرداند (echo).
-
-## مرتبط
-
-- [تغییر رمز کاربر](user_password_change.md)
-- [لاگین کردن در پورتال](user_login.md)
+| فیلد | نوع | توضیح |
+|------|-----|-------|
+| `data` | object | چک رمز |
+| `data.valid_password` | boolean | بولین برای تایید پسورد |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

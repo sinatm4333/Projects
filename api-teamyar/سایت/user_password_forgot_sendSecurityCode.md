@@ -1,7 +1,5 @@
 # ارسال کد امنیتی
 
-ارسال کد امنیتی به موبایل یا ایمیل کاربر در فرایند بازیابی رمز عبور.
-
 ## آدرس
 
 ```
@@ -20,25 +18,25 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `portal_id` | number | شناسه پورتال |
-| `mobile_email` | string | موبایل یا ایمیل کاربر |
-| `lang_id` | number | شناسه زبان |
+| `lang_id` | integer (int32) | زبان |
+| `portal_id` | integer (int64) | شناشه پورتال |
+| `mobile_email` | string | شماره تلفن یا ایمیل |
 
 ## پاسخ
 
 ```json
 {
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [فراموشی رمز عبور](user_password_forgot_change.md) — کد ارسال‌شده در فیلد `security_code` آن استفاده می‌شود.
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

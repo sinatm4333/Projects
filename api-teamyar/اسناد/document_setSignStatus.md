@@ -1,6 +1,6 @@
 # تایید سند
 
-ثبت وضعیت امضا/تأیید سند.
+تایید سند (تایید، مسئول و امضا)
 
 ## آدرس
 
@@ -13,33 +13,32 @@
 ```json
 {
   "assign_type": 0,
-  "document_id": 0,
+  "document_id*": 0,
   "sign_status": 0
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `document_id` | number | شناسه سند |
-| `sign_status` | number | وضعیت امضا/تأیید |
-| `assign_type` | number | نوع ارجاع |
+| `assign_type` | integer (int32) | نوع رد کردن سند2 : امضا16 : تایید32 : مسئول |
+| `document_id*` | integer (int64) | شناسه ی سندوارد کردن این مقدار اجباری میباشد |
+| `sign_status` | integer (int32) | وضعیت سند2 : رد شده |
 
 ## پاسخ
 
 ```json
 {
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [دریافت وضعیت سند](document_getSignStatus.md) — خواندن وضعیت.
-- [رد سند](document_refuseSignStatus.md) — عملیات مقابل.
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

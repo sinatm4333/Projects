@@ -1,6 +1,6 @@
 # گرفتن نوع زیرپوشه مشتریان
 
-دریافت نوع کاربر مرتبط با یک پوشه الگو.
+حقیقی 3 USER_TYPE_NATURAL حقوقی 4 USER_TYPE_LEGAL
 
 ## آدرس
 
@@ -12,31 +12,34 @@
 
 ```json
 {
-  "template_folder_id": 0
+  "template_folder_id*": 0
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `template_folder_id` | number | شناسه پوشه الگو |
+| `template_folder_id*` | integer (int64) | زیر پوشه خودکار پوشه مشتری |
 
 ## پاسخ
 
 ```json
 {
-  "data": { "user_type": 0 },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "data": {
+    "user_type": 0
+  },
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.user_type` | number | نوع کاربر |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [گرفتن زیرپوشه‌های پوشه مشتری](client_getSubfolderId.md) — همان `template_folder_id` در ورودی آن.
+| `data` | object |  |
+| `data.user_type` | integer (int32) | حقیقی 3 USER_TYPE_NATURAL حقوقی 4 USER_TYPE_LEGAL |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

@@ -1,6 +1,4 @@
-# گرفتن زیرپوشه‌های پوشه مشتری
-
-دریافت شناسه زیرپوشه یک مشتری بر اساس پوشه الگو.
+# گرفتن زیر پوشه های پوشه مشتری
 
 ## آدرس
 
@@ -19,28 +17,29 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `client_id` | number | شناسه مشتری |
-| `template_folder_id` | number | شناسه پوشه الگو |
+| `client_id` | integer (int64) | شناسه مشتری |
+| `template_folder_id` | integer (int64) | زیر پوشه خودکار پوشه مشتری |
 
 ## پاسخ
 
 ```json
 {
-  "data": { "sub_folder_id": 0 },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "data": {
+    "sub_folder_id": 0
+  },
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.sub_folder_id` | number | شناسه زیرپوشه |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [گرفتن پوشه‌ی مشتریان](client_getRootId.md) — پوشه ریشه مشتریان.
-- [گرفتن شناسه پوشه مشتری](client_getFolderId.md) — پوشه یک مشتری خاص.
-- [فهرست اسناد](document_list.md) — `sub_folder_id` به‌عنوان `parent_id` قابل استفاده است.
+| `data` | object | داده |
+| `data.sub_folder_id` | integer (int64) | زیر پوشه خودکار پوشه مشتری |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

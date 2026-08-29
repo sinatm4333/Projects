@@ -1,4 +1,4 @@
-# دریافت اطلاعات جریان کار اقدام
+# دریافت اطلاعات جریان کار اقدام *
 
 دریافت اطلاعات جریان کار اقدام
 
@@ -47,14 +47,14 @@
 |------|-----|-------|
 | `data` | object |  |
 | `data.id` | integer (int64) | شناسه جریان کار |
-| `data.kind` | integer (int32) | نوع جریان کار، WORK_FLOW_KIND_WORKFLOW =1, جریان کار، WORK_FLOW_KIND_BPMN =2, bpmn، WORK_FLOW_KIND_BPMS =3, bpmn بین رده ای |
+| `data.kind` | integer (int32) | نوع جریان کارWORK_FLOW_KIND_WORKFLOW =1, جریان کار WORK_FLOW_KIND_BPMN =2, bpmb WORK_FLOW_KIND_BPMS =3, bpmn بین رده ای |
 | `data.name` | string | عنوان جریان کار |
-| `data.type` | integer (int32) | نوع جریان کار، `WORK_FLOW_TYPE_SEQUENTIAL=0`، `WORK_FLOW_TYPE_FLOATING=1` |
-| `data.cat_id` | integer (int64) | شناسه رده |
+| `data.type` | integer (int32) | نوع جریان کارWORK_FLOW_TYPE_SEQUENTIAL =0,WORK_FLOW_TYPE_FLOATING =1, |
+| `data.cat_id` | integer (int64) | شناسه ردهsource table name : `0000000`.todo_category \| column name: ID |
 | `data.name_bpmn` | string | عنوان جریان کار بین رده ای |
 | `data.name_step` | string | عنوان مرحله شروع |
 | `data.bpms_wf_id` | integer (int64) | شناسه جریان کار بین رده ای |
-| `data.section_id` | integer (int64) | شناسه بخش |
+| `data.section_id` | integer (int64) | شناسه بخشsource table name : `0000000`.todo_section \| column name: ID |
 | `error` | object | جزئیات خطای اجرای API |
 | `error.status` | integer (int32) | کد خطا |
 | `error.message` | string | پیغام خطا |

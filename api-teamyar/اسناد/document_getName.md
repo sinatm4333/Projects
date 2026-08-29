@@ -1,6 +1,6 @@
 # دریافت نام سند
 
-دریافت نام یک سند بر اساس شناسه.
+با شناسه سند نام سند را دریافت می کنیم
 
 ## آدرس
 
@@ -18,25 +18,28 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `document_id` | number | شناسه سند |
+| `document_id` | integer (int64) | شناسه سند |
 
 ## پاسخ
 
 ```json
 {
-  "data": { "name": "" },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "data": {
+    "name": ""
+  },
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
+| `data` | object | آبجکتی از نام اسناد |
 | `data.name` | string | نام سند |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [گرفتن اطلاعات یک سند](document_getInfo.md) — اطلاعات کامل سند.
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

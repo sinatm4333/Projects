@@ -1,7 +1,5 @@
 # دریافت لیست اقداماتی که یک مشتری در آن اقدام اساین شده است
 
-دریافت لیست اقداماتی که یک مشتری در آن اقدام اساین شده است
-
 ## آدرس
 
 ```
@@ -26,9 +24,9 @@
 | `from` | integer (int32) | از (شروع لیست) |
 | `count` | integer (int32) | تعداد اقدام |
 | `client_id` | integer (int64) | شناسه مشتری |
-| `archive_db` | integer (int32) | 1: لیست اقدامات آرشیو شده، 0 : لیست اقدامات معمولی |
+| `archive_db` | integer (int32) | 1: لیست اقدامات آرشیو شده0 : لیست اقدامات معمولی |
 | `category_id` | integer (int64) | شناسه رده |
-| `task_status` | integer (int32) | وضعیت اقدام، `TASK_STATUS_OPEN=1`، `TASK_STATUS_CLOSE=2`، `TASK_STATUS_SUSPEND=3` |
+| `task_status` | integer (int32) | وضعیت اقدام TASK_STATUS_OPEN =1, TASK_STATUS_CLOSE =2, TASK_STATUS_SUSPEND =3 |
 
 ## پاسخ
 
@@ -95,17 +93,17 @@
 | `data.tasks[]` | array | آرایه ای از اطلاعات اقدام |
 | `data.tasks[].id` | integer (int64) | شناسه اقدام |
 | `data.tasks[].perm` | integer (int32) | مقدار دسترسی (در هر ماژول بستگی به نوع دسترسی مقادیر متفاوت است) |
-| `data.tasks[].type` | integer (int32) | نوع اقدام، `TASK_TYPE_NORMAL=1`، `TASK_TYPE_PERIODICALLY=2`، `TASK_TYPE_PUBLIC=3`، `TASK_TYPE_PORTAL=4` |
+| `data.tasks[].type` | integer (int32) | نوع اقدام TASK_TYPE_NORMAL =1, TASK_TYPE_PERIODICALLY =2, TASK_TYPE_PUBLIC =3, TASK_TYPE_PORTAL =4, |
 | `data.tasks[].color` | string | رنگ اقدام |
 | `data.tasks[].wf_id` | integer (int64) | شناسه جریان کار اقدام |
-| `data.tasks[].status` | integer (int32) | وضعیت اقدام، `TASK_STATUS_OPEN=1`، `TASK_STATUS_CLOSE=2`، `TASK_STATUS_SUSPEND=3` |
-| `data.tasks[].bpmn_id` | integer (int64) | شناسه ی bpmn بین رده ای، source table name : `0000000`.todo_workflow \| column name: ID |
+| `data.tasks[].status` | integer (int32) | وضعیت اقدام TASK_STATUS_OPEN =1, TASK_STATUS_CLOSE =2, TASK_STATUS_SUSPEND =3 |
+| `data.tasks[].bpmn_id` | integer (int64) | شناسه ی bpmn بین رده ایsource table name : `0000000`.todo_workflow \| column name: ID |
 | `data.tasks[].bpms_id` | integer (int64) | شناسه ی unique برای bpmnبین رده ای ایجاد شده در یک سری |
 | `data.tasks[].favorite` | integer (int64) | برگزیده |
 | `data.tasks[].owner_id` | integer (int64) | شناسه ی مالک اقدام |
 | `data.tasks[].progress` | integer (int32) | مقدار پیشرفت اقدام |
 | `data.tasks[].topic_id` | integer (int64) | شناسه موضوع |
-| `data.tasks[].ty_state` | integer (int32) | وضعیت 4 مرحله ای اقدام، TODO_TASK_TY_STATE_DRAFT=0 پیش نویش، TODO_TASK_TY_STATE_CHECK=1 بررسی، TODO_TASK_TY_STATE_DO=2 اجرا، TODO_TASK_TY_STATE_DONE=3 کامل |
+| `data.tasks[].ty_state` | integer (int32) | وضعیت 4 مرحله ای اقدام TODO_TASK_TY_STATE_DRAFT=0 پیش نویش TODO_TASK_TY_STATE_CHECK=1 بررسی TODO_TASK_TY_STATE_DO=2 اجرا TODO_TASK_TY_STATE_DONE=3 کامل |
 | `data.tasks[].author_id` | integer (int64) | ایجاد کننده (جدول Profile_Main) |
 | `data.tasks[].folder_id` | integer (int64) | فولدر ذخیره سازی فایل ها |
 | `data.tasks[].module_id` | integer (int64) | شناسه ماژول |
@@ -116,23 +114,23 @@
 | `data.tasks[].t_priority` | integer (int32) | اولویت اقدام |
 | `data.tasks[].task_count` | integer (int64) | تعداد اقدام های افزوده شده |
 | `data.tasks[].task_title` | string | عنوان اقدام |
-| `data.tasks[].author_name` | string | نام ایجاد کننده، که این فیلد برای اقدام های عمومی استفاده میشود |
+| `data.tasks[].author_name` | string | نام ایجاد کنندهکه این فیلد برای اقدام های عمومی استفاده میشود |
 | `data.tasks[].category_id` | integer (int64) | شناسه رده |
-| `data.tasks[].portal_show` | integer (int32) | نمایش اقدام در پورتال، در صورتی که بخواهیم اقدامی که پورتال نیست در پورتال نمایش داده شود از این فیلد استفاده میکنیم، show task in the portal. 0=no setting; 1=view all steps; 2=view first step |
-| `data.tasks[].repeat_type` | integer (int32) | نوع تکرار، EVERY_DAY: 1، EVERY_WEEK:2، EVERY_MONTH:3، EVERY_YEAR:4 |
+| `data.tasks[].portal_show` | integer (int32) | نمایش اقدام در پورتالدر صورتی که بخواهیم اقدامی که پورتال نیست در پورتال نمایش داده شود از این فیلد استفاده میکنیمshow task in the portal. 0=no setting; 1=view all steps; 2=view first step |
+| `data.tasks[].repeat_type` | integer (int32) | نوع تکرارEVERY_DAY: 1EVERY_WEEK:2EVERY_MONTH:3EVERY_YEAR:4 |
 | `data.tasks[].archive_flag` | integer (int32) | در صورتی که این فیلد مقدار 1 داشته باشد در فرایند ارشیو به دیتابیس ارشیو منتقل میشود |
-| `data.tasks[].bpmn_step_id` | integer (int64) | شناسه ی مرحله ی bpmnبین رده ای، source table name : `0000000`.todo_step \| column name: ID |
+| `data.tasks[].bpmn_step_id` | integer (int64) | شناسه ی مرحله ی bpmnبین رده ایsource table name : `0000000`.todo_step \| column name: ID |
 | `data.tasks[].last_step_id` | integer (int64) | حذف شده |
 | `data.tasks[].reference_id` | integer (int64) | شناسه مرجع |
 | `data.tasks[].repeat_count` | integer (int32) | تعداد تسک دوره ای که کاربر میخواهد اد کند |
 | `data.tasks[].t_start_date` | integer (int64) | تاریخ شروع |
 | `data.tasks[].last_modifier` | integer (int64) | اخرین تغییر دهنده |
 | `data.tasks[].t_modify_date` | integer (int64) | تاریخ اخرین تغییر |
-| `data.tasks[].t_return_date` | integer (int64) | تاریخ بازگرداندن، در صورتی که اقدام موکول شده باشد در این تاریخ بازگردانده میشود |
+| `data.tasks[].t_return_date` | integer (int64) | تاریخ بازگرداندندر صورتی که اقدام موکول شده باشد در این تاریخ بازگردانده میشود |
 | `data.tasks[].parent_task_id` | integer (int64) | شناسه تسک والد |
 | `data.tasks[].t_real_end_date` | integer (int64) | تاریخ پایان اقدام |
 | `data.tasks[].last_responsible` | integer (int64) | اخرین مسئول مرحله |
-| `data.tasks[].t_auto_close_date` | integer (int64) | تاریخ پایان اتوماتیک، در صورتی که این فیلد مقداردهی شود در این تاریخ به صورت اتوماتیک تسک بسته میشود |
+| `data.tasks[].t_auto_close_date` | integer (int64) | تاریخ پایان اتوماتیکدر صورتی که این فیلد مقداردهی شود در این تاریخ به صورت اتوماتیک تسک بسته میشود |
 | `data.total` | integer (int32) | تعداد کل |
 | `error` | object | جزئیات خطای اجرای API |
 | `error.status` | integer (int32) | کد خطا |

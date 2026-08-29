@@ -1,6 +1,6 @@
 # تغییر وضعیت اقدام
 
-تغییر وضعیت اقدام (بسته، باز، موکول شده)
+تغییر وضعیت اقدام(بسته، باز، موکول شده)
 
 ## آدرس
 
@@ -19,7 +19,7 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `status` | integer (int32) | وضعیت اقدام، `TASK_STATUS_OPEN=1`، `TASK_STATUS_CLOSE=2`، `TASK_STATUS_SUSPEND=3` |
+| `status` | integer (int32) | وضعیت اقدام TASK_STATUS_OPEN =1, TASK_STATUS_CLOSE =2, TASK_STATUS_SUSPEND =3 |
 | `task_id` | integer (int64) | شناسه اقدام |
 
 ## پاسخ

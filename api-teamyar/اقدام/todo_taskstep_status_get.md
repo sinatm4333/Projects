@@ -1,7 +1,5 @@
 # دریافت وضعیت مرحله اقدام
 
-دریافت وضعیت مرحله اقدام
-
 ## آدرس
 
 ```
@@ -40,7 +38,7 @@
 | فیلد | نوع | توضیح |
 |------|-----|-------|
 | `data` | object | آبجکت نمایش وضعیت اقدام |
-| `data.status` | integer (int32) | وضعیت اقدام، `TASK_STATUS_OPEN=1`، `TASK_STATUS_CLOSE=2`، `TASK_STATUS_SUSPEND=3` |
+| `data.status` | integer (int32) | وضعیت اقدام TASK_STATUS_OPEN =1, TASK_STATUS_CLOSE =2, TASK_STATUS_SUSPEND =3 |
 | `error` | object | جزئیات خطای اجرای API |
 | `error.status` | integer (int32) | کد خطا |
 | `error.message` | string | پیغام خطا |

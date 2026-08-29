@@ -1,7 +1,5 @@
 # حذف سند به همراه چک
 
-حذف سند پس از بررسی شرایط حذف.
-
 ## آدرس
 
 ```
@@ -12,32 +10,31 @@
 
 ```json
 {
-  "id": 0,
-  "move_to_trash": 0
+  "id*": 0,
+  "move_to_trash": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `id` | number | شناسه سند |
-| `move_to_trash` | number | انتقال به سطل زباله به‌جای حذف کامل |
+| `id*` | integer (int64) | شناسه سند |
+| `move_to_trash` | boolean | چک حذف موقت |
 
 ## پاسخ
 
 ```json
 {
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [ایجاد سند](createDocumentFile.md)
-- [فهرست اسناد](document_list.md)
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

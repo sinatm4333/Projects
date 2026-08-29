@@ -1,7 +1,5 @@
 # ایجاد سند
 
-ایجاد سند/فایل جدید و آپلود محتوای آن.
-
 ## آدرس
 
 ```
@@ -15,11 +13,18 @@
   "mode": 0,
   "name": "",
   "size": 0,
-  "crm_ids": [0],
+  "crm_ids": [
+    0
+  ],
   "filepath": "",
   "file_type": 0,
   "mime_type": "",
-  "mt_values": [{ "mt_id": 0, "value": "" }],
+  "mt_values": [
+    {
+      "mt_id": 0,
+      "value": ""
+    }
+  ],
   "parent_id": 0,
   "document_id": 0,
   "auto_name_id": 0,
@@ -32,42 +37,27 @@
 }
 ```
 
-### فایل
-
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `name` | string | نام سند |
-| `filepath` | string | مسیر فایل |
-| `file_type` | number | نوع فایل |
-| `mime_type` | string | نوع MIME |
-| `size` | number | حجم فایل |
-| `content_base64_str` | string | محتوای فایل به‌صورت base64 |
-
-### مکان و مقصد
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `parent_id` | number | شناسه پوشه والد |
-| `dst_location` | string | مکان مقصد |
-| `embedded_files_folder_id` | number | شناسه پوشه فایل‌های جاسازی‌شده |
-
-### شناسه‌ها
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `document_id` | number | شناسه سند |
-| `temp_document_id` | number | شناسه سند موقت |
-| `auto_name_id` | number | شناسه نام‌گذاری خودکار |
-| `src_module_id` | number | شناسه ماژول مبدأ |
-| `crm_ids` | array\<number\> | شناسه‌های CRM مرتبط |
-
-### تنظیمات
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `mode` | number | حالت ایجاد |
-| `perm_inherent_flag` | number | ارث‌بری دسترسی |
-| `mt_values[]` | array | مقادیر متادیتا — `mt_id`، `value` |
+| `mode` | integer (int32) | enum class EnMode {NORMAL = 0, ///< if a same name file is found, do nothing and return errorVERSIONING = 1, ///< if a same name file is found, add new file as a version of old fileREPLACE = 2 ///< if a same name file is found, delete old file and add new file (replace)}; |
+| `name` | string | عنوان سند |
+| `size` | integer (int64) | سایز فایل ها با واحد byte |
+| `crm_ids[]` | array | شناسه های مشتریان |
+| `filepath` | string | مسیر کامل هر سند |
+| `file_type` | integer (int32) | نوع فایل |
+| `mime_type` | string | نوع فایل ذخیره شده |
+| `mt_values[]` | array | متادیتا ها |
+| `mt_values[].mt_id` | integer (int64) | شناسه متادیتا |
+| `mt_values[].value` | string | مقدار متادیتا |
+| `parent_id` | integer (int64) | شناسه ی پوشه ی سطح بالاتر از سند فعلی |
+| `document_id` | integer (int64) | شناسه سند |
+| `auto_name_id` | integer (int64) | نامگذاری خودکار |
+| `dst_location` | string | مسیر مقصد |
+| `src_module_id` | integer (int32) | در صورت ارسال فایل، شناسه ماژولی می باشد که فایل در آن ماژول آپلود شده |
+| `temp_document_id` | integer (int64) | ظاهرا استفاده ای نشده |
+| `content_base64_str` | string | متن مربوطه که برای ایجاد فایل میبایست encode شده ی base64 باشد |
+| `perm_inherent_flag` | integer (int32) | سند به ارث برده شده، اگر سندی تیک ارث بری داشته باشد. |
+| `embedded_files_folder_id` | integer (int64) | شناسه پوشه فایل های embedded |
 
 ## پاسخ
 
@@ -79,22 +69,22 @@
     "document_name": "",
     "final_document_id": 0
   },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.final_document_id` | number | شناسه نهایی سند ایجادشده |
-| `data.document_name` | string | نام سند |
-| `data.file_type` | number | نوع فایل |
-| `data.warnings` | string | هشدارها |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [فهرست اسناد](document_list.md)
-- [منگنه کردن فایل](document_attach.md)
+| `data` | object |  |
+| `data.warnings` | string | پیغام خطا |
+| `data.file_type` | integer (int32) | این عدد مشخص کننده نوع فایل است، نوع فایل ها در فایل mimes.ini در مسیر teamyar\data\0000000\config تعریف شده است |
+| `data.document_name` | string | عنوان سند |
+| `data.final_document_id` | integer (int64) | شناسه سند ایجاد شده |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

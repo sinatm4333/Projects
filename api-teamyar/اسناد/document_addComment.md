@@ -1,7 +1,5 @@
 # اضافه کردن کامنت
 
-ثبت یک یادداشت/کامنت روی سند.
-
 ## آدرس
 
 ```
@@ -12,33 +10,33 @@
 
 ```json
 {
-  "content": "",
-  "is_portal": 0,
-  "document_id": 0
+  "content*": "",
+  "is_portal": false,
+  "document_id*": 0
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `document_id` | number | شناسه سند |
-| `content` | string | متن کامنت |
-| `is_portal` | number | ثبت از سمت پورتال |
+| `content*` | string | محتوای کامنت |
+| `is_portal` | boolean | اگر پورتال باشد 1در غیر این صورت 0 |
+| `document_id*` | integer (int64) | شناسه سند |
 
 ## پاسخ
 
 ```json
 {
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [گرفتن اطلاعات یک سند](document_getInfo.md)
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

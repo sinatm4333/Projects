@@ -1,7 +1,5 @@
 # گرفتن سند از طریق متادیتا
 
-جستجوی اسناد بر اساس یک فیلد متادیتا و مقدار آن.
-
 ## آدرس
 
 ```
@@ -19,8 +17,8 @@
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `meta_id` | number | شناسه فیلد متادیتا |
-| `meta_value` | string | مقدار موردجستجو |
+| `meta_id` | integer (int64) | نام متا دیتا |
+| `meta_value` | string | مقدار متا دیتا |
 
 ## پاسخ
 
@@ -31,7 +29,7 @@
       "id": 0,
       "size": 0,
       "type": 0,
-      "deleted": 0,
+      "deleted": false,
       "version": 0,
       "filename": "",
       "filetype": 0,
@@ -39,26 +37,27 @@
       "date_create": 0
     }
   ],
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data[].id` | number | شناسه سند |
-| `data[].filename` | string | نام فایل |
-| `data[].filetype` | number | نوع فایل |
-| `data[].mime_type` | string | نوع MIME |
-| `data[].size` | number | حجم فایل |
-| `data[].type` | number | نوع |
-| `data[].version` | number | نسخه |
-| `data[].deleted` | number | حذف‌شده |
-| `data[].date_create` | number | تاریخ ایجاد |
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [فهرست اسناد](document_list.md) — فیلدهای `meta_id` و `meta_value` در ورودی و خروجی آن.
+| `data[]` | array | data |
+| `data[].id` | integer (int64) | شناسه سند |
+| `data[].size` | integer (int64) | سایز فایل ها با واحد byte |
+| `data[].type` | integer (int32) | پوشه= 1 سند= 2 |
+| `data[].deleted` | boolean | 0 : به حذف شده ها منتقل شده است.1 : حذف نشده است. |
+| `data[].version` | integer (int32) | نسخه فعلی سند |
+| `data[].filename` | string | نام سند |
+| `data[].filetype` | integer (int32) | نوع سند |
+| `data[].mime_type` | string | نوع فایل ذخیره شده |
+| `data[].date_create` | integer (date) | تاریخ ایجاد سند |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

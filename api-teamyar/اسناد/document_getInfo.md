@@ -1,7 +1,5 @@
 # گرفتن اطلاعات یک سند
 
-دریافت اطلاعات کامل یک سند بر اساس شناسه.
-
 ## آدرس
 
 ```
@@ -12,13 +10,13 @@
 
 ```json
 {
-  "id": 0
+  "id*": 0
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `id` | number | شناسه سند |
+| `id*` | integer (int64) | شناسه سند |
 
 ## پاسخ
 
@@ -49,61 +47,40 @@
     "document_profile_id": 0,
     "client_folder_setting_id": 0
   },
-  "error": { "status": 0, "message": "" },
-  "success": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
-### سطح بالا
-
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `data.owner_id` | number | شناسه مالک |
-| `data.document_profile_id` | number | شناسه پروفایل سند |
-| `data.client_folder_setting_id` | number | شناسه تنظیمات پوشه مشتری |
-
-### فایل — `data.file_info`
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `id` | number | شناسه فایل |
-| `filename` | string | نام فایل |
-| `filetype` | number | نوع فایل |
-| `mime_type` | string | نوع MIME |
-| `size` | number | حجم فایل |
-| `type` | number | نوع |
-| `version` | number | نسخه |
-| `flags` | number | فلگ‌ها |
-| `underline` | number | زیرخط |
-
-### مکان — `data.file_info`
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `parent_id` | number | شناسه پوشه والد |
-| `root_folder_id` | number | شناسه پوشه ریشه |
-| `module_id` | number | شناسه ماژول |
-| `record_id` | number | شناسه رکورد |
-| `record_type` | number | نوع رکورد |
-
-### ایجاد و ویرایش — `data.file_info`
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `author_id` | number | شناسه ایجادکننده |
-| `date_create` | number | تاریخ ایجاد |
-| `modifier_id` | number | شناسه آخرین ویرایش‌کننده |
-| `date_modify` | number | تاریخ آخرین ویرایش |
-
-### وضعیت پاسخ
-
-| فیلد | نوع | توضیح |
-|------|-----|-------|
-| `error.status` | number | کد خطا |
-| `error.message` | string | پیام خطا |
-| `success` | number | نتیجه اجرا |
-
-## مرتبط
-
-- [فهرست اسناد](document_list.md)
-- [گرفتن سند از طریق متادیتا](document_getByMetadata.md)
+| `data` | object | data |
+| `data.owner_id` | integer (int64) | شناسه مالک سند |
+| `data.file_info` | object |  |
+| `data.file_info.id` | integer (int64) | شناسه سند |
+| `data.file_info.size` | integer (int64) | سایز سند |
+| `data.file_info.type` | integer (int32) | پوشه برابر با 1 و فایل برابر با 2 است. |
+| `data.file_info.flags` | integer (int32) | INHERENT_SETTING = 1 ,DISABLED = 8 ,PROFILE_NAME = 16 ,DICTIONARY_NAME = 32 ,INHERENT = 64 ,DELETED = 128 ,SYSTEM = 256 |
+| `data.file_info.version` | integer (int32) | آخرین نسخه سند |
+| `data.file_info.filename` | string | نام سند |
+| `data.file_info.filetype` | integer (int32) | نوع سند |
+| `data.file_info.author_id` | integer (int64) | کاربری که سند توسط آن ثبت شده است. اسنادی هستند که با موارد زیر ثبت شده استUSER_BUILTIN_ADMIN = 10001,USER_BUILTIN_EVERYONE = 1,USER_BUILTIN_ADMINISTRATION = 2,USER_BUILTIN_TEAMYAR = 3,USER_BUILTIN_PUBLIC = 4 |
+| `data.file_info.mime_type` | string | نوع فایل ذخیره شده |
+| `data.file_info.module_id` | integer (int32) | شناسه ماژول |
+| `data.file_info.parent_id` | integer (int64) | شناسه ی پوشه ی سطح بالاتر از سند فعلی |
+| `data.file_info.record_id` | integer (int64) | MY_DOCUMENT=1024 ,USER_FOLDER = 8192 ,CLIENT_FOLDER = 16384 ,CLIENTS_ROOT = 32768 ,DOCUMENT_PORTAL_VIEW = 4096 ,DOCUMENT_PORTAL_EDIT = 131072 |
+| `data.file_info.underline` | integer (int32) | این فیلد بصورت سیستمی مقداردهی میشود و برای چک صحت عملیات آپدیت فایل است |
+| `data.file_info.date_create` | integer (date) | تاریخ ایجاد سند |
+| `data.file_info.date_modify` | integer (date) | تاریخ ویرایش سند |
+| `data.file_info.modifier_id` | integer (int64) | شناسه کاربر ویرایش کننده سند |
+| `data.file_info.record_type` | integer (int32) | برای فایل enum FILe_RECORD_TYPE{ FILE_TEMPLATE = 1, FILE_ATTACHMENT = 2};برای فولدر نیز نمایش عمق واقعی پوشه (یعنی چند تا زیرپوشه دارد ) |
+| `data.file_info.root_folder_id` | integer (int64) | پوشه ای که اسناد در آن ذخیره می شوند |
+| `data.document_profile_id` | integer (int64) | شناسه کاربر |
+| `data.client_folder_setting_id` | integer (int64) | شناسه تنظیمات زیرپوشه های خودکار (شناسه ی جدول DOCUMENTS_TY_DOCUMENT ) |
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |

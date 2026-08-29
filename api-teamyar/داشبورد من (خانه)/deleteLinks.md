@@ -1,7 +1,5 @@
 # حذف لینک تیمیاری
 
-حذف پیوند (link) یک رکورد در ماژول مشخص.
-
 ## آدرس
 
 ```
@@ -12,36 +10,37 @@
 
 ```json
 {
-  "type": 0,
-  "link_id": 0,
+  "type*": 0,
+  "link_id*": 0,
   "db_prefix": "",
-  "module_id": 0,
-  "is_archive": 0
+  "module_id*": 0,
+  "is_archive": false
 }
 ```
 
 | فیلد | نوع | توضیح |
 |------|-----|-------|
-| `module_id` | number | شناسه ماژول |
-| `link_id` | number | شناسه لینک/رکورد |
-| `type` | number | نوع |
-| `db_prefix` | string | پیشوند دیتابیس |
-| `is_archive` | number | آرشیو |
+| `type*` | integer (int32) | نوع |
+| `link_id*` | integer (int64) | شناسه لینک شده |
+| `db_prefix` | string | پیشوند جدول ماژول |
+| `module_id*` | integer (int32) | شناسه ماژول برای حذف لینک |
+| `is_archive` | boolean | مقدار true در صورت حذف از آرشیو.در این حالت باید پارامتر db_prefix مقدار دهی شود |
 
 ## پاسخ
 
 ```json
 {
-  "type": 0,
-  "link_id": 0,
-  "db_prefix": "",
-  "module_id": 0,
-  "is_archive": 0
+  "error": {
+    "status": 0,
+    "message": ""
+  },
+  "success": false
 }
 ```
 
-پاسخ همان ساختار درخواست را بازمی‌گرداند (echo) — برخلاف بقیه APIها که `error`/`success` برمی‌گردانند.
-
-## مرتبط
-
-- [ایجاد لینک بین ماژول‌ها](add_linkmodule.md)
+| فیلد | نوع | توضیح |
+|------|-----|-------|
+| `error` | object | جزئیات خطای اجرای API |
+| `error.status` | integer (int32) | کد خطا |
+| `error.message` | string | پیغام خطا |
+| `success` | boolean | نشان دهنده وضعیت اجرای API، مقدار true در صورت موفقیت و مقدار false در صورت مواجه شدن با خطا |
