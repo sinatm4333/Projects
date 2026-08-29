@@ -54,6 +54,7 @@
 | [document/getSignStatus](اسناد/document_getSignStatus.md) | `/api/document/getSignStatus` | دریافت وضعیت سند |
 | [document/setSignStatus](اسناد/document_setSignStatus.md) | `/api/document/setSignStatus` | تایید سند |
 | [document/refuseSignStatus](اسناد/document_refuseSignStatus.md) | `/api/document/refuseSignStatus` | رد سند |
+| [document/setVerifiers](اسناد/document_setVerifiers.md) | `/api/document/setVerifiers` | تغییر در افراد مطلع، تایید کننده، مسئول و امضا کننده |
 | [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
 | [folder/getDisplayName](اسناد/folder_getDisplayName.md) | `/api/folder/getDisplayName` | گرفتن نام فولدر |
 | [getAutoName](اسناد/getAutoName.md) | `/api/getAutoName` | ساخت نام خودکار سند |
