@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 14:57
+-- Last Edit = 1405/06/07 15:04
 
 -- botName = hr_companion
 -- description = همراه ۱۴۰ — پنل پرسنلی (تردد و کارکرد، درخواست‌ها، اطلاعات پرسنلی، همراهِ روز و تولدها)
@@ -197,6 +197,16 @@ local function fetch_rows(query, params, column_count)
     return rows
 end
 
+-- ثانیهٔ روز → HH:MM. مقدار صفر/منفی یعنی «ثبت نشده» و nil برمی‌گرداند.
+local function seconds_to_hm(value)
+    local sec = tonumber(value)
+    if sec == nil or sec <= 0 then return nil end
+    sec = math.floor(sec)
+    local h = math.floor(sec / 3600) % 24
+    local m = math.floor((sec % 3600) / 60)
+    return string.format("%02d:%02d", h, m)
+end
+
 -- ستون‌های متنی این بات با COALESCE هرگز NULL نمی‌شوند؛ رشتهٔ خالی یعنی «مقدار ندارد»
 local function blank_to_nil(value)
     if value == nil then return nil end
@@ -207,21 +217,39 @@ end
 
 local FT_DAY = 864000000000 -- 86400 * 10000000
 
+-- ⚠️ «امروز» از خود دیتابیس گرفته می‌شود، نه از محاسبهٔ Lua روی FILETIME. این همان الگویی است که
+-- بات ۶۰۹ (مستقر و سالم) استفاده می‌کند. روی بات ۶۲۲ دیده شد که مقدار محاسبه‌شده در Lua به رکورد
+-- report_dimdate نمی‌خورد (تاریخ صفحه «—» می‌شد و پیام روز به آخرین روز سال می‌افتاد).
+-- محاسبهٔ Lua فقط به‌عنوان آخرین fallback باقی مانده است.
 local function today_filetime()
-    local now = time.current()
-    local ft = time.get_filetime(string.format(
-        '{"year":%d,"month":%d,"day":%d,"hour":0,"minute":0,"second":0}',
-        time.get_year(now), time.get_month(now), time.get_day(now)))
-    return tonumber(string.format("%18.0f", ft))
+    local rows = fetch_rows(
+        "SELECT ((UNIX_TIMESTAMP() + 11644473600) * 10000000) " ..
+        "- MOD((UNIX_TIMESTAMP() + 11644473600) * 10000000, 864000000000) AS today_key", {}, 1)
+    if rows ~= nil and #rows > 0 then
+        local value = tonumber(rows[1][1])
+        if value ~= nil and value > 0 then return value end
+    end
+    local ok, fallback = pcall(function()
+        local now = time.current()
+        local ft = time.get_filetime(string.format(
+            '{"year":%d,"month":%d,"day":%d,"hour":0,"minute":0,"second":0}',
+            time.get_year(now), time.get_month(now), time.get_day(now)))
+        return tonumber(string.format("%18.0f", ft))
+    end)
+    if ok and tonumber(fallback) ~= nil then return tonumber(fallback) end
+    return 0
 end
 
 -- ساعتِ روز از یک ستون FILETIME یا tick-since-midnight، بدون فرض دربارهٔ این‌که کدام‌یک است:
 -- MOD(col, ticks_of_day) برای FILETIME کامل «ساعت همان روز» را می‌دهد و برای مقدار درون‌روزی
 -- خودِ مقدار را دست‌نخورده برمی‌گرداند. پس هر دو حالت درست رندر می‌شوند.
--- به‌جای NULL رشتهٔ خالی برمی‌گرداند تا هیچ NULLای به لایهٔ Lua نرسد (بالا را ببینید)
-local function sql_time_of_day(col)
-    return "COALESCE(CASE WHEN " .. col .. " IS NULL OR " .. col .. " <= 0 THEN NULL ELSE " ..
-        "TIME_FORMAT(SEC_TO_TIME(MOD(" .. col .. ", 864000000000) / 10000000), '%H:%i') END, '')"
+-- ⚠️ ساعتِ روز در SQL قالب‌بندی نمی‌شود؛ فقط «ثانیه از ابتدای روز» برگردانده می‌شود و خودِ Lua
+-- آن را به HH:MM تبدیل می‌کند. علتش تجربهٔ زندهٔ بات ۶۲۲ است: هر کوئری‌ای که
+-- TIME_FORMAT(SEC_TO_TIME(...)) داشت با «sql error» رد شد و هر کوئری‌ای که نداشت کار کرد. هیچ
+-- باتِ مستقر و سالمی در این ریپو از این دو تابع استفاده نمی‌کند. در مقابل، MOD و FLOOR حساب
+-- ساده‌اند و در بات ۶۰۹ (مستقر و سالم) استفاده شده‌اند.
+local function sql_seconds_of_day(col)
+    return "FLOOR(MOD(COALESCE(" .. col .. ", 0), 864000000000) / 10000000)"
 end
 
 -- ⚠️ تاریخ‌ها هرگز به‌عنوان پارامتر «?» فرستاده نمی‌شوند (تاییدشده روی سرور زنده ۱۴۰۵/۰۶/۰۷).
@@ -645,7 +673,7 @@ local function load_celebration_messages(dialog_id)
     local rows = fetch_rows([[
 SELECT COALESCE(pm.fullname, N'همکار') AS author_name, cm.CONTENT,
   COALESCE(REPORT_FN_JDATE(cm.DATE_CREATE, '/'), '') AS jdate,
-  ]] .. sql_time_of_day("cm.DATE_CREATE") .. [[ AS jtime
+  ]] .. sql_seconds_of_day("cm.DATE_CREATE") .. [[ AS jtime
 FROM chat_message cm
 LEFT JOIN profile_main pm ON pm.id = cm.USER_ID
 WHERE cm.DIALOG_ID = ?
@@ -659,7 +687,7 @@ LIMIT 200
                 author = r[1] or "همکار",
                 text = r[2] or "",
                 date = r[3] or "",
-                clock = r[4] or ""
+                clock = seconds_to_hm(r[4]) or ""
             })
         end
     end
@@ -1084,8 +1112,8 @@ SELECT
   COALESCE(REPORT_FN_JDATE(w.WORK_DATE, '/'), '') AS jdate,
   COALESCE(rd.JTDAY, '—') AS jday_name,
   COALESCE(rd.JMDAY, 0) AS jmday,
-  ]] .. sql_time_of_day("w.FIRST_IN") .. [[ AS first_in,
-  ]] .. sql_time_of_day("w.LAST_OUT") .. [[ AS last_out,
+  ]] .. sql_seconds_of_day("w.FIRST_IN") .. [[ AS first_in,
+  ]] .. sql_seconds_of_day("w.LAST_OUT") .. [[ AS last_out,
   ]] .. sql_ticks_to_minutes("w.TOTAL_WORK") .. [[ AS work_minutes,
   ]] .. sql_ticks_to_minutes("CASE WHEN w.FINAL_OVER_TIME = -1 THEN w.OVER_TIME ELSE w.FINAL_OVER_TIME END") .. [[ AS overtime_minutes,
   ]] .. sql_ticks_to_minutes("CASE WHEN w.FINAL_ABSENCE = -1 THEN w.ABSENCE ELSE w.FINAL_ABSENCE END") .. [[ AS delay_minutes,
@@ -1093,8 +1121,8 @@ SELECT
   ]] .. sql_ticks_to_minutes("w.MISSION + w.MISSION_OUT_CITY + w.MISSION_OUT_COUNTRY") .. [[ AS mission_minutes,
   COALESCE(w.ABSENT, 0) AS absent_flag,
   COALESCE(rd.JWEEKEND, 0) AS is_weekend,
-  ]] .. sql_time_of_day("sd.shift_from") .. [[ AS shift_from,
-  ]] .. sql_time_of_day("sd.shift_to") .. [[ AS shift_to,
+  ]] .. sql_seconds_of_day("sd.shift_from") .. [[ AS shift_from,
+  ]] .. sql_seconds_of_day("sd.shift_to") .. [[ AS shift_to,
   ]] .. sql_ticks_to_minutes("sd.shift_duration") .. [[ AS shift_minutes,
   w.WORK_DATE AS work_date_raw
 FROM hr_work_time w
@@ -1117,7 +1145,7 @@ LIMIT 200
             local leave_minutes = tonumber(r[9]) or 0
             local mission_minutes = tonumber(r[10]) or 0
             local absent_flag = tonumber(r[11]) or 0
-            local first_in, last_out = blank_to_nil(r[4]), blank_to_nil(r[5])
+            local first_in, last_out = seconds_to_hm(r[4]), seconds_to_hm(r[5])
             local incomplete = (first_in ~= nil and last_out == nil) or (first_in == nil and last_out ~= nil)
 
             local deficit = 0
@@ -1153,8 +1181,8 @@ LIMIT 200
                 delay_minutes = tonumber(r[8]) or 0,
                 leave_minutes = leave_minutes,
                 mission_minutes = mission_minutes,
-                shift_from = blank_to_nil(r[13]),
-                shift_to = blank_to_nil(r[14]),
+                shift_from = seconds_to_hm(r[13]),
+                shift_to = seconds_to_hm(r[14]),
                 shift_minutes = shift_minutes,
                 deficit_minutes = deficit,
                 incomplete = incomplete,
@@ -1201,8 +1229,8 @@ do
         local rows, query_err = fetch_rows([[
 SELECT
   COALESCE(REPORT_FN_JDATE(e.EXT_DATE, '/'), '') AS jdate,
-  ]] .. sql_time_of_day("e.TIME_FROM") .. [[ AS time_from,
-  ]] .. sql_time_of_day("e.TIME_TO") .. [[ AS time_to,
+  ]] .. sql_seconds_of_day("e.TIME_FROM") .. [[ AS time_from,
+  ]] .. sql_seconds_of_day("e.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(e.TIME_TO - e.TIME_FROM, 0)") .. [[ AS duration_minutes,
   COALESCE(e.TYPE, 0) AS ext_type,
   COALESCE(e.ENABLE, 0) AS enabled,
@@ -1224,8 +1252,8 @@ LIMIT 300
         for _, r in ipairs(rows) do
             table.insert(events, {
                 jdate = r[1] or "—",
-                time_from = blank_to_nil(r[2]),
-                time_to = blank_to_nil(r[3]),
+                time_from = seconds_to_hm(r[2]),
+                time_to = seconds_to_hm(r[3]),
                 duration_minutes = tonumber(r[4]) or 0,
                 ext_type = tonumber(r[5]) or 0,
                 enabled = tonumber(r[6]) or 0,
@@ -1266,8 +1294,8 @@ SELECT
   v.ID,
   COALESCE(NULLIF(vt_by_type.NAME, ''), NULLIF(vt_by_id.NAME, ''), N'مرخصی/ماموریت') AS type_name,
   COALESCE(REPORT_FN_JDATE(v.DATE_VACATOIN, '/'), '') AS jdate,
-  ]] .. sql_time_of_day("v.TIME_FROM") .. [[ AS time_from,
-  ]] .. sql_time_of_day("v.TIME_TO") .. [[ AS time_to,
+  ]] .. sql_seconds_of_day("v.TIME_FROM") .. [[ AS time_from,
+  ]] .. sql_seconds_of_day("v.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("v.TOTAL_TIME") .. [[ AS total_minutes,
   COALESCE(v.STATUS, 0) AS status_code,
   COALESCE(v.DESCRIPTION, '') AS description,
@@ -1293,8 +1321,8 @@ LIMIT 200
                     family = "مرخصی و ماموریت",
                     type_name = r[2] or "مرخصی/ماموریت",
                     jdate = r[3] or "—",
-                    time_from = blank_to_nil(r[4]),
-                    time_to = blank_to_nil(r[5]),
+                    time_from = seconds_to_hm(r[4]),
+                    time_to = seconds_to_hm(r[5]),
                     total_minutes = tonumber(r[6]) or 0,
                     status_code = tonumber(r[7]) or 0,
                     status = request_status_label(r[7]),
@@ -1310,8 +1338,8 @@ LIMIT 200
         local ot_rows = fetch_rows([[
 SELECT r.ID,
   COALESCE(REPORT_FN_JDATE(r.DAY_DATE, '/'), '') AS jdate,
-  ]] .. sql_time_of_day("r.TIME_FROM") .. [[ AS time_from,
-  ]] .. sql_time_of_day("r.TIME_TO") .. [[ AS time_to,
+  ]] .. sql_seconds_of_day("r.TIME_FROM") .. [[ AS time_from,
+  ]] .. sql_seconds_of_day("r.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(r.TIME_TO - r.TIME_FROM, 0)") .. [[ AS total_minutes,
   COALESCE(r.STATUS, 0) AS status_code,
   COALESCE(r.DESCRIPTION, '') AS description,
@@ -1330,8 +1358,8 @@ LIMIT 100
                     family = "اضافه‌کاری",
                     type_name = "درخواست اضافه‌کاری",
                     jdate = r[2] or "—",
-                    time_from = blank_to_nil(r[3]),
-                    time_to = blank_to_nil(r[4]),
+                    time_from = seconds_to_hm(r[3]),
+                    time_to = seconds_to_hm(r[4]),
                     total_minutes = tonumber(r[5]) or 0,
                     status_code = tonumber(r[6]) or 0,
                     status = request_status_label(r[6]),
@@ -1347,8 +1375,8 @@ LIMIT 100
         local tw_rows = fetch_rows([[
 SELECT r.ID,
   COALESCE(REPORT_FN_JDATE(r.DAY_DATE, '/'), '') AS jdate,
-  ]] .. sql_time_of_day("r.TIME_FROM") .. [[ AS time_from,
-  ]] .. sql_time_of_day("r.TIME_TO") .. [[ AS time_to,
+  ]] .. sql_seconds_of_day("r.TIME_FROM") .. [[ AS time_from,
+  ]] .. sql_seconds_of_day("r.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(r.TIME_TO - r.TIME_FROM, 0)") .. [[ AS total_minutes,
   COALESCE(r.STATUS, 0) AS status_code,
   COALESCE(r.DESCRIPTION, '') AS description,
@@ -1367,8 +1395,8 @@ LIMIT 100
                     family = "دورکاری",
                     type_name = "درخواست دورکاری",
                     jdate = r[2] or "—",
-                    time_from = blank_to_nil(r[3]),
-                    time_to = blank_to_nil(r[4]),
+                    time_from = seconds_to_hm(r[3]),
+                    time_to = seconds_to_hm(r[4]),
                     total_minutes = tonumber(r[5]) or 0,
                     status_code = tonumber(r[6]) or 0,
                     status = request_status_label(r[6]),
