@@ -142,6 +142,7 @@ local document_id = tonumber(raw_document_id) or TEST_DOCUMENT_ID
 
 local result = {
     ok = true,
+    probe_version = "v04",
     note = "این بات فقط تشخیصی است — برای داشبورد نهایی CSV چندفایلی استفاده نمی‌شود",
     document_id_used = document_id,
 }
