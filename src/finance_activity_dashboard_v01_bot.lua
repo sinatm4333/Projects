@@ -1,35 +1,45 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 23:40
+-- Last Edit = 1405/06/08 10:15
 
 -- Bot: داشبورد عملکرد کاربران واحد مالی (finance_activity_dashboard_v01)
 -- گروه هدف: GROUP_ID = 36390 (واحد مالی)
 --
--- دامنهٔ این نسخه (v01) — به تأیید صریح کاربر پروژه (1405/06/07)، فقط عملیات‌هایی ساخته شده که از خودِ
--- ستون جدول اثبات می‌شوند، بدون وابستگی به کد عددی نامعلوم:
---   CREATE  = ستون USER_CREATE + DATE_CREATE (قرارداد یکسان همهٔ جداول این پلتفرم)
---   EDIT    = ستون USER_MODIFIED + DATE_MODIFIED (فقط وقتی DATE_MODIFIED <> DATE_CREATE، یعنی واقعاً
---             بعد از ایجاد تغییر کرده — نه همان لحظهٔ ایجاد)
---   CANCEL  = sales_invoice.CANCELED=1 / purchase_invoice.CANCELED=1  (پرچم خودِ ستون، بدون کد رمزی)
---   DELETE  = sales_invoice.DELETED=1 / purchase_invoice.DELETED=1 / pa_voucher.DELETED=1
---   REJECT  = sales_invoice.REJECT=1 / purchase_invoice.REJECT=1
--- عمداً ساخته نشده (چون به کد عددی نامعلوم TYPE/STATUS/SIGN وابسته‌اند و طبق قانون پروژه حدس زده
--- نمی‌شوند): «تایید/امضای سند حسابداری» (pa_voucher_signs.SIGN)، ریزتر کردن ویرایش‌ها بر اساس
--- sales_history/purchase_history.TYPE، و STATUS دقیق فاکتور/سند. اینها بعد از اجرای
--- finance_activity_discovery_json_bot.lua روی دادهٔ زنده و تفسیر خروجی واقعی آن اضافه می‌شوند.
+-- دامنهٔ این نسخه — طبق دو منبع: (۱) تأیید صریح کاربر پروژه (1405/06/07) که فقط عملیات‌های اثبات‌شده از
+-- خودِ ستون جدول ساخته شود، (۲) خروجی واقعی finance_activity_discovery_json_bot.lua روی دیتابیس زنده
+-- (1405/06/08، گروه ۳۶۳۹۰) که برای دو مورد زیر شواهد کافی به دست داد:
+--   CREATE   = ستون USER_CREATE + DATE_CREATE (قرارداد یکسان همهٔ جداول این پلتفرم)
+--   EDIT     = ستون USER_MODIFIED + DATE_MODIFIED (فقط وقتی DATE_MODIFIED <> DATE_CREATE، یعنی واقعاً
+--              بعد از ایجاد تغییر کرده — نه همان لحظهٔ ایجاد)
+--   CANCEL   = sales_invoice.CANCELED=1 / purchase_invoice.CANCELED=1  (پرچم خودِ ستون، بدون کد رمزی)
+--   DELETE   = sales_invoice.DELETED=1 / purchase_invoice.DELETED=1 / pa_voucher.DELETED=1
+--   REJECT   = sales_invoice.REJECT=1 / purchase_invoice.REJECT=1
+--   CONFIRM  = pa_voucher_signs.SIGN=1 (تایید سند حسابداری) — تأییدشده با دادهٔ واقعی: شمار ردیف‌های
+--              SIGN=0 هر کاربر در حد چند هزار در ۱۸۰ روز است (با DATE_SIGN تقریباً کل بازه را پوشش
+--              می‌دهد) که برای یک «عملیات» انسانی معقول نیست — یعنی SIGN=0 صرفاً وضعیت «در انتظار تایید»
+--              یک تخصیص است، نه یک رویداد؛ درحالی‌که شمار SIGN=1 هر کاربر معقول و پراکنده در طول بازه است
+--              (مثلاً از ۱ تا ۹۰۶ در ۱۸۰ روز) و DATE_SIGN آن لحظهٔ واقعی تایید را نشان می‌دهد — پس فقط
+--              SIGN=1 به‌عنوان عملیات «تایید» شمرده می‌شود، به تأیید صریح کاربر (1405/06/08).
+-- عمداً ساخته نشده (چون به کد عددی نامعلوم وابسته‌اند و طبق قانون پروژه حدس زده نمی‌شوند): ریزتر کردن
+-- ویرایش‌ها بر اساس sales_history/purchase_history.TYPE — خروجی زندهٔ discovery نشان داد این دو جدول
+-- برای اعضای این گروه در بازهٔ آزمایش‌شده کاملاً خالی برمی‌گردانند (history_type_distribution={}), یعنی
+-- برای فعالیت کارکنان واحد مالی مسیر قابل‌استفاده‌ای نیست؛ و STATUS دقیق فاکتور/سند (معنای هر کد عددی
+-- STATUS همچنان اثبات نشده، فقط NOT IN (0,3) برای pa_voucher از trial_balance_report_bot.lua شناخته‌شده).
 --
 -- طبق درخواست صریح کاربر: Drill-down فقط جدول جزئیات داخلی است (تاریخ/عملیات/ماژول/شناسهٔ سند/توضیح)،
 -- بدون لینک بیرونی به صفحهٔ واقعی سند — چون URL آن ماژول‌ها اثبات نشده و حدس زده نمی‌شود.
 --
--- «فعال/غیرفعال»: چون هیچ ستون ACTIVE/DISABLE واقعی روی کاربر پیدا نشد، به تأیید صریح کاربر پروژه بر
--- اساس admin_user.EXPIRATION تعیین می‌شود: EXPIRATION=0 یا در آینده => فعال؛ در گذشته => غیرفعال —
--- طبق همان قرارداد یکسان تمام ستون‌های تاریخ bigint این دیتابیس («0» = تنظیم‌نشده).
+-- «فعال/غیرفعال»: عمداً در این Dashboard وجود ندارد. admin_user.EXPIRATION در ابتدا برای این منظور در
+-- نظر گرفته شده بود، اما دادهٔ زندهٔ discovery نشان داد مقدار آن برای تقریباً همهٔ ۲۰ کارمند فقط چند هفته
+-- تا چند ماه جلوتر از «اکنون» است (نه سال‌ها، و نه صفر/تنظیم‌نشده) — الگویی که با «انقضای دورهٔ رمز عبور»
+-- سازگار است، نه با «غیرفعال‌سازی حساب»؛ به تأیید صریح کاربر پروژه (1405/06/08: «انقضای رمز عبور است، نه
+-- حساب کاربری») این ستون برای برچسب فعال/غیرفعال کارمند استفاده نمی‌شود، چون گمراه‌کننده است.
 --
 -- FILETIME rule (طبق CLAUDE.md / الگوی اثبات‌شدهٔ crm_geo_sales_dashboard_bot.lua): مقادیر FILETIME
 -- (~1.3×10^17) از سقف عدد صحیح دقیق double عبور می‌کنند — هرگز جمع/تفریق/باقیمانده روی این مقادیر در Lua
 -- انجام نمی‌شود؛ فقط به‌عنوان پارامتر Opaque (رشته) بین Query ها رد و بدل می‌شوند. مرز «تا تاریخ» با یک
 -- Query جداگانه (MIN(DATEKEY) روز بعد) به‌صورت Exclusive محاسبه می‌شود، نه با جمع در Lua.
 --
--- Performance: طبق درخواست کاربر، هیچ Query داخل Loop روی کاربر وجود ندارد — یک UNION ALL سیزده‌شاخه‌ای
+-- Performance: طبق درخواست کاربر، هیچ Query داخل Loop روی کاربر وجود ندارد — یک UNION ALL چهارده‌شاخه‌ای
 -- (Users -> Activity Dataset) سه بار با پوشش‌های متفاوت (GROUP BY برای KPI/جدول اصلی، ORDER BY+LIMIT برای
 -- جزئیات Drill-down، GROUP BY روزانه برای Trend) اجرا می‌شود.
 
@@ -42,7 +52,7 @@ local CONFIG = {
     DAY_TICKS = 864000000000, -- یک روز بر حسب تیک FILETIME (10,000,000 * 86400) — فقط در SQL استفاده می‌شود
     DETAIL_LIMIT = 5000,      -- سقف ردیف‌های خام Drill-down (طبق KPI های تجمیعی که مستقل از این سقف‌اند)
     MODULE_LABELS = { sales = "فروش", purchase = "خرید", accounting = "حسابداری" },
-    OPERATION_LABELS = { create = "ایجاد", edit = "ویرایش", cancel = "ابطال", delete = "حذف", reject = "رد" },
+    OPERATION_LABELS = { create = "ایجاد", edit = "ویرایش", cancel = "ابطال", delete = "حذف", reject = "رد", confirm = "تایید" },
     -- لوگو «۱۴۰» (الزام CLAUDE.md برای بات‌های HTML جدید) — نسخهٔ White، چون روی نوار Accent هدر می‌نشیند
     -- (طبق Background-pairing rule در assets/brand140/README.md — Case C)
     LOGO140_WHITE_B64 = "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",
@@ -176,7 +186,7 @@ local function resolve_day_after(day_key)
 end
 
 -- ============================================================
--- گروه واحد مالی (اعضا + وضعیت فعال/غیرفعال بر اساس EXPIRATION)
+-- گروه واحد مالی (اعضا)
 -- ============================================================
 
 -- تأییدشدهٔ زنده (اجرای finance_activity_discovery_json_bot.lua، 1405/06/07): profile_group_member برای
@@ -185,22 +195,21 @@ end
 -- کارمند واقعی USERNAME غیرخالی دارند. پس فیلتر au.USERNAME <> '' (که NULL را هم به‌صورت طبیعی SQL کنار
 -- می‌گذارد) هم آن ردیف خودارجاع را حذف می‌کند، هم هر عضو بدون حساب کاربری واقعی را — بدون حدس، صرفاً بر
 -- اساس دادهٔ واقعی مشاهده‌شده.
-local function fetch_group_members(group_id, now_raw)
+local function fetch_group_members(group_id)
     return fetch_rows([[
         SELECT
             gm.USER_ID,
-            COALESCE(pm.FULLNAME, 'نامشخص') AS FULLNAME,
-            CASE WHEN au.EXPIRATION IS NULL OR au.EXPIRATION = 0 OR au.EXPIRATION > ? THEN 1 ELSE 0 END AS IS_ACTIVE
+            COALESCE(pm.FULLNAME, 'نامشخص') AS FULLNAME
         FROM profile_group_member gm
         LEFT JOIN profile_main pm ON pm.ID = gm.USER_ID
         LEFT JOIN admin_user au ON au.ID = gm.USER_ID
         WHERE gm.GROUP_ID = ? AND au.USERNAME IS NOT NULL AND au.USERNAME <> ''
         ORDER BY pm.FULLNAME
-    ]], { now_raw, group_id })
+    ]], { group_id })
 end
 
 -- ============================================================
--- Activity Dataset: UNION ALL سیزده‌شاخه‌ای (فروش×۵ + خرید×۵ + حسابداری×۳)
+-- Activity Dataset: UNION ALL چهارده‌شاخه‌ای (فروش×۵ + خرید×۵ + حسابداری×۴)
 -- هر شاخه دقیقاً یک نوع عملیاتِ اثبات‌شده از یک جدول را برمی‌گرداند — بدون Double Count: هر شاخه فقط
 -- ردیف‌هایی از یک جدول پایه را می‌شمارد (بدون JOIN چندگانه‌ای که ردیف را تکرار کند) و هر شاخه یک واقعیت
 -- مستقل و قابل‌اثبات دربارهٔ همان سند است (مثلاً «حذف شد» و «ایجاد شد» دو واقعیت جدا روی همان ID هستند،
@@ -300,9 +309,20 @@ local EVENTS_UNION_SQL = [[
     FROM pa_voucher
     WHERE USER_MODIFIED IN (SELECT USER_ID FROM profile_group_member WHERE GROUP_ID = ?)
       AND DATE_MODIFIED >= ? AND DATE_MODIFIED < ? AND DELETED = 1
+
+    UNION ALL
+    -- تایید سند حسابداری — فقط SIGN=1 (تأییدشده با دادهٔ واقعی: ر.ک. توضیح بالای فایل). pa_voucher_signs
+    -- عنوان سند ندارد؛ برای doc_title به pa_voucher با کلید ترکیبی (ID, ORG_ID) — همان الگوی اثبات‌شدهٔ
+    -- trial_balance_report_bot.lua — LEFT JOIN می‌شود.
+    SELECT pvs.USER_ID, 'accounting', 'confirm', pvs.VOUCHER_ID,
+        CAST(pvs.VOUCHER_ID AS CHAR), COALESCE(NULLIF(v.TITLE, ''), v.CONTENT, ''), pvs.DATE_SIGN
+    FROM pa_voucher_signs pvs
+    LEFT JOIN pa_voucher v ON v.ID = pvs.VOUCHER_ID AND v.ORG_ID = pvs.ORG_ID
+    WHERE pvs.USER_ID IN (SELECT USER_ID FROM profile_group_member WHERE GROUP_ID = ?)
+      AND pvs.DATE_SIGN >= ? AND pvs.DATE_SIGN < ? AND pvs.SIGN = 1
 ]]
 
-local EVENTS_BRANCH_COUNT = 13
+local EVENTS_BRANCH_COUNT = 14
 
 local function events_params(group_id, from_key, day_after_to)
     local params = {}
@@ -355,7 +375,6 @@ local function build_dashboard_data(members, aggregate_rows, detail_rows, trend_
         user_by_id[uid] = {
             user_id = m[1],
             name = m[2],
-            is_active = tonumber(m[3]) == 1,
             sales = 0, purchase = 0, accounting = 0, total = 0,
             ops = {}, -- ops[module][operation] = cnt
         }
@@ -374,7 +393,7 @@ local function build_dashboard_data(members, aggregate_rows, detail_rows, trend_
         local u = user_by_id[uid]
         if u == nil then
             -- کاربری که در Activity Dataset هست ولی دیگر عضو گروه ۳۶۳۹۰ نیست (ممکن است در گذشته عضو بوده)
-            u = { user_id = r[1], name = "نامشخص (خارج از گروه فعلی)", is_active = false,
+            u = { user_id = r[1], name = "نامشخص (خارج از گروه فعلی)",
                 sales = 0, purchase = 0, accounting = 0, total = 0, ops = {} }
             user_by_id[uid] = u
             table.insert(user_order, uid)
@@ -405,7 +424,7 @@ local function build_dashboard_data(members, aggregate_rows, detail_rows, trend_
             ops_json[mod_key] = op_list
         end
         table.insert(users_json, {
-            user_id = u.user_id, name = u.name, is_active = u.is_active,
+            user_id = u.user_id, name = u.name,
             sales = u.sales, purchase = u.purchase, accounting = u.accounting, total = u.total,
             share_pct = fmt_pct(u.total, grand_total),
             ops = ops_json,
@@ -523,8 +542,6 @@ table.data-table thead th.sort-desc::after{ content:" ▼"; }
 table.data-table tbody tr:nth-child(even){ background:var(--zebra); }
 table.data-table tbody tr.clickable-cell td.clickable{ cursor:pointer; color:var(--accent); font-weight:bold; text-decoration:underline; }
 .table-scroll{ overflow-x:auto; }
-.badge{ display:inline-block; background:var(--accent); color:#fff; border-radius:6px; padding:2px 8px; font-size:14px; }
-.badge.gray{ background:#eee; color:#000; }
 .search-box{ margin-bottom:10px; }
 .search-box input{ width:100%; max-width:320px; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
 .tooltip-box{ position:fixed; background:#000; color:#fff; font-size:14px; padding:6px 10px; border-radius:6px; pointer-events:none; z-index:9999; display:none; white-space:nowrap; }
@@ -752,7 +769,7 @@ function exportToExcel(){
 /* ---------------- دادهٔ تعبیه‌شده + Drill-down (کاملاً از داده‌ای که همراه صفحه آمده، بدون Query تازه) ---------------- */
 var DASH = JSON.parse(document.getElementById('dashData').textContent);
 var MODULE_LABELS = { sales: 'فروش', purchase: 'خرید', accounting: 'حسابداری' };
-var OP_LABELS = { create: 'ایجاد', edit: 'ویرایش', cancel: 'ابطال', delete: 'حذف', reject: 'رد' };
+var OP_LABELS = { create: 'ایجاد', edit: 'ویرایش', cancel: 'ابطال', delete: 'حذف', reject: 'رد', confirm: 'تایید' };
 
 function openDrill(userId, moduleKey, userName){
   var rows = DASH.events.filter(function(e){
@@ -823,10 +840,9 @@ end
 local function render_main_table_rows(users)
     local html = {}
     for _, u in ipairs(users) do
-        local active_badge = u.is_active and '<span class="badge">فعال</span>' or '<span class="badge gray">غیرفعال</span>'
         local uid_attr = 'data-uid="' .. escape_html(u.user_id) .. '" data-name="' .. escape_html(u.name) .. '"'
         table.insert(html, '<tr class="clickable-cell">' ..
-            '<td>' .. escape_html(u.name) .. ' ' .. active_badge .. '</td>' ..
+            '<td>' .. escape_html(u.name) .. '</td>' ..
             '<td class="clickable" ' .. uid_attr .. ' data-module="sales">' .. fmt_num(u.sales) .. '</td>' ..
             '<td class="clickable" ' .. uid_attr .. ' data-module="purchase">' .. fmt_num(u.purchase) .. '</td>' ..
             '<td class="clickable" ' .. uid_attr .. ' data-module="accounting">' .. fmt_num(u.accounting) .. '</td>' ..
@@ -915,7 +931,7 @@ local function render_html(args)
     <div class="card"><h3>سهم ماژول‌ها از کل عملیات واحد</h3><div class="desc">فروش / خرید / حسابداری</div><div class="chart-box" id="moduleDonutChart"></div></div>
     <div class="card"><h3>روند فعالیت روزانهٔ واحد</h3><div class="desc">تعداد کل عملیات هر روز در بازهٔ انتخابی</div><div class="chart-box" id="trendChart"></div></div>
   </div>
-  <div class="card" style="margin-top:16px;"><h3>تفکیک نوع عملیات</h3><div class="desc">فقط عملیات‌های اثبات‌شده از دیتابیس (ایجاد/ویرایش/ابطال/حذف/رد)</div><div class="chart-box" id="opBreakdownChart"></div></div>
+  <div class="card" style="margin-top:16px;"><h3>تفکیک نوع عملیات</h3><div class="desc">فقط عملیات‌های اثبات‌شده از دیتابیس (ایجاد/ویرایش/ابطال/حذف/رد/تایید)</div><div class="chart-box" id="opBreakdownChart"></div></div>
 </div>
 
 <div class="section" id="mainTableSection">
@@ -945,7 +961,8 @@ local function render_html(args)
       <li><b>ایجاد:</b> کاربری که فیلد USER_CREATE سند است، در تاریخ DATE_CREATE.</li>
       <li><b>ویرایش:</b> کاربری که فیلد USER_MODIFIED سند است، وقتی DATE_MODIFIED واقعاً با DATE_CREATE فرق دارد (یعنی بعد از ایجاد تغییر کرده).</li>
       <li><b>ابطال/حذف/رد:</b> بر اساس پرچم خودِ ستون سند (CANCELED/DELETED/REJECT) در آخرین لحظهٔ ثبت‌شده (USER_MODIFIED/DATE_MODIFIED).</li>
-      <li>فقط عملیات‌هایی نمایش داده می‌شوند که مستقیماً از ستون‌های خودِ جدول اثبات می‌شوند — هیچ کد عددی (TYPE/STATUS/SIGN) حدس زده نشده است.</li>
+      <li><b>تایید (فقط حسابداری):</b> ردیف‌های <code>pa_voucher_signs</code> با <code>SIGN=1</code> — تأییدشده با دادهٔ واقعی که تعداد آن برای هر کاربر در بازه معقول و پراکنده است (بر خلاف <code>SIGN=0</code> که صرفاً وضعیت «در انتظار» یک تخصیص است، نه یک رویداد).</li>
+      <li>فقط عملیات‌هایی نمایش داده می‌شوند که مستقیماً از ستون‌های خودِ جدول اثبات می‌شوند — هیچ کد عددی حدسی در کار نیست.</li>
     </ul>
     <h4>تعامل‌ها</h4>
     <ul>
@@ -955,8 +972,8 @@ local function render_html(args)
     </ul>
     <h4>محدودیت‌های شناخته‌شده (v01)</h4>
     <ul>
-      <li>«تایید/امضای سند حسابداری» و ریزتر کردن انواع ویرایش هنوز اضافه نشده — چون به کدهای عددی نامعلوم (pa_voucher_signs.SIGN و TYPE در sales_history/purchase_history) وابسته‌اند که هنوز روی دادهٔ زنده تفسیر نشده‌اند.</li>
-      <li>«فعال/غیرفعال» بر اساس admin_user.EXPIRATION تعیین شده (چون ستون ACTIVE/DISABLE واقعی روی کاربر وجود ندارد).</li>
+      <li>ریزتر کردن انواع ویرایش بر اساس <code>sales_history</code>/<code>purchase_history.TYPE</code> اضافه نشده — بررسی دادهٔ زندهٔ این گروه نشان داد این دو جدول برای اعضای واحد مالی خالی برمی‌گردند، پس مسیر قابل‌استفاده‌ای برای این گزارش نیست.</li>
+      <li>«فعال/غیرفعال بودن کارمند» در این داشبورد وجود ندارد — <code>admin_user.EXPIRATION</code> که ابتدا برای این منظور بررسی شد، طبق تأیید کاربر پروژه در واقع انقضای دورهٔ رمز عبور است، نه وضعیت حساب کاربری.</li>
       <li>این عدد صرفاً «تعداد عملیات ثبت‌شده» است، نه سنجش کیفیت یا بهره‌وری — دو کاربر با نقش متفاوت طبیعتاً تعداد متفاوتی عملیات دارند.</li>
     </ul>
   </div>
@@ -1021,7 +1038,7 @@ local function main()
         day_after_to = "9223372036854775807"
     end
 
-    local members, members_err = fetch_group_members(group_id, now_raw)
+    local members, members_err = fetch_group_members(group_id)
     if members == nil then
         teamyar.write_result(render_error_html("دریافت اعضای گروه واحد مالی ناموفق بود: " .. tostring(members_err)))
         return
