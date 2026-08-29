@@ -45,4 +45,5 @@
 | [document/list](اسناد/document_list.md) | `/api/document/list` | فهرست اسناد |
 | [document/attach](اسناد/document_attach.md) | `/api/document/attach` | منگنه کردن فایل |
 | [document/detach](اسناد/document_detach.md) | `/api/document/detach` | بازکردن منگنه |
+| [client/getRootId](اسناد/client_getRootId.md) | `/api/client/getRootId` | گرفتن پوشه‌ی مشتریان |
 | [client/getFolderId](اسناد/client_getFolderId.md) | `/api/client/getFolderId` | گرفتن شناسه پوشه مشتری |
