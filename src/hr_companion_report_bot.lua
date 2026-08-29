@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 15:08
+-- Last Edit = 1405/06/07 15:13
 
 -- botName = hr_companion
 -- description = همراه ۱۴۰ — پنل پرسنلی (تردد و کارکرد، درخواست‌ها، اطلاعات پرسنلی، همراهِ روز و تولدها)
@@ -197,6 +197,18 @@ local function fetch_rows(query, params, column_count)
     return rows
 end
 
+-- ⚠️ REPORT_FN_JDATE همیشه با جداکنندهٔ '-' صدا زده می‌شود، هرگز '/'.
+-- تاییدشده روی سرور زنده (بات ۶۲۲، گام ۶ حالت sqlprobe): شکل '/' با «sql error» رد می‌شود، در
+-- حالی که همهٔ بات‌های مستقر و سالم این ریپو شکل '-' را استفاده می‌کنند و این بات تنها جایی بود
+-- که '/' داشت. با هشدار CLAUDE.md هم می‌خواند: ذخیرهٔ command گاهی کاراکتر اسلش را خراب می‌کند.
+-- نمایش فارسی همچنان با اسلش است؛ تبدیل در همین‌جا انجام می‌شود، نه در SQL.
+local function jalali_date(value)
+    if value == nil then return nil end
+    local text = tostring(value)
+    if text == "" then return nil end
+    return (text:gsub("%-", "/"))
+end
+
 -- ثانیهٔ روز → HH:MM. مقدار صفر/منفی یعنی «ثبت نشده» و nil برمی‌گرداند.
 local function seconds_to_hm(value)
     local sec = tonumber(value)
@@ -359,52 +371,61 @@ if action_type == "sqlprobe" then
         })
     end
 
-    probe("۱ ساده‌ترین کوئری ممکن", "SELECT 1", {})
-    probe("۲ تاریخ از دیتابیس (UNIX_TIMESTAMP)",
+    probe("01 SELECT 1", "SELECT 1", {})
+    probe("02 UNIX_TIMESTAMP filetime",
         "SELECT (UNIX_TIMESTAMP() + 11644473600) * 10000000", {})
-    probe("۳ همان + MOD با لیترال بزرگ",
+    probe("03 MOD big literal",
         "SELECT MOD((UNIX_TIMESTAMP() + 11644473600) * 10000000, 864000000000)", {})
-    probe("۴ FLOOR روی تقسیم", "SELECT FLOOR(864000000000 / 10000000)", {})
-    probe("۵ ROUND روی تقسیم دوگانه", "SELECT ROUND(864000000000 / 10000000 / 60, 0)", {})
-    probe("۶ REPORT_FN_JDATE با جداکنندهٔ اسلش",
+    probe("04 FLOOR", "SELECT FLOOR(864000000000 / 10000000)", {})
+    probe("05 ROUND", "SELECT ROUND(864000000000 / 10000000 / 60, 0)", {})
+    probe("06 JDATE expr + DASH (was slash)",
         "SELECT COALESCE(REPORT_FN_JDATE((UNIX_TIMESTAMP() + 11644473600) * 10000000, '/'), '')", {})
-    probe("۷ لیترال N با فارسی", "SELECT COALESCE(NULL, N'نامشخص')", {})
-    probe("۸ خواندن ساده از hr_work_time", "SELECT COUNT(*) FROM hr_work_time", {})
-    probe("۹ hr_work_time با پارامتر عددی کوچک",
+    -- گام‌های اختصاصی جداکننده: دقیقاً ثابت می‌کنند اسلش مقصر بوده یا نه
+    probe("06a JDATE literal + dash", "SELECT REPORT_FN_JDATE(" ..
+        sql_filetime(133700000000000000) .. ", '-')", {})
+    probe("06b JDATE literal + SLASH", "SELECT REPORT_FN_JDATE(" ..
+        sql_filetime(133700000000000000) .. ", '/')", {})
+    probe("06c JDATE column + dash",
+        "SELECT REPORT_FN_JDATE(w.WORK_DATE, '-') FROM hr_work_time w LIMIT 1", {})
+    probe("06d JDATE column + SLASH",
+        "SELECT REPORT_FN_JDATE(w.WORK_DATE, '/') FROM hr_work_time w LIMIT 1", {})
+    probe("07 N-literal persian", "SELECT COALESCE(NULL, N'نامشخص')", {})
+    probe("08 hr_work_time count", "SELECT COUNT(*) FROM hr_work_time", {})
+    probe("09 small param",
         "SELECT COUNT(*) FROM hr_work_time w WHERE w.PERSONNEL_ID = ?", { 1 })
-    probe("۱۰ hr_work_time با بازهٔ تاریخ لیترال",
+    probe("10 date range literal",
         "SELECT COUNT(*) FROM hr_work_time w WHERE w.WORK_DATE BETWEEN " ..
         sql_filetime(0) .. " AND " .. sql_filetime(133700000000000000), {})
-    probe("۱۱ ستون FIRST_IN با FLOOR/MOD",
+    probe("11 FIRST_IN floor/mod",
         "SELECT " .. sql_seconds_of_day("w.FIRST_IN") .. " FROM hr_work_time w LIMIT 1", {})
-    probe("۱۲ ستون TOTAL_WORK با ROUND",
+    probe("12 TOTAL_WORK round",
         "SELECT " .. sql_ticks_to_minutes("w.TOTAL_WORK") .. " FROM hr_work_time w LIMIT 1", {})
-    probe("۱۳ CASE با FINAL_OVER_TIME",
+    probe("13 CASE final_over_time",
         "SELECT " .. sql_ticks_to_minutes(
             "CASE WHEN w.FINAL_OVER_TIME = -1 THEN w.OVER_TIME ELSE w.FINAL_OVER_TIME END") ..
         " FROM hr_work_time w LIMIT 1", {})
-    probe("۱۴ جمع ستون‌های ماموریت",
+    probe("14 mission sum",
         "SELECT " .. sql_ticks_to_minutes("w.MISSION + w.MISSION_OUT_CITY + w.MISSION_OUT_COUNTRY") ..
         " FROM hr_work_time w LIMIT 1", {})
-    probe("۱۵ ستون ABSENT", "SELECT COALESCE(w.ABSENT, 0) FROM hr_work_time w LIMIT 1", {})
-    probe("۱۶ JOIN با report_dimdate",
+    probe("15 ABSENT", "SELECT COALESCE(w.ABSENT, 0) FROM hr_work_time w LIMIT 1", {})
+    probe("16 join report_dimdate",
         "SELECT COALESCE(rd.JTDAY, '') FROM hr_work_time w " ..
         "LEFT JOIN report_dimdate rd ON rd.DATEKEY = w.WORK_DATE LIMIT 1", {})
-    probe("۱۷ CTE با WITH", "WITH t AS (SELECT 1 AS a) SELECT a FROM t", {})
-    probe("۱۸ CTE روی hr_day_details",
+    probe("17 CTE", "WITH t AS (SELECT 1 AS a) SELECT a FROM t", {})
+    probe("18 CTE hr_day_details",
         "WITH shift_day AS (SELECT d.CALENDAR_ID, d.DAY_DATE, MIN(d.TIME_FROM) AS shift_from " ..
         "FROM hr_day_details d WHERE d.CALENDAR_ID = ? GROUP BY d.CALENDAR_ID, d.DAY_DATE) " ..
         "SELECT COUNT(*) FROM shift_day", { 1 })
-    probe("۱۹ hr_ext_time ساده", "SELECT COUNT(*) FROM hr_ext_time", {})
-    probe("۲۰ hr_vacation ساده", "SELECT COUNT(*) FROM hr_vacation", {})
-    probe("۲۱ hr_vacation با JOIN نوع",
+    probe("19 hr_ext_time count", "SELECT COUNT(*) FROM hr_ext_time", {})
+    probe("20 hr_vacation count", "SELECT COUNT(*) FROM hr_vacation", {})
+    probe("21 hr_vacation join type",
         "SELECT COUNT(*) FROM hr_vacation v " ..
         "LEFT JOIN hr_vacation_type vt ON vt.TYPE = v.TYPE", {})
-    probe("۲۲ زیرکوئری همبسته در SELECT",
+    probe("22 correlated subquery",
         "SELECT (SELECT COUNT(*) FROM hr_leave_verify lv WHERE lv.LEAVE_ID = v.ID) " ..
         "FROM hr_vacation v LIMIT 1", {})
-    probe("۲۳ hr_machine JOIN", "SELECT COALESCE(m.NAME, N'—') FROM hr_machine m LIMIT 1", {})
-    probe("۲۴ GREATEST روی تفریق",
+    probe("23 hr_machine", "SELECT COALESCE(m.NAME, N'—') FROM hr_machine m LIMIT 1", {})
+    probe("24 GREATEST",
         "SELECT " .. sql_ticks_to_minutes("GREATEST(e.TIME_TO - e.TIME_FROM, 0)") ..
         " FROM hr_ext_time e LIMIT 1", {})
 
@@ -755,7 +776,7 @@ end
 local function load_celebration_messages(dialog_id)
     local rows = fetch_rows([[
 SELECT COALESCE(pm.fullname, N'همکار') AS author_name, cm.CONTENT,
-  COALESCE(REPORT_FN_JDATE(cm.DATE_CREATE, '/'), '') AS jdate,
+  COALESCE(REPORT_FN_JDATE(cm.DATE_CREATE, '-'), '') AS jdate,
   ]] .. sql_seconds_of_day("cm.DATE_CREATE") .. [[ AS jtime
 FROM chat_message cm
 LEFT JOIN profile_main pm ON pm.id = cm.USER_ID
@@ -769,7 +790,7 @@ LIMIT 200
             table.insert(messages, {
                 author = r[1] or "همکار",
                 text = r[2] or "",
-                date = r[3] or "",
+                date = jalali_date(r[3]) or "",
                 clock = seconds_to_hm(r[4]) or ""
             })
         end
@@ -1021,8 +1042,8 @@ LIMIT 1
         unit_name = rows[1][1] or "نامشخص",
         calendar_name = rows[1][2] or "—",
         supervisor_name = rows[1][3] or "—",
-        date_from = rows[1][4] or "—",
-        date_to = rows[1][5] or "—"
+        date_from = jalali_date(rows[1][4]) or "—",
+        date_to = jalali_date(rows[1][5]) or "—"
     }
 end
 
@@ -1032,8 +1053,8 @@ SELECT o.ID, o.UNIT_ID, COALESCE(ou.NAME, N'نامشخص') AS unit_name,
        o.CALENDAR_ID, COALESCE(hc.NAME, N'—') AS calendar_name,
        ]] .. sql_ticks_to_minutes("o.WORKING_HOURS") .. [[ AS working_minutes,
        ]] .. sql_ticks_to_minutes("o.LEAVE_PER_MONTH") .. [[ AS leave_per_month_minutes,
-       COALESCE(REPORT_FN_JDATE(o.DATE_FROM, '/'), '') AS date_from_j,
-       COALESCE(REPORT_FN_JDATE(o.DATE_TO, '/'), '') AS date_to_j
+       COALESCE(REPORT_FN_JDATE(o.DATE_FROM, '-'), '') AS date_from_j,
+       COALESCE(REPORT_FN_JDATE(o.DATE_TO, '-'), '') AS date_to_j
 FROM hr_personnel_order o
 LEFT JOIN org_organization_unit oou ON oou.ID = o.UNIT_ID
 LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
@@ -1125,8 +1146,8 @@ LIMIT 1
         employment.calendar_name = r[7] or "—"
         employment.working_hours_raw = tonumber(r[8])
         employment.leave_per_month_raw = tonumber(r[9])
-        employment.date_from = r[10] or "—"
-        employment.date_to = r[11] or "—"
+        employment.date_from = jalali_date(r[10]) or "—"
+        employment.date_to = jalali_date(r[11]) or "—"
         employment_source = "db"
     end)
     if not ok then employment_err = tostring(err) end
@@ -1192,7 +1213,7 @@ WITH shift_day AS (
   GROUP BY d.CALENDAR_ID, d.DAY_DATE
 )
 SELECT
-  COALESCE(REPORT_FN_JDATE(w.WORK_DATE, '/'), '') AS jdate,
+  COALESCE(REPORT_FN_JDATE(w.WORK_DATE, '-'), '') AS jdate,
   COALESCE(rd.JTDAY, '—') AS jday_name,
   COALESCE(rd.JMDAY, 0) AS jmday,
   ]] .. sql_seconds_of_day("w.FIRST_IN") .. [[ AS first_in,
@@ -1255,7 +1276,7 @@ LIMIT 200
             end
 
             table.insert(daily, {
-                jdate = r[1] or "—",
+                jdate = jalali_date(r[1]) or "—",
                 jday_name = r[2] or "—",
                 first_in = first_in,
                 last_out = last_out,
@@ -1311,7 +1332,7 @@ do
     local ok, err = pcall(function()
         local rows, query_err = fetch_rows([[
 SELECT
-  COALESCE(REPORT_FN_JDATE(e.EXT_DATE, '/'), '') AS jdate,
+  COALESCE(REPORT_FN_JDATE(e.EXT_DATE, '-'), '') AS jdate,
   ]] .. sql_seconds_of_day("e.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_seconds_of_day("e.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(e.TIME_TO - e.TIME_FROM, 0)") .. [[ AS duration_minutes,
@@ -1334,7 +1355,7 @@ LIMIT 300
         end
         for _, r in ipairs(rows) do
             table.insert(events, {
-                jdate = r[1] or "—",
+                jdate = jalali_date(r[1]) or "—",
                 time_from = seconds_to_hm(r[2]),
                 time_to = seconds_to_hm(r[3]),
                 duration_minutes = tonumber(r[4]) or 0,
@@ -1376,13 +1397,13 @@ do
 SELECT
   v.ID,
   COALESCE(NULLIF(vt_by_type.NAME, ''), NULLIF(vt_by_id.NAME, ''), N'مرخصی/ماموریت') AS type_name,
-  COALESCE(REPORT_FN_JDATE(v.DATE_VACATOIN, '/'), '') AS jdate,
+  COALESCE(REPORT_FN_JDATE(v.DATE_VACATOIN, '-'), '') AS jdate,
   ]] .. sql_seconds_of_day("v.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_seconds_of_day("v.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("v.TOTAL_TIME") .. [[ AS total_minutes,
   COALESCE(v.STATUS, 0) AS status_code,
   COALESCE(v.DESCRIPTION, '') AS description,
-  COALESCE(REPORT_FN_JDATE(v.DATE_CREATE, '/'), '') AS created_j,
+  COALESCE(REPORT_FN_JDATE(v.DATE_CREATE, '-'), '') AS created_j,
   COALESCE(v.KIND, 0) AS kind_code,
   (SELECT COUNT(*) FROM hr_leave_verify lv WHERE lv.LEAVE_ID = v.ID) AS verify_count,
   (SELECT COUNT(*) FROM hr_leave_verify lv WHERE lv.LEAVE_ID = v.ID AND lv.STATUS = 1) AS verify_done,
@@ -1403,14 +1424,14 @@ LIMIT 200
                     id = tonumber(r[1]),
                     family = "مرخصی و ماموریت",
                     type_name = r[2] or "مرخصی/ماموریت",
-                    jdate = r[3] or "—",
+                    jdate = jalali_date(r[3]) or "—",
                     time_from = seconds_to_hm(r[4]),
                     time_to = seconds_to_hm(r[5]),
                     total_minutes = tonumber(r[6]) or 0,
                     status_code = tonumber(r[7]) or 0,
                     status = request_status_label(r[7]),
                     description = r[8] or "",
-                    created = r[9] or "—",
+                    created = jalali_date(r[9]) or "—",
                     verify_count = tonumber(r[11]) or 0,
                     verify_done = tonumber(r[12]) or 0,
                     sort_key = tonumber(r[13]) or 0
@@ -1420,13 +1441,13 @@ LIMIT 200
 
         local ot_rows = fetch_rows([[
 SELECT r.ID,
-  COALESCE(REPORT_FN_JDATE(r.DAY_DATE, '/'), '') AS jdate,
+  COALESCE(REPORT_FN_JDATE(r.DAY_DATE, '-'), '') AS jdate,
   ]] .. sql_seconds_of_day("r.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_seconds_of_day("r.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(r.TIME_TO - r.TIME_FROM, 0)") .. [[ AS total_minutes,
   COALESCE(r.STATUS, 0) AS status_code,
   COALESCE(r.DESCRIPTION, '') AS description,
-  COALESCE(REPORT_FN_JDATE(r.DATE_CREATE, '/'), '') AS created_j,
+  COALESCE(REPORT_FN_JDATE(r.DATE_CREATE, '-'), '') AS created_j,
   r.DAY_DATE AS day_raw
 FROM hr_overtime_request r
 WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ]] .. sql_filetime(from_date) ..
@@ -1440,14 +1461,14 @@ LIMIT 100
                     id = tonumber(r[1]),
                     family = "اضافه‌کاری",
                     type_name = "درخواست اضافه‌کاری",
-                    jdate = r[2] or "—",
+                    jdate = jalali_date(r[2]) or "—",
                     time_from = seconds_to_hm(r[3]),
                     time_to = seconds_to_hm(r[4]),
                     total_minutes = tonumber(r[5]) or 0,
                     status_code = tonumber(r[6]) or 0,
                     status = request_status_label(r[6]),
                     description = r[7] or "",
-                    created = r[8] or "—",
+                    created = jalali_date(r[8]) or "—",
                     verify_count = 0,
                     verify_done = 0,
                     sort_key = tonumber(r[9]) or 0
@@ -1457,13 +1478,13 @@ LIMIT 100
 
         local tw_rows = fetch_rows([[
 SELECT r.ID,
-  COALESCE(REPORT_FN_JDATE(r.DAY_DATE, '/'), '') AS jdate,
+  COALESCE(REPORT_FN_JDATE(r.DAY_DATE, '-'), '') AS jdate,
   ]] .. sql_seconds_of_day("r.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_seconds_of_day("r.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(r.TIME_TO - r.TIME_FROM, 0)") .. [[ AS total_minutes,
   COALESCE(r.STATUS, 0) AS status_code,
   COALESCE(r.DESCRIPTION, '') AS description,
-  COALESCE(REPORT_FN_JDATE(r.DATE_CREATE, '/'), '') AS created_j,
+  COALESCE(REPORT_FN_JDATE(r.DATE_CREATE, '-'), '') AS created_j,
   r.DAY_DATE AS day_raw
 FROM hr_telework_request r
 WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ]] .. sql_filetime(from_date) ..
@@ -1477,14 +1498,14 @@ LIMIT 100
                     id = tonumber(r[1]),
                     family = "دورکاری",
                     type_name = "درخواست دورکاری",
-                    jdate = r[2] or "—",
+                    jdate = jalali_date(r[2]) or "—",
                     time_from = seconds_to_hm(r[3]),
                     time_to = seconds_to_hm(r[4]),
                     total_minutes = tonumber(r[5]) or 0,
                     status_code = tonumber(r[6]) or 0,
                     status = request_status_label(r[6]),
                     description = r[7] or "",
-                    created = r[8] or "—",
+                    created = jalali_date(r[8]) or "—",
                     verify_count = 0,
                     verify_done = 0,
                     sort_key = tonumber(r[9]) or 0
@@ -1558,8 +1579,8 @@ do
         local rows, query_err = fetch_rows([[
 SELECT ]] .. sql_ticks_to_minutes("rec.LEAVE_REMAINED") .. [[ AS remained_minutes,
        ]] .. sql_ticks_to_minutes("rec.PAID_LEAVE_REMAINED") .. [[ AS paid_remained_minutes,
-       COALESCE(REPORT_FN_JDATE(lst.DATE_FROM, '/'), '') AS date_from_j,
-       COALESCE(REPORT_FN_JDATE(lst.DATE_TO, '/'), '') AS date_to_j
+       COALESCE(REPORT_FN_JDATE(lst.DATE_FROM, '-'), '') AS date_from_j,
+       COALESCE(REPORT_FN_JDATE(lst.DATE_TO, '-'), '') AS date_to_j
 FROM hr_leave_remained_records rec
 JOIN hr_leave_remained lst ON lst.ID = rec.LIST_ID
 WHERE rec.PERSONNEL_ID = ?
@@ -1576,7 +1597,8 @@ LIMIT 1
                 remained_minutes = tonumber(rows[1][1]) or 0,
                 paid_remained_minutes = tonumber(rows[1][2]) or 0
             }
-            leave_balance_period = (rows[1][3] or "—") .. " تا " .. (rows[1][4] or "—")
+            leave_balance_period = (jalali_date(rows[1][3]) or "—") .. " تا " ..
+                (jalali_date(rows[1][4]) or "—")
             leave_balance_source = "db"
         end
     end)
@@ -1622,7 +1644,7 @@ local celebration_err = nil
 do
     local ok, err = pcall(function()
         local rows = fetch_rows([[
-SELECT COALESCE(REPORT_FN_JDATE(rd.DATEKEY, '/'), '') AS jdate, COALESCE(rd.JTDAY, '—') AS jday_name,
+SELECT COALESCE(REPORT_FN_JDATE(rd.DATEKEY, '-'), '') AS jdate, COALESCE(rd.JTDAY, '—') AS jday_name,
        COALESCE(rd.JYDAY, 0) AS jyday, COALESCE(rd.JMONTH, 0) AS jmonth,
        COALESCE(rd.JMDAY, 0) AS jmday, COALESCE(rd.JTMONTH, '—') AS jmonth_name
 FROM report_dimdate rd
@@ -1631,7 +1653,7 @@ WHERE rd.DATEKEY = (]] .. sql_filetime(to_date) .. [[ - MOD(]] .. sql_filetime(t
 LIMIT 1
 ]], {}, 6)
         if rows ~= nil and #rows > 0 then
-            today_meta.jdate = rows[1][1] or "—"
+            today_meta.jdate = jalali_date(rows[1][1]) or "—"
             today_meta.jday_name = rows[1][2] or "—"
             today_meta.jyday = tonumber(rows[1][3]) or 0
             today_meta.jmonth = tonumber(rows[1][4]) or 0
@@ -1645,7 +1667,7 @@ LIMIT 1
             -- «شاغل» است که بات ۴۴۴ و hr_dashboard_report_bot استفاده می‌کنند.
             local bd_rows = fetch_rows([[
 SELECT p.FULLNAME, COALESCE(rd.JMDAY, 0) AS jmday, COALESCE(rd.JTMONTH, '—') AS jmonth_name,
-       COALESCE(rd.JMONTH, 0) AS jmonth, COALESCE(REPORT_FN_JDATE(uf.BIRTHDAY, '/'), '') AS birth_j,
+       COALESCE(rd.JMONTH, 0) AS jmonth, COALESCE(REPORT_FN_JDATE(uf.BIRTHDAY, '-'), '') AS birth_j,
        COALESCE(ou.NAME, N'—') AS unit_name, h.PERSONNEL_ID
 FROM hr_personnels h
 JOIN profile_main p ON p.id = h.PROFILE_ID
@@ -1669,7 +1691,7 @@ LIMIT 200
                         name = r[1] or "-",
                         jmday = tonumber(r[2]) or 0,
                         jmonth_name = r[3] or "—",
-                        birth_date = r[5] or "—",
+                        birth_date = jalali_date(r[5]) or "—",
                         unit_name = r[6] or "—",
                         personnel_id = tonumber(r[7]),
                         is_self = (tonumber(r[7]) == personnel.personnel_id)

@@ -335,6 +335,12 @@ Do not index or read `docs/context/DatabaseSchema.md`.
   جابه‌جا می‌شوند — یعنی عدد اشتباه، بی‌هیچ خطایی. راه درست: تعداد ستون‌ها را صریح به تابع خواندن
   بدهید (`fetch_rows(query, params, column_count)`) و علاوه بر آن هر عبارت nullable را در SQL با
   `COALESCE(..., '')` بپوشانید. نمونهٔ پیاده‌شده: `src/hr_companion_report_bot.lua`.
+- **`REPORT_FN_JDATE` را همیشه با جداکنندهٔ `'-'` صدا بزنید، هرگز `'/'` (تاییدشده زنده ۱۴۰۵/۰۶/۰۷).**
+  روی بات ۶۲۲ با حالت تشخیصی گام‌به‌گام ثابت شد که شکل `REPORT_FN_JDATE(x, '/')` با «sql error»
+  عمومی رد می‌شود، در حالی که همان کوئری با `'-'` کار می‌کند. همهٔ بات‌های مستقر و سالم این ریپو
+  از `'-'` استفاده می‌کنند و تنها جایی که `'/'` داشت همین بات بود. با هشدار قبلی همین فایل
+  هم‌خوان است: ذخیرهٔ `command` گاهی کاراکتر `/` را خراب می‌کند. اگر نمایش با اسلش لازم است،
+  تبدیل را در Lua انجام دهید (`text:gsub("%-", "/")`)، نه در SQL.
 - Prefer CTEs for complex multi-step queries.
 - Use `EXISTS` instead of `IN` for subqueries when possible.
 - Lua bots target **MySQL** (schema `0000000`). The .NET/Blazor side (when applicable) targets **SQL Server** via EF Core — same principles above apply there too.
