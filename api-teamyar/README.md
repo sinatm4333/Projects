@@ -27,4 +27,5 @@
 | [user/login/token](سایت/user_login_token.md) | `/api/user/login/token` | ایجاد توکن جهت لاگین در پورتال |
 | [user/password/change](سایت/user_password_change.md) | `/api/user/password/change` | تغییر رمز کاربر |
 | [user/password/check](سایت/user_password_check.md) | `/api/user/password/check` | چک پسورد کاربر |
+| [user/password/forgot/sendSecurityCode](سایت/user_password_forgot_sendSecurityCode.md) | `/api/user/password/forgot/sendSecurityCode` | ارسال کد امنیتی |
 | [user/password/forgot/change](سایت/user_password_forgot_change.md) | `/api/user/password/forgot/change` | فراموشی رمز عبور |
