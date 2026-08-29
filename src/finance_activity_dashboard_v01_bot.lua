@@ -179,6 +179,12 @@ end
 -- گروه واحد مالی (اعضا + وضعیت فعال/غیرفعال بر اساس EXPIRATION)
 -- ============================================================
 
+-- تأییدشدهٔ زنده (اجرای finance_activity_discovery_json_bot.lua، 1405/06/07): profile_group_member برای
+-- گروه ۳۶۳۹۰ یک ردیف خودارجاع هم دارد (USER_ID=36390، profile_main.FULLNAME="مالی 140 (واحد)" — خودِ
+-- واحد/گروه، نه یک کارمند) که admin_user متناظرش USERNAME خالی و همهٔ فیلدهای تاریخ صفر دارد؛ همهٔ ۲۰
+-- کارمند واقعی USERNAME غیرخالی دارند. پس فیلتر au.USERNAME <> '' (که NULL را هم به‌صورت طبیعی SQL کنار
+-- می‌گذارد) هم آن ردیف خودارجاع را حذف می‌کند، هم هر عضو بدون حساب کاربری واقعی را — بدون حدس، صرفاً بر
+-- اساس دادهٔ واقعی مشاهده‌شده.
 local function fetch_group_members(group_id, now_raw)
     return fetch_rows([[
         SELECT
@@ -188,7 +194,7 @@ local function fetch_group_members(group_id, now_raw)
         FROM profile_group_member gm
         LEFT JOIN profile_main pm ON pm.ID = gm.USER_ID
         LEFT JOIN admin_user au ON au.ID = gm.USER_ID
-        WHERE gm.GROUP_ID = ?
+        WHERE gm.GROUP_ID = ? AND au.USERNAME IS NOT NULL AND au.USERNAME <> ''
         ORDER BY pm.FULLNAME
     ]], { now_raw, group_id })
 end
