@@ -70,6 +70,7 @@
 | [todo/customform/update](اقدام/todo_customform_update.md) | `/api/todo/customform/update` | به‌روزرسانی فرم سفارشی |
 | [todo/registerform](اقدام/todo_registerform.md) | `/api/todo/registerform` | فراخوانی فرم ماژول‌های دیگر در اقدام |
 | [todo/category/list/get](اقدام/todo_category_list_get.md) | `/api/todo/category/list/get` | دریافت لیست رده‌های یک بخش |
+| [todo/category/update](اقدام/todo_category_update.md) | `/api/todo/category/update` | بروزرسانی رده |
 | [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
 | [folder/getDisplayName](اسناد/folder_getDisplayName.md) | `/api/folder/getDisplayName` | گرفتن نام فولدر |
 | [getAutoName](اسناد/getAutoName.md) | `/api/getAutoName` | ساخت نام خودکار سند |
