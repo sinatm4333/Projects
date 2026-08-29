@@ -1,21 +1,21 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 22:56
+-- Last Edit = 1405/06/07 23:02
 
 -- botName = document_content_access_probe
--- version = v03
+-- version = v04
 --
 -- خلاصهٔ دورهای قبل:
---   v01: io/os در Sandbox موجود نیستند. توابع ناشناختهٔ زیر روی teamyar کشف شدند:
---        get_file, get_attachment, create_file_manager, csv_to_json, json_to_csv
---   v02: csv_to_json(csv_string) کار می‌کند و یک رشتهٔ JSON آرایه‌ای برمی‌گرداند — CONFIRMED.
---        get_attachment(document_id) رشتهٔ خالی برمی‌گرداند (مخصوص پیوست خودِ بات با نام فایل است،
---        نه سند دلخواه از ماژول اسناد).
---        get_file(document_id) / get_file(tostring(id)) / get_file({id=id}) هرکدام nil یا جدول خالی دادند.
---        create_file_manager() با آرگومان صفر خطای «invalid module id» داد — یعنی یک آرگومان module_id
---        می‌خواهد (برای سند اسناد ماژول = 7، طبق docs/context/TeamyarInternalApiReference.md).
---   این دور (v03): create_file_manager با module_id واقعی سند (از ستون MODULE_ID خودِ documents_main،
---   نه فرض ثابت 7) صدا زده می‌شود، شیء برگشتی به‌طور کامل کاویده می‌شود، و چند امضای دیگر برای
---   get_file/create_file_manager (دو-آرگومانی) و چند حدس برای teamyar.call_api(7, ...) هم امتحان می‌شود.
+--   v01: io/os موجود نیستند. get_file/get_attachment/create_file_manager/csv_to_json/json_to_csv کشف شدند.
+--   v02: csv_to_json(csv_string) CONFIRMED کار می‌کند (رشتهٔ JSON آرایه‌ای برمی‌گرداند).
+--        get_attachment فقط برای پیوست خودِ بات کار می‌کند (با document_id رشتهٔ خالی می‌دهد).
+--        create_file_manager() بدون آرگومان خطای «invalid module id» داد.
+--   v03: create_file_manager(module_id) و create_file_manager(module_id, document_id) هر دو موفق شدند
+--        و userdata برگرداندند (نه Lua table معمولی) — یعنی شیءای شبیه file handle واقعی io.open، با
+--        متدهایی که فقط از طریق metatable/__index قابل کشفند، نه pairs() ساده روی خودش.
+--        get_file و چند حدس call_api(7, "document/*") به جایی نرسیدند (nil یا success:false).
+--   این دور (v04): چون شیء userdata است، getmetatable روی آن اجرا می‌شود تا __index (جدول متدهای
+--   واقعی) کشف شود؛ سپس فهرست وسیعی از متدهای محتمل (read/get/open/download/content/data/...) روی
+--   هر دو نمونهٔ userdata (تک‌آرگومانی و دوآرگومانی) با self:method(...) امتحان می‌شود.
 --
 -- این بات نهایی نیست و در داشبورد CSV چندفایلی استفاده نمی‌شود.
 
@@ -72,9 +72,67 @@ local function summarize_value(v, max_len)
     end
 end
 
--- رشتهٔ رشته‌ای غیرخالی؟ (برای جلوگیری از قبول کردن "" به‌عنوان محتوای واقعی)
 local function is_real_content(v)
     return type(v) == "string" and #v > 0
+end
+
+-- کاوش یک شیء userdata: متادیتای metatable + امتحان لیست وسیعی از متدهای محتمل
+local CANDIDATE_METHODS = {
+    "read", "get", "open", "download", "get_content", "content", "data", "bytes",
+    "get_data", "fetch", "load", "to_string", "tostring", "text", "value", "close", "size"
+}
+
+local function probe_userdata_object(obj, extra_arg_for_methods)
+    local probe = {}
+
+    -- متادیتا/متدها
+    local ok_mt, mt = pcall(function() return getmetatable(obj) end)
+    if ok_mt and type(mt) == "table" then
+        local mt_summary = { has_metatable = true }
+        local ok_idx, idx = pcall(function() return mt.__index end)
+        if ok_idx and type(idx) == "table" then
+            local method_names = {}
+            for k, v in pairs(idx) do
+                if type(v) == "function" then table.insert(method_names, tostring(k)) end
+            end
+            table.sort(method_names)
+            mt_summary.index_methods = method_names
+        else
+            mt_summary.index_type = ok_idx and type(idx) or "error"
+        end
+        probe.metatable = mt_summary
+    else
+        probe.metatable = { has_metatable = false }
+    end
+
+    -- امتحان متدهای محتمل، هم بدون آرگومان و هم با extra_arg_for_methods (مثلاً document_id)
+    local method_attempts = {}
+    local found_content = nil
+    for _, m in ipairs(CANDIDATE_METHODS) do
+        local ok_has, fn = pcall(function() return obj[m] end)
+        if ok_has and type(fn) == "function" then
+            local ok_call0, res0 = pcall(function() return fn(obj) end)
+            table.insert(method_attempts, {
+                method = m .. "(self)", ok = ok_call0,
+                result = ok_call0 and summarize_value(res0) or nil,
+                error = (not ok_call0) and tostring(res0) or nil
+            })
+            if found_content == nil and is_real_content(res0) then found_content = res0 end
+
+            if extra_arg_for_methods ~= nil then
+                local ok_call1, res1 = pcall(function() return fn(obj, extra_arg_for_methods) end)
+                table.insert(method_attempts, {
+                    method = m .. "(self, arg)", ok = ok_call1,
+                    result = ok_call1 and summarize_value(res1) or nil,
+                    error = (not ok_call1) and tostring(res1) or nil
+                })
+                if found_content == nil and is_real_content(res1) then found_content = res1 end
+            end
+        end
+    end
+    probe.method_attempts = method_attempts
+    probe.found_content = found_content
+    return probe
 end
 
 local input = {}
@@ -88,120 +146,46 @@ local result = {
     document_id_used = document_id,
 }
 
--- 0) متادیتای سند — این‌بار MODULE_ID هم می‌خوانیم (کلید حل مشکل create_file_manager)
-local module_id = 7 -- fallback طبق رجیستری اسناد
+local module_id = 7
 local rows, err = fetch_rows([[
-    SELECT ID, NAME, MIME_TYPE, SIZE, ENCODING_KEY, FILE_TYPE, MODULE_ID, RECORD_ID, RECORD_TYPE
-    FROM documents_main
-    WHERE ID = ?
-    LIMIT 1
+    SELECT ID, NAME, MIME_TYPE, SIZE, ENCODING_KEY, FILE_TYPE, MODULE_ID
+    FROM documents_main WHERE ID = ? LIMIT 1
 ]], { document_id })
-if err ~= nil then
-    result.document_meta = { ok = false, error = tostring(err) }
-elseif rows == nil or #rows == 0 then
-    result.document_meta = { ok = false, error = "سندی با این document_id یافت نشد" }
-else
+if rows ~= nil and #rows > 0 then
     local r = rows[1]
-    result.document_meta = {
-        ok = true, id = r[1], name = r[2], mime_type = r[3], size = r[4],
-        encoding_key = r[5], file_type = r[6], module_id = r[7], record_id = r[8], record_type = r[9]
-    }
+    result.document_meta = { id = r[1], name = r[2], mime_type = r[3], size = r[4], encoding_key = r[5], file_type = r[6], module_id = r[7] }
     if type(r[7]) == "number" and r[7] > 0 then module_id = r[7] end
 end
 result.module_id_used = module_id
 
 local get_file_content = nil
 
--- 1) create_file_manager با module_id واقعی — یک‌آرگومانی و دوآرگومانی
-local file_manager_probe = {}
-
 local ok1, fm1 = pcall(function() return teamyar.create_file_manager(module_id) end)
-file_manager_probe.single_arg = { ok = ok1, error = (not ok1) and tostring(fm1) or nil }
+local single_arg_probe = { ok = ok1, error = (not ok1) and tostring(fm1) or nil }
 if ok1 then
-    file_manager_probe.single_arg.instance = summarize_value(fm1)
-    if type(fm1) == "table" then
-        local method_names = { "get", "read", "open", "download", "get_content", "get_file", "fetch", "load", "content" }
-        local attempts = {}
-        for _, m in ipairs(method_names) do
-            if type(fm1[m]) == "function" then
-                local ok_m, res_m = pcall(function() return fm1[m](fm1, document_id) end)
-                table.insert(attempts, {
-                    method = m .. "(self, document_id)", ok = ok_m,
-                    result = ok_m and summarize_value(res_m) or nil,
-                    error = (not ok_m) and tostring(res_m) or nil
-                })
-                if get_file_content == nil and is_real_content(res_m) then get_file_content = res_m end
-            end
-        end
-        file_manager_probe.single_arg.method_attempts = attempts
+    single_arg_probe.lua_type = type(fm1)
+    if type(fm1) == "userdata" or type(fm1) == "table" then
+        local p = probe_userdata_object(fm1, document_id)
+        single_arg_probe.metatable = p.metatable
+        single_arg_probe.method_attempts = p.method_attempts
+        if get_file_content == nil then get_file_content = p.found_content end
     end
 end
+result.file_manager_single_arg = single_arg_probe
 
 local ok2, fm2 = pcall(function() return teamyar.create_file_manager(module_id, document_id) end)
-file_manager_probe.two_arg = { ok = ok2, error = (not ok2) and tostring(fm2) or nil }
+local two_arg_probe = { ok = ok2, error = (not ok2) and tostring(fm2) or nil }
 if ok2 then
-    file_manager_probe.two_arg.instance = summarize_value(fm2)
-    if type(fm2) == "table" then
-        local method_names = { "get", "read", "open", "download", "get_content", "get_file", "fetch", "load", "content" }
-        local attempts = {}
-        for _, m in ipairs(method_names) do
-            if type(fm2[m]) == "function" then
-                local ok_m, res_m = pcall(function() return fm2[m](fm2) end)
-                table.insert(attempts, {
-                    method = m .. "(self)", ok = ok_m,
-                    result = ok_m and summarize_value(res_m) or nil,
-                    error = (not ok_m) and tostring(res_m) or nil
-                })
-                if get_file_content == nil and is_real_content(res_m) then get_file_content = res_m end
-            end
-        end
-        file_manager_probe.two_arg.method_attempts = attempts
+    two_arg_probe.lua_type = type(fm2)
+    if type(fm2) == "userdata" or type(fm2) == "table" then
+        local p = probe_userdata_object(fm2, document_id)
+        two_arg_probe.metatable = p.metatable
+        two_arg_probe.method_attempts = p.method_attempts
+        if get_file_content == nil then get_file_content = p.found_content end
     end
-elseif type(fm2) == "string" then
-    -- شاید خودِ create_file_manager دو-آرگومانی مستقیماً محتوا را برگرداند
-    if is_real_content(fm2) then get_file_content = fm2 end
 end
+result.file_manager_two_arg = two_arg_probe
 
-result.file_manager_probe = file_manager_probe
-
--- 2) get_file با امضای دوآرگومانی (module_id, document_id) و برعکس
-local get_file_probe = {}
-local gf1_ok, gf1 = pcall(function() return teamyar.get_file(module_id, document_id) end)
-table.insert(get_file_probe, { call = "get_file(module_id, document_id)", ok = gf1_ok,
-    result = gf1_ok and summarize_value(gf1) or nil, error = (not gf1_ok) and tostring(gf1) or nil })
-if get_file_content == nil and is_real_content(gf1) then get_file_content = gf1 end
-
-local gf2_ok, gf2 = pcall(function() return teamyar.get_file(document_id, module_id) end)
-table.insert(get_file_probe, { call = "get_file(document_id, module_id)", ok = gf2_ok,
-    result = gf2_ok and summarize_value(gf2) or nil, error = (not gf2_ok) and tostring(gf2) or nil })
-if get_file_content == nil and is_real_content(gf2) then get_file_content = gf2 end
-
-local gf3_ok, gf3 = pcall(function() return teamyar.get_file({ module_id = module_id, id = document_id }) end)
-table.insert(get_file_probe, { call = "get_file({module_id=..,id=..})", ok = gf3_ok,
-    result = gf3_ok and summarize_value(gf3) or nil, error = (not gf3_ok) and tostring(gf3) or nil })
-if get_file_content == nil and is_real_content(gf3) then get_file_content = gf3 end
-
-result.get_file_probe_v2 = get_file_probe
-
--- 3) چند حدس برای teamyar.call_api(module_id, url, params) روی ماژول اسناد
-local call_api_probe = {}
-local api_guesses = {
-    { url = "document/download", params = { id = document_id } },
-    { url = "document/get", params = { id = document_id } },
-    { url = "document/get_content", params = { id = document_id } },
-    { url = "file/download", params = { id = document_id } },
-}
-for _, guess in ipairs(api_guesses) do
-    local ok_api, res_api = pcall(function() return teamyar.call_api(module_id, guess.url, guess.params) end)
-    table.insert(call_api_probe, {
-        url = guess.url, ok = ok_api,
-        result = ok_api and summarize_value(res_api) or nil,
-        error = (not ok_api) and tostring(res_api) or nil
-    })
-end
-result.call_api_probe = call_api_probe
-
--- 4) اگر محتوای واقعی پیدا شد، طول/پیش‌نمایش + تست csv_to_json روی آن
 if get_file_content ~= nil then
     result.real_content_found = true
     result.real_content_length = #get_file_content
