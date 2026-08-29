@@ -59,4 +59,5 @@
 | [client/getFolderId](اسناد/client_getFolderId.md) | `/api/client/getFolderId` | گرفتن شناسه پوشه مشتری |
 | [client/getSubfolderId](اسناد/client_getSubfolderId.md) | `/api/client/getSubfolderId` | گرفتن زیرپوشه‌های پوشه مشتری |
 | [client/updateFolderId](اسناد/client_updateFolderId.md) | `/api/client/updateFolderId` | به‌روزرسانی پوشه مشتریان |
+| [client/updateFolderName](اسناد/client_updateFolderName.md) | `/api/client/updateFolderName` | تغییر نام پوشه مشتری |
 | [setting/template/folder/getUserType](اسناد/setting_template_folder_getUserType.md) | `/api/setting/template/folder/getUserType` | گرفتن نوع زیرپوشه مشتریان |
