@@ -62,6 +62,7 @@
 | API | آدرس | توضیح |
 |-----|------|-------|
 | [todo/taskadd](اقدام/todo_taskadd.md) | `/api/todo/taskadd` | ایجاد اقدام |
+| [todo/taskedit](اقدام/todo_taskedit.md) | `/api/todo/taskedit` | ویرایش اقدام |
 | [todo/task/assignadd](اقدام/todo_task_assignadd.md) | `/api/todo/task/assignadd` | اساین کردن کاربران در اقدام |
 | [todo/task/stepadd](اقدام/todo_task_stepadd.md) | `/api/todo/task/stepadd` | افزودن مرحله در اقدام |
 | [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
