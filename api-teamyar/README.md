@@ -50,6 +50,9 @@
 | [document/getByMetadata](اسناد/document_getByMetadata.md) | `/api/document/getByMetadata` | گرفتن سند از طریق متادیتا |
 | [document/getInfo](اسناد/document_getInfo.md) | `/api/document/getInfo` | گرفتن اطلاعات یک سند |
 | [document/getName](اسناد/document_getName.md) | `/api/document/getName` | دریافت نام سند |
+| [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
+| [folder/getDisplayName](اسناد/folder_getDisplayName.md) | `/api/folder/getDisplayName` | گرفتن نام فولدر |
+| [getAutoName](اسناد/getAutoName.md) | `/api/getAutoName` | ساخت نام خودکار سند |
 | [document/addComment](اسناد/document_addComment.md) | `/api/document/addComment` | اضافه کردن کامنت |
 | [document/getSignStatus](اسناد/document_getSignStatus.md) | `/api/document/getSignStatus` | دریافت وضعیت سند |
 | [document/setSignStatus](اسناد/document_setSignStatus.md) | `/api/document/setSignStatus` | تایید سند |
@@ -74,9 +77,29 @@
 | [todo/category/list/get](اقدام/todo_category_list_get.md) | `/api/todo/category/list/get` | دریافت لیست رده‌های یک بخش |
 | [todo/category/update](اقدام/todo_category_update.md) | `/api/todo/category/update` | بروزرسانی رده |
 | [todo/delcheck/stock](اقدام/todo_delcheck_stock.md) | `/api/todo/delcheck/stock` | چک وجود انبار در ماژول اقدام |
-| [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
-| [folder/getDisplayName](اسناد/folder_getDisplayName.md) | `/api/folder/getDisplayName` | گرفتن نام فولدر |
-| [getAutoName](اسناد/getAutoName.md) | `/api/getAutoName` | ساخت نام خودکار سند |
+| [todo/section/update](اقدام/todo_section_update.md) | `/api/todo/section/update` | بروز رسانی اطلاعات بخش |
+| [todo/step/get](اقدام/todo_step_get.md) | `/api/todo/step/get` | دریافت اطلاعات مرحله جریان کار |
+| [todo/task/crm/add](اقدام/todo_task_crm_add.md) | `/api/todo/task/crm/add` | افزودن مشتری به اقدام |
+| [todo/task/event/add](اقدام/todo_task_event_add.md) | `/api/todo/task/event/add` | افزودن رویداد به اقدام |
+| [todo/task/get](اقدام/todo_task_get.md) | `/api/todo/task/get` | دریافت اطلاعات اقدام |
+| [todo/task/list/crm/get](اقدام/todo_task_list_crm_get.md) | `/api/todo/task/list/crm/get` | لیست اقدام‌های اساین‌شده به یک مشتری |
+| [todo/task/list/get](اقدام/todo_task_list_get.md) | `/api/todo/task/list/get` | دریافت اطلاعات اقدام (بر اساس شناسه) |
+| [todo/task/list/link/get](اقدام/todo_task_list_link_get.md) | `/api/todo/task/list/link/get` | لیست تسک‌های لینک شده |
+| [todo/task/permcheck/view](اقدام/todo_task_permcheck_view.md) | `/api/todo/task/permcheck/view` | چک دسترسی کاربر روی اقدام |
+| [todo/task/status/set](اقدام/todo_task_status_set.md) | `/api/todo/task/status/set` | تغییر وضعیت اقدام |
+| [todo/taskstep/status/get](اقدام/todo_taskstep_status_get.md) | `/api/todo/taskstep/status/get` | دریافت وضعیت مرحله اقدام |
+| [todo/taskstep/status/set](اقدام/todo_taskstep_status_set.md) | `/api/todo/taskstep/status/set` | تغییر وضعیت مرحله اقدام |
+| [todo/topic/get](اقدام/todo_topic_get.md) | `/api/todo/topic/get` | دریافت عنوان موضوع |
+| [todo/topic/list/get](اقدام/todo_topic_list_get.md) | `/api/todo/topic/list/get` | دریافت لیست موضوعات رده اقدام |
+| [todo/wf/addtask/get](اقدام/todo_wf_addtask_get.md) | `/api/todo/wf/addtask/get` | دریافت اطلاعات جریان کار اقدام |
+| [todo/wf/addtasklist/get](اقدام/todo_wf_addtasklist_get.md) | `/api/todo/wf/addtasklist/get` | دریافت لیست جریان کارهای رده اقدام |
+| [todo/wf/get](اقدام/todo_wf_get.md) | `/api/todo/wf/get` | دریافت اطلاعات جریان کار |
+| [todo/wf/list/get](اقدام/todo_wf_list_get.md) | `/api/todo/wf/list/get` | دریافت لیست جریان کارهای یک رده |
+| [todo/registerform/delete](اقدام/todo_registerform_delete.md) | `/api/todo/registerform/delete` | حذف فرم مرحله ثبت‌شده در فرم‌های اقدام |
+| [todo/task/comment/add](اقدام/todo_task_comment_add.md) | `/api/todo/task/comment/add` | افزودن کامنت به مرحله اقدام |
+| [todo/task/taskstep/responsible/set](اقدام/todo_task_taskstep_responsible_set.md) | `/api/todo/task/taskstep/responsible/set` | تغییر مسئول مرحله در اقدام |
+| [todo/taskstep/update](اقدام/todo_taskstep_update.md) | `/api/todo/taskstep/update` | افزودن مرحله با مسئول و مهلت در اقدام |
+| [todo/taskstep/change/perm/check](اقدام/todo_taskstep_change_perm_check.md) | `/api/todo/taskstep/change/perm/check` | چک دسترسی تغییر مرحله |
 | [document/attach](اسناد/document_attach.md) | `/api/document/attach` | منگنه کردن فایل |
 | [document/detach](اسناد/document_detach.md) | `/api/document/detach` | بازکردن منگنه |
 | [client/getRootId](اسناد/client_getRootId.md) | `/api/client/getRootId` | گرفتن پوشه‌ی مشتریان |
