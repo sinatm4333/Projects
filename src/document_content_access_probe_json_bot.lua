@@ -1,21 +1,20 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 23:02
+-- Last Edit = 1405/06/07 23:09
 
 -- botName = document_content_access_probe
--- version = v04
+-- version = v05
 --
 -- خلاصهٔ دورهای قبل:
---   v01: io/os موجود نیستند. get_file/get_attachment/create_file_manager/csv_to_json/json_to_csv کشف شدند.
---   v02: csv_to_json(csv_string) CONFIRMED کار می‌کند (رشتهٔ JSON آرایه‌ای برمی‌گرداند).
---        get_attachment فقط برای پیوست خودِ بات کار می‌کند (با document_id رشتهٔ خالی می‌دهد).
---        create_file_manager() بدون آرگومان خطای «invalid module id» داد.
---   v03: create_file_manager(module_id) و create_file_manager(module_id, document_id) هر دو موفق شدند
---        و userdata برگرداندند (نه Lua table معمولی) — یعنی شیءای شبیه file handle واقعی io.open، با
---        متدهایی که فقط از طریق metatable/__index قابل کشفند، نه pairs() ساده روی خودش.
---        get_file و چند حدس call_api(7, "document/*") به جایی نرسیدند (nil یا success:false).
---   این دور (v04): چون شیء userdata است، getmetatable روی آن اجرا می‌شود تا __index (جدول متدهای
---   واقعی) کشف شود؛ سپس فهرست وسیعی از متدهای محتمل (read/get/open/download/content/data/...) روی
---   هر دو نمونهٔ userdata (تک‌آرگومانی و دوآرگومانی) با self:method(...) امتحان می‌شود.
+--   v01-v03: io/os موجود نیستند؛ create_file_manager(module_id[, document_id]) یک userdata (شبیه
+--            file handle io.open) برمی‌گرداند؛ get_file/get_attachment/call_api حدسی به جایی نرسیدند.
+--   v04: getmetatable(obj).__index روی آن userdata اجرا شد و متدهای واقعی کشف شدند:
+--        __gc, getInfo, readFile, readFileBase64, release, updateFile, updateFolder
+--        (حدس‌های قبلی مثل read/get/content هیچ‌کدام درست نبودند — برای همین method_attempts خالی ماند)
+--   این دور (v05): فقط متدهای امن-فقط-خواندنی (readFile, readFileBase64, getInfo) روی هر دو نمونه
+--   (تک‌آرگومانی module_id و دوآرگومانی module_id+document_id) با self-only و self+document_id
+--   امتحان می‌شوند. updateFile/updateFolder عمداً فراخوانی نمی‌شوند (نوشتنی‌اند، امضایشان ناشناخته
+--   است و ریسک خراب‌کردن سند واقعی کاربر را دارند) — release هم فقط در پایان برای پاک‌سازی صدا زده
+--   می‌شود، نه برای کاوش.
 --
 -- این بات نهایی نیست و در داشبورد CSV چندفایلی استفاده نمی‌شود.
 
@@ -76,11 +75,10 @@ local function is_real_content(v)
     return type(v) == "string" and #v > 0
 end
 
--- کاوش یک شیء userdata: متادیتای metatable + امتحان لیست وسیعی از متدهای محتمل
-local CANDIDATE_METHODS = {
-    "read", "get", "open", "download", "get_content", "content", "data", "bytes",
-    "get_data", "fetch", "load", "to_string", "tostring", "text", "value", "close", "size"
-}
+-- کاوش یک شیء userdata: متادیتای metatable + امتحان متدهای واقعی امن-فقط-خواندنی
+-- (کشف‌شده در v04 از getmetatable(obj).__index — updateFile/updateFolder/release عمداً اینجا نیستند)
+-- ترتیب عمدی: getInfo (سبک) قبل از readFile/readFileBase64 (فایل ۱۳ مگابایتی — سنگین)
+local CANDIDATE_METHODS = { "getInfo", "readFile", "readFileBase64" }
 
 local function probe_userdata_object(obj, extra_arg_for_methods)
     local probe = {}
@@ -106,9 +104,12 @@ local function probe_userdata_object(obj, extra_arg_for_methods)
     end
 
     -- امتحان متدهای محتمل، هم بدون آرگومان و هم با extra_arg_for_methods (مثلاً document_id)
+    -- خروج زودهنگام به‌محض پیدا شدن محتوای واقعی — فایل ۱۳ مگابایتی است، فراخوانی‌های تکراری
+    -- readFile/readFileBase64 روی همان سند فقط زمان/حافظه هدر می‌دهند.
     local method_attempts = {}
     local found_content = nil
     for _, m in ipairs(CANDIDATE_METHODS) do
+        if found_content ~= nil then break end
         local ok_has, fn = pcall(function() return obj[m] end)
         if ok_has and type(fn) == "function" then
             local ok_call0, res0 = pcall(function() return fn(obj) end)
@@ -117,16 +118,16 @@ local function probe_userdata_object(obj, extra_arg_for_methods)
                 result = ok_call0 and summarize_value(res0) or nil,
                 error = (not ok_call0) and tostring(res0) or nil
             })
-            if found_content == nil and is_real_content(res0) then found_content = res0 end
+            if is_real_content(res0) and m ~= "getInfo" then found_content = res0 end
 
-            if extra_arg_for_methods ~= nil then
+            if found_content == nil and extra_arg_for_methods ~= nil then
                 local ok_call1, res1 = pcall(function() return fn(obj, extra_arg_for_methods) end)
                 table.insert(method_attempts, {
                     method = m .. "(self, arg)", ok = ok_call1,
                     result = ok_call1 and summarize_value(res1) or nil,
                     error = (not ok_call1) and tostring(res1) or nil
                 })
-                if found_content == nil and is_real_content(res1) then found_content = res1 end
+                if is_real_content(res1) and m ~= "getInfo" then found_content = res1 end
             end
         end
     end
@@ -142,7 +143,7 @@ local document_id = tonumber(raw_document_id) or TEST_DOCUMENT_ID
 
 local result = {
     ok = true,
-    probe_version = "v04",
+    probe_version = "v05",
     note = "این بات فقط تشخیصی است — برای داشبورد نهایی CSV چندفایلی استفاده نمی‌شود",
     document_id_used = document_id,
 }
@@ -160,21 +161,12 @@ end
 result.module_id_used = module_id
 
 local get_file_content = nil
+local fm1, fm2 = nil, nil
 
-local ok1, fm1 = pcall(function() return teamyar.create_file_manager(module_id) end)
-local single_arg_probe = { ok = ok1, error = (not ok1) and tostring(fm1) or nil }
-if ok1 then
-    single_arg_probe.lua_type = type(fm1)
-    if type(fm1) == "userdata" or type(fm1) == "table" then
-        local p = probe_userdata_object(fm1, document_id)
-        single_arg_probe.metatable = p.metatable
-        single_arg_probe.method_attempts = p.method_attempts
-        if get_file_content == nil then get_file_content = p.found_content end
-    end
-end
-result.file_manager_single_arg = single_arg_probe
-
-local ok2, fm2 = pcall(function() return teamyar.create_file_manager(module_id, document_id) end)
+-- اول نمونهٔ دوآرگومانی (module_id+document_id) که احتمالاً از قبل به همین سند مقیدشده و سبک‌تره —
+-- اگر محتوا از این پیدا شد، نیازی به تکرار سنگین همان کار روی نمونهٔ تک‌آرگومانی نیست.
+local ok2, fm2_val = pcall(function() return teamyar.create_file_manager(module_id, document_id) end)
+fm2 = fm2_val
 local two_arg_probe = { ok = ok2, error = (not ok2) and tostring(fm2) or nil }
 if ok2 then
     two_arg_probe.lua_type = type(fm2)
@@ -186,6 +178,26 @@ if ok2 then
     end
 end
 result.file_manager_two_arg = two_arg_probe
+
+local ok1, fm1_val = pcall(function() return teamyar.create_file_manager(module_id) end)
+fm1 = fm1_val
+local single_arg_probe = { ok = ok1, error = (not ok1) and tostring(fm1) or nil }
+if ok1 then
+    single_arg_probe.lua_type = type(fm1)
+    if get_file_content == nil and (type(fm1) == "userdata" or type(fm1) == "table") then
+        local p = probe_userdata_object(fm1, document_id)
+        single_arg_probe.metatable = p.metatable
+        single_arg_probe.method_attempts = p.method_attempts
+        get_file_content = p.found_content
+    elseif get_file_content ~= nil then
+        single_arg_probe.skipped_probing = "محتوا از نمونهٔ دوآرگومانی پیدا شد — برای صرفه‌جویی، متدهای سنگین روی این نمونه هم امتحان نشدند"
+    end
+end
+result.file_manager_single_arg = single_arg_probe
+
+-- پاک‌سازی — release فقط در پایان، بدون گزارش‌گیری از آن
+pcall(function() if type(fm1) == "userdata" and fm1.release then fm1:release() end end)
+pcall(function() if type(fm2) == "userdata" and fm2.release then fm2:release() end end)
 
 if get_file_content ~= nil then
     result.real_content_found = true
