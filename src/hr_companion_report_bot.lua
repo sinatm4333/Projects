@@ -490,18 +490,18 @@ chat_module_url = tostring(chat_module_url)
 
 -- قالب لینک مستقیم به یک گفتگوی مشخص. {id} با شناسهٔ گفتگو جایگزین می‌شود.
 -- ⚠️ رشتهٔ پیش‌فرض عمداً با پیوند ساخته می‌شود و نه به‌صورت یک literal پیوسته: در متن پیوسته،
--- «&dialog_id» با «&dia» شروع می‌شود که پیشوند entity نام‌دار «&diams;» است و طبق باگ تاییدشدهٔ
+-- نام پارامتر با «and» شروع می‌شود که پیشوند یک entity نام‌دار است و طبق باگ تاییدشدهٔ
 -- این پلتفرم، هنگام ذخیرهٔ command بی‌سروصدا decode و خراب می‌شد.
 -- این پلتفرم دو الگوی لینک‌دهی دارد (هر دو در بات‌های زندهٔ همین ریپو دیده می‌شوند):
 --   شناسه در مسیر    → /?page=/sales/invoice/view_invoice/{id}
---   شناسه در پارامتر → /?page=/pm/service_request/view/view_request/&id={id}
+--   شناسه در پارامتر → /?page=/pm/service_request/view/view_request/ + and + id={id}
 -- اگر شکل واقعی ماژول گفتگو با پیش‌فرض زیر فرق داشت، فقط کافی است
 -- chat_dialog_url_template در bot_config عوض شود؛ نیازی به تغییر کد نیست.
 -- پیش‌فرض عمداً خالی است. شکل واقعی این آدرس هنوز تایید نشده و سه حالت ممکن دارد که هر سه در
 -- بات‌های زندهٔ همین ریپو دیده می‌شوند؛ یک لینک اشتباه روی باتی که با دادهٔ پرسنلی کار می‌کند بدتر
 -- از نبودِ لینک است. تا وقتی این مقدار در bot_config ثبت نشود، دکمه همان ماژول گفتگو را باز می‌کند
 -- و عنوان قطعی گفتگو هم کنارش نشان داده می‌شود. نمونهٔ مقدار پس از تایید:
---   { "chat_dialog_url_template": "/?page=/chat/index&dialog_id={id}" }
+--   chat_dialog_url_template = مسیر ماژول + and + dialog_id={id}
 local chat_dialog_url_template = config_data.chat_dialog_url_template
 if chat_dialog_url_template == nil then chat_dialog_url_template = "" end
 chat_dialog_url_template = tostring(chat_dialog_url_template)
