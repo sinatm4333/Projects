@@ -44,6 +44,7 @@
 |-----|------|-------|
 | [createDocumentFile](اسناد/createDocumentFile.md) | `/api/createDocumentFile` | ایجاد سند |
 | [createDocumentFolder](اسناد/createDocumentFolder.md) | `/api/createDocumentFolder` | ایجاد پوشه |
+| [deleteDocumentWithCheck](اسناد/deleteDocumentWithCheck.md) | `/api/deleteDocumentWithCheck` | حذف سند به همراه چک |
 | [document/list](اسناد/document_list.md) | `/api/document/list` | فهرست اسناد |
 | [document/attach](اسناد/document_attach.md) | `/api/document/attach` | منگنه کردن فایل |
 | [document/detach](اسناد/document_detach.md) | `/api/document/detach` | بازکردن منگنه |
