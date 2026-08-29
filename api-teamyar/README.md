@@ -35,3 +35,4 @@
 | API | آدرس | توضیح |
 |-----|------|-------|
 | [profile/getInfo](پروفایل/profile_getInfo.md) | `/api/profile/getInfo` | دریافت پروفایل‌ها |
+| [profile/getProfile](پروفایل/profile_getProfile.md) | `/api/profile/getProfile` | دریافت اطلاعات پروفایل |
