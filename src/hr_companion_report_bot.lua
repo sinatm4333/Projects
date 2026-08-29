@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 15:26
+-- Last Edit = 1405/06/07 15:47
 
 -- botName = hr_companion
 -- description = همراه ۱۴۰ — پنل پرسنلی (تردد و کارکرد، درخواست‌ها، اطلاعات پرسنلی، همراهِ روز و تولدها)
@@ -468,6 +468,72 @@ if action_type == "sqlprobe" then
         total_steps = #steps,
         steps = steps
     }))
+    return
+end
+
+-- ── type=rawdata — مقدار خامِ ستون‌ها، بدون هیچ تفسیری ───────────────
+-- وقتی صفحه بالا می‌آید ولی عددها اشتباه‌اند، مشکل «تفسیر» است نه «اجرا». این حالت مقدار خام را
+-- همان‌طور که در جدول است برمی‌گرداند تا واحد و معنای هر ستون با دادهٔ واقعی مشخص شود، نه با حدس.
+if action_type == "rawdata" then
+    local out = { ok = true }
+
+    local who = fetch_rows(
+        "SELECT h.PERSONNEL_ID, h.PERSONNEL_CODE, p.FULLNAME FROM hr_personnels h " ..
+        "JOIN profile_main p ON p.id = h.PROFILE_ID WHERE h.PROFILE_ID = ? LIMIT 1",
+        { current_profile_id or 0 }, 3)
+    local pid = (who ~= nil and #who > 0) and tonumber(who[1][1]) or 0
+    out.personnel_id = pid
+    out.personnel_code = (who ~= nil and #who > 0) and who[1][2] or nil
+    out.fullname = (who ~= nil and #who > 0) and who[1][3] or nil
+
+    -- خامِ hr_work_time: هیچ MOD، هیچ ROUND، هیچ تبدیلی
+    local wt, wt_err = fetch_rows(
+        "SELECT w.WORK_DATE, w.FIRST_IN, w.LAST_OUT, w.TOTAL_WORK, w.ABSENCE, w.FINAL_ABSENCE, " ..
+        "w.OVER_TIME, w.FINAL_OVER_TIME, w.TOTAL_LEAVE, w.MISSION, w.ABSENT, w.CALENDAR_ID, " ..
+        "w.SHIFT_ID, w.MACHINE_TIME " ..
+        "FROM hr_work_time w WHERE w.PERSONNEL_ID = ? ORDER BY w.WORK_DATE DESC LIMIT 5",
+        { pid }, 14)
+    out.work_time_error = wt_err and tostring(wt_err) or nil
+    out.work_time_columns = { "WORK_DATE", "FIRST_IN", "LAST_OUT", "TOTAL_WORK", "ABSENCE",
+        "FINAL_ABSENCE", "OVER_TIME", "FINAL_OVER_TIME", "TOTAL_LEAVE", "MISSION", "ABSENT",
+        "CALENDAR_ID", "SHIFT_ID", "MACHINE_TIME" }
+    out.work_time_rows = {}
+    if wt ~= nil then
+        for _, r in ipairs(wt) do
+            local row = {}
+            for i = 1, 14 do row[i] = tostring(r[i]) end
+            table.insert(out.work_time_rows, row)
+        end
+    end
+
+    -- خامِ hr_day_details برای تقویم همان پرسنل
+    local cal = fetch_rows(
+        "SELECT o.CALENDAR_ID FROM hr_personnel_order o WHERE o.PERSONNEL_ID = ? " ..
+        "ORDER BY o.ID DESC LIMIT 1", { pid }, 1)
+    local calendar_id = (cal ~= nil and #cal > 0) and tonumber(cal[1][1]) or 0
+    out.calendar_id = calendar_id
+
+    local dd, dd_err = fetch_rows(
+        "SELECT d.DAY_DATE, d.TIME_FROM, d.TIME_TO, d.TYPE, d.kind, d.DESCRIPTION " ..
+        "FROM hr_day_details d WHERE d.CALENDAR_ID = ? ORDER BY d.DAY_DATE DESC LIMIT 8",
+        { calendar_id }, 6)
+    out.day_details_error = dd_err and tostring(dd_err) or nil
+    out.day_details_columns = { "DAY_DATE", "TIME_FROM", "TIME_TO", "TYPE", "kind", "DESCRIPTION" }
+    out.day_details_rows = {}
+    if dd ~= nil then
+        for _, r in ipairs(dd) do
+            local row = {}
+            for i = 1, 6 do row[i] = tostring(r[i]) end
+            table.insert(out.day_details_rows, row)
+        end
+    end
+
+    -- مرجع: «الان» طبق خود دیتابیس، برای مقایسهٔ مقیاس
+    local nw = fetch_rows("SELECT (UNIX_TIMESTAMP() + 11644473600) * 10000000", {}, 1)
+    out.db_now_filetime = (nw ~= nil and #nw > 0) and tostring(nw[1][1]) or nil
+    out.lua_today_filetime = tostring(to_date)
+
+    teamyar.write_result(json.encode(out))
     return
 end
 
