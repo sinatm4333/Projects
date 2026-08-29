@@ -18,3 +18,9 @@
 | [add_linkmodule](داشبورد%20من%20%28خانه%29/add_linkmodule.md) | `/api/add_linkmodule` | ایجاد لینک بین ماژول‌ها |
 | [removeLinkModule](داشبورد%20من%20%28خانه%29/removeLinkModule.md) | `/api/removeLinkModule` | حذف لینک تیمیاری (بین دو ماژول) |
 | [deleteLinks](داشبورد%20من%20%28خانه%29/deleteLinks.md) | `/api/deleteLinks` | حذف لینک تیمیاری |
+
+## سایت
+
+| API | آدرس | توضیح |
+|-----|------|-------|
+| [user/login](سایت/user_login.md) | `/api/user/login` | لاگین کردن در پورتال |
