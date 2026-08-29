@@ -63,6 +63,7 @@
 |-----|------|-------|
 | [todo/taskadd](اقدام/todo_taskadd.md) | `/api/todo/taskadd` | ایجاد اقدام |
 | [todo/task/assignadd](اقدام/todo_task_assignadd.md) | `/api/todo/task/assignadd` | اساین کردن کاربران در اقدام |
+| [todo/task/stepadd](اقدام/todo_task_stepadd.md) | `/api/todo/task/stepadd` | افزودن مرحله در اقدام |
 | [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
 | [folder/getDisplayName](اسناد/folder_getDisplayName.md) | `/api/folder/getDisplayName` | گرفتن نام فولدر |
 | [getAutoName](اسناد/getAutoName.md) | `/api/getAutoName` | ساخت نام خودکار سند |
