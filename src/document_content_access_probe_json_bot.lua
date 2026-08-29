@@ -1,20 +1,24 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 23:09
+-- Last Edit = 1405/06/07 23:16
 
 -- botName = document_content_access_probe
--- version = v05
+-- version = v06
 --
 -- خلاصهٔ دورهای قبل:
 --   v01-v03: io/os موجود نیستند؛ create_file_manager(module_id[, document_id]) یک userdata (شبیه
 --            file handle io.open) برمی‌گرداند؛ get_file/get_attachment/call_api حدسی به جایی نرسیدند.
---   v04: getmetatable(obj).__index روی آن userdata اجرا شد و متدهای واقعی کشف شدند:
---        __gc, getInfo, readFile, readFileBase64, release, updateFile, updateFolder
---        (حدس‌های قبلی مثل read/get/content هیچ‌کدام درست نبودند — برای همین method_attempts خالی ماند)
---   این دور (v05): فقط متدهای امن-فقط-خواندنی (readFile, readFileBase64, getInfo) روی هر دو نمونه
---   (تک‌آرگومانی module_id و دوآرگومانی module_id+document_id) با self-only و self+document_id
---   امتحان می‌شوند. updateFile/updateFolder عمداً فراخوانی نمی‌شوند (نوشتنی‌اند، امضایشان ناشناخته
---   است و ریسک خراب‌کردن سند واقعی کاربر را دارند) — release هم فقط در پایان برای پاک‌سازی صدا زده
---   می‌شود، نه برای کاوش.
+--   v04: getmetatable(obj).__index کشف کرد: __gc, getInfo, readFile, readFileBase64, release,
+--        updateFile, updateFolder.
+--   v05: getInfo(self, document_id) — یعنی فراخوانی دوآرگومانی fn(obj, document_id) — CONFIRMED کار
+--        می‌کند و متادیتای کامل سند (۲۲ فیلد) را برمی‌گرداند. اما یک باگ در خودِ بات تشخیصی داشت:
+--        وقتی readFile(self) (تک‌آرگومانی) خطا می‌داد، خودِ پیام خطا (یک رشتهٔ غیرخالی) اشتباهاً
+--        به‌عنوان «محتوای واقعی پیدا شده» ثبت می‌شد (چون is_real_content فقط type==string را چک
+--        می‌کرد، نه موفقیت pcall را) — همین باعث می‌شد حلقه زودتر متوقف شود و readFile(self,
+--        document_id) اصلاً امتحان نشود.
+--   این دور (v06): آن باگ رفع شد (فقط pcall موفق به‌عنوان محتوا پذیرفته می‌شود) و چون امضای دوآرگومانی
+--   fn(obj, document_id) در getInfo تایید شده، مستقیم همان روی readFile و readFileBase64 هم امتحان
+--   می‌شود (بدون تلاش بی‌فایدهٔ تک‌آرگومانی، برای صرفه‌جویی روی فایل ۱۳ مگابایتی).
+--   updateFile/updateFolder همچنان عمداً فراخوانی نمی‌شوند.
 --
 -- این بات نهایی نیست و در داشبورد CSV چندفایلی استفاده نمی‌شود.
 
@@ -103,32 +107,24 @@ local function probe_userdata_object(obj, extra_arg_for_methods)
         probe.metatable = { has_metatable = false }
     end
 
-    -- امتحان متدهای محتمل، هم بدون آرگومان و هم با extra_arg_for_methods (مثلاً document_id)
-    -- خروج زودهنگام به‌محض پیدا شدن محتوای واقعی — فایل ۱۳ مگابایتی است، فراخوانی‌های تکراری
-    -- readFile/readFileBase64 روی همان سند فقط زمان/حافظه هدر می‌دهند.
+    -- امضای دوآرگومانی fn(obj, document_id) در v05 روی getInfo تایید شد (getInfo(self) تک‌آرگومانی
+    -- خطای «integer required» می‌داد، getInfo(self, document_id) متادیتای کامل داد) — پس مستقیم
+    -- همین امضا را روی هر متد امتحان می‌کنیم، بدون تلاش بی‌فایدهٔ تک‌آرگومانی (صرفه‌جویی روی فایل
+    -- ۱۳ مگابایتی). فقط پاسخ pcall-موفق به‌عنوان «محتوای واقعی» پذیرفته می‌شود (رفع باگ v05 که پیام
+    -- خطا را با محتوای واقعی اشتباه می‌گرفت).
     local method_attempts = {}
     local found_content = nil
     for _, m in ipairs(CANDIDATE_METHODS) do
         if found_content ~= nil then break end
         local ok_has, fn = pcall(function() return obj[m] end)
         if ok_has and type(fn) == "function" then
-            local ok_call0, res0 = pcall(function() return fn(obj) end)
+            local ok_call, res = pcall(function() return fn(obj, extra_arg_for_methods) end)
             table.insert(method_attempts, {
-                method = m .. "(self)", ok = ok_call0,
-                result = ok_call0 and summarize_value(res0) or nil,
-                error = (not ok_call0) and tostring(res0) or nil
+                method = m .. "(self, document_id)", ok = ok_call,
+                result = ok_call and summarize_value(res) or nil,
+                error = (not ok_call) and tostring(res) or nil
             })
-            if is_real_content(res0) and m ~= "getInfo" then found_content = res0 end
-
-            if found_content == nil and extra_arg_for_methods ~= nil then
-                local ok_call1, res1 = pcall(function() return fn(obj, extra_arg_for_methods) end)
-                table.insert(method_attempts, {
-                    method = m .. "(self, arg)", ok = ok_call1,
-                    result = ok_call1 and summarize_value(res1) or nil,
-                    error = (not ok_call1) and tostring(res1) or nil
-                })
-                if is_real_content(res1) and m ~= "getInfo" then found_content = res1 end
-            end
+            if ok_call and is_real_content(res) and m ~= "getInfo" then found_content = res end
         end
     end
     probe.method_attempts = method_attempts
@@ -143,7 +139,7 @@ local document_id = tonumber(raw_document_id) or TEST_DOCUMENT_ID
 
 local result = {
     ok = true,
-    probe_version = "v05",
+    probe_version = "v06",
     note = "این بات فقط تشخیصی است — برای داشبورد نهایی CSV چندفایلی استفاده نمی‌شود",
     document_id_used = document_id,
 }
