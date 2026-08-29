@@ -24,3 +24,4 @@
 | API | آدرس | توضیح |
 |-----|------|-------|
 | [user/login](سایت/user_login.md) | `/api/user/login` | لاگین کردن در پورتال |
+| [user/login/token](سایت/user_login_token.md) | `/api/user/login/token` | ایجاد توکن جهت لاگین در پورتال |
