@@ -50,6 +50,7 @@
 | [document/getByMetadata](اسناد/document_getByMetadata.md) | `/api/document/getByMetadata` | گرفتن سند از طریق متادیتا |
 | [document/getInfo](اسناد/document_getInfo.md) | `/api/document/getInfo` | گرفتن اطلاعات یک سند |
 | [document/getName](اسناد/document_getName.md) | `/api/document/getName` | دریافت نام سند |
+| [document/addComment](اسناد/document_addComment.md) | `/api/document/addComment` | اضافه کردن کامنت |
 | [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
 | [folder/getDisplayName](اسناد/folder_getDisplayName.md) | `/api/folder/getDisplayName` | گرفتن نام فولدر |
 | [getAutoName](اسناد/getAutoName.md) | `/api/getAutoName` | ساخت نام خودکار سند |
