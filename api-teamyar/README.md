@@ -59,7 +59,9 @@
 
 ## اقدام
 
-هنوز API ای ثبت نشده است.
+| API | آدرس | توضیح |
+|-----|------|-------|
+| [todo/taskadd](اقدام/todo_taskadd.md) | `/api/todo/taskadd` | ایجاد اقدام |
 | [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
 | [folder/getDisplayName](اسناد/folder_getDisplayName.md) | `/api/folder/getDisplayName` | گرفتن نام فولدر |
 | [getAutoName](اسناد/getAutoName.md) | `/api/getAutoName` | ساخت نام خودکار سند |
