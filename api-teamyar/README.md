@@ -67,6 +67,7 @@
 | [todo/task/stepadd](اقدام/todo_task_stepadd.md) | `/api/todo/task/stepadd` | افزودن مرحله در اقدام |
 | [todo/customform/get](اقدام/todo_customform_get.md) | `/api/todo/customform/get` | دریافت فرم سفارشی |
 | [todo/customform/multi_get](اقدام/todo_customform_multi_get.md) | `/api/todo/customform/multi_get` | دریافت فرم سفارشی توضیحات |
+| [todo/customform/update](اقدام/todo_customform_update.md) | `/api/todo/customform/update` | به‌روزرسانی فرم سفارشی |
 | [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
 | [folder/getDisplayName](اسناد/folder_getDisplayName.md) | `/api/folder/getDisplayName` | گرفتن نام فولدر |
 | [getAutoName](اسناد/getAutoName.md) | `/api/getAutoName` | ساخت نام خودکار سند |
