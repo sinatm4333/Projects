@@ -52,6 +52,7 @@
 | [document/getName](اسناد/document_getName.md) | `/api/document/getName` | دریافت نام سند |
 | [document/addComment](اسناد/document_addComment.md) | `/api/document/addComment` | اضافه کردن کامنت |
 | [document/getSignStatus](اسناد/document_getSignStatus.md) | `/api/document/getSignStatus` | دریافت وضعیت سند |
+| [document/refuseSignStatus](اسناد/document_refuseSignStatus.md) | `/api/document/refuseSignStatus` | رد سند |
 | [folder/getAutoNamingSetting](اسناد/folder_getAutoNamingSetting.md) | `/api/folder/getAutoNamingSetting` | گرفتن نام خودکار سند |
 | [folder/getDisplayName](اسناد/folder_getDisplayName.md) | `/api/folder/getDisplayName` | گرفتن نام فولدر |
 | [getAutoName](اسناد/getAutoName.md) | `/api/getAutoName` | ساخت نام خودکار سند |
