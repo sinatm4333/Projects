@@ -1,4 +1,7 @@
-﻿-- botName = Sum Workdays And Sales Params
+-- تحلیل و ایجاد توسط سینا مقدم 09121011778
+-- Last Edit = 1405/06/04 10:05
+
+-- botName = Sum Workdays And Sales Params
 -- creator = zmo
 -- date = 02/25/2025
 -- version= 1.0
@@ -27,7 +30,7 @@ local _QUERY_TYPE = {
 }
 -------------------------------------------
 --- install [RES]
---------------------------------------------
+-------------------------------------------
 local _BAT_RES_PATH = "2/res_v2";
 function readyCodes()
   local data = teamyar.get_input();
@@ -50,6 +53,29 @@ readyCodes();
 --------------------------------------------
 --- data
 --------------------------------------------
+---- getInput() برای هر فیلدی که در درخواست ارسال نشده باشد یک userdata نال
+---- ("userdata: 0000000000000000") برمی‌گرداند — نه nil و نه table. آن مقدار در Lua
+---- truthy است ولی index نمی‌شود، پس چک‌هایی مثل «x ~= nil and x[1] ~= nil» با خطای
+---- "attempt to index a userdata value" کل بات را می‌شکنند (علت واقعی «لودینگ گیر
+---- می‌کند» وقتی گزارش از داشبورد CRM بدون Submit فرم فیلتر لود می‌شود).
+---- این تابع هر ورودی ACL را به «یک table معتبر» یا nil نرمال می‌کند.
+local function acl_selection(value)
+  if value == nil then return nil end
+  if _G.type(value) ~= "table" then return nil end
+  if value[1] == nil then return nil end
+  if _G.type(value[1]) ~= "table" then return nil end
+  if tonumber(value[1].id) == nil then return nil end
+  return value
+end
+
+---- همان نرمال‌سازی برای مقادیر ساده (عدد/متن): userdata نال -> nil
+local function scalar_input(value)
+  if value == nil then return nil end
+  local t = _G.type(value)
+  if t ~= "string" and t ~= "number" then return nil end
+  return value
+end
+
 function getData(queryType , pageFrom , perPage , pageTo )
   ---- init Query
   local dataQuery = {
@@ -81,8 +107,26 @@ function getData(queryType , pageFrom , perPage , pageTo )
   local cat = getInput("cat");
   local crm = getInput("crm");
   local org = getInput("org");
+  local center = getInput("center");
   local datef = getInput("datef");
   local datet = getInput("datet");
+  local sort_key = getInput("sort_key");
+  local sort_dir = getInput("sort_dir");
+  local monetary_min = getInput("monetary_min");
+  local monetary_max = getInput("monetary_max");
+  ---- نرمال‌سازی: userdata نال (فیلد ارسال‌نشده) به nil تبدیل می‌شود
+  ctype = acl_selection(ctype)
+  cat = acl_selection(cat)
+  crm = acl_selection(crm)
+  org = acl_selection(org)
+  center = acl_selection(center)
+  datef = scalar_input(datef)
+  datet = scalar_input(datet)
+  sort_key = scalar_input(sort_key)
+  sort_dir = scalar_input(sort_dir)
+  monetary_min = scalar_input(monetary_min)
+  monetary_max = scalar_input(monetary_max)
+  teamyar.write_log("[RFM] getData queryType="..tostring(queryType).." org="..(org and tostring(org[1] and org[1].id or "nil") or "nil").." center="..(center and tostring(center[1] and center[1].id or "nil") or "nil").." crm="..(crm and tostring(crm[1] and crm[1].id or "nil") or "nil").." datef="..tostring(datef).." datet="..tostring(datet).." sort_key="..tostring(sort_key).." sort_dir="..tostring(sort_dir))
   local qs = getQuery_select(queryType)
   local inp = teamyar.get_input()
   ---- invoice Filter
@@ -102,6 +146,7 @@ function getData(queryType , pageFrom , perPage , pageTo )
   local where_ctype= ""
   local where_crm= ""
   local where_org = ""
+  local where_center = ""
   if cat ~= nil and cat[1] ~= nil then 
     where_cat = where_cat.. [[ and c.id in (select CLIENT_ID from crm_cross where REFERE_ID =]]..cat[1].id..[[ )]]
   end 
@@ -112,14 +157,39 @@ function getData(queryType , pageFrom , perPage , pageTo )
   if crm ~= nil and crm[1] ~= nil then 
     where_crm = where_crm.. [[ and ui.USER_TYPE=]]..crm[1].id
   end 
-  if org ~= nil and org[1] ~= nil then 
+  if org ~= nil and org[1] ~= nil then
     where_org = where_org.. [[ and s.org_id=]]..org[1].id..[[ and p.org_id=]]..org[1].id
-  end 
-  if tonumber(datet) == nil then 
-    datet=0
   end
-  if tonumber(datef) == nil then 
-    datef=0
+  if center ~= nil and center[1] ~= nil then
+    where_center = where_center.. [[ and s.SALES_CENTER=]]..center[1].id
+    teamyar.write_log("[RFM] center filter applied: SALES_CENTER="..tostring(center[1].id))
+  end
+  ---- فریم‌ورک RES مقدار غیرعددی را بی‌صدا به 0 تبدیل می‌کند (نه nil)، پس چک «== nil»
+  ---- به‌تنهایی هرگز fire نمی‌شود و بازهٔ تاریخ عملاً حذف می‌شد. با <= 0 هر دو حالت گرفته می‌شود.
+  if tonumber(datet) == nil or tonumber(datet) <= 0 then
+    datet = currentdate
+  end
+  if tonumber(datef) == nil or tonumber(datef) <= 0 then
+    datef = currentdate
+  end
+  ---- monetary filter
+  local where_monetary = ""
+  local mmin = tonumber(monetary_min)
+  local mmax = tonumber(monetary_max)
+  if mmin ~= nil and mmin ~= 0 then
+    where_monetary = where_monetary .. [[ and Monetary >= ]]..mmin
+  end
+  if mmax ~= nil and mmax ~= 0 then
+    where_monetary = where_monetary .. [[ and Monetary <= ]]..mmax
+  end
+  ---- sort defaults — treat nil, "", "null" all as empty
+  local sort_col = sort_key
+  if sort_col == nil or sort_col == "" or sort_col == "null" then
+    sort_col = "rfm"
+  end
+  local sort_dir_val = sort_dir
+  if sort_dir_val == nil or sort_dir_val == "" or sort_dir_val == "null" then
+    sort_dir_val = "desc"
   end
   dataQuery.query = string.gsub(dataQuery.query,"{{datet}}",datet);
   dataQuery.query = string.gsub(dataQuery.query,"{{datef}}",datef);
@@ -128,6 +198,10 @@ function getData(queryType , pageFrom , perPage , pageTo )
   dataQuery.query = string.gsub(dataQuery.query,"{{where_crm}}",where_crm);
   dataQuery.query = string.gsub(dataQuery.query,"{{where_ctype}}",where_ctype);
   dataQuery.query = string.gsub(dataQuery.query,"{{where_org}}",where_org);
+  dataQuery.query = string.gsub(dataQuery.query,"{{where_center}}",where_center);
+  dataQuery.query = string.gsub(dataQuery.query,"{{where_monetary}}",where_monetary);
+  dataQuery.query = string.gsub(dataQuery.query,"{{sort_col}}",sort_col);
+  dataQuery.query = string.gsub(dataQuery.query,"{{sort_dir}}",sort_dir_val);
   dataQuery.query = string.gsub(dataQuery.query,"{{r_number}}",r_nummber);
     dataQuery.query = string.gsub(dataQuery.query,"{{f_number}}",f_nummber);
  dataQuery.query = string.gsub(dataQuery.query,"{{m_number}}",m_nummber);
@@ -289,6 +363,7 @@ function getTableConfig_header()
 end
 ---------------------------------------------
 function queryResultAcl(select_query,user_param)
+  teamyar.write_log(select_query)
   db.use_db("0000000")
   local params = {
     query = select_query,
@@ -341,6 +416,7 @@ end
 --- Report
 --------------------------------------------
 function report()
+  teamyar.write_log("[RFM] report() called")
   local data= getTableSectionOne()
   local report = {
     {
@@ -408,6 +484,21 @@ function getAclOrg(data)
 end
 
 -------------------------------------------
+function centerAcl(data)
+  teamyar.write_log("dsaate----------"..json.encode(data))
+  local org_id = data.org_id;
+  teamyar.write_log("[RFM] centerAcl called org_id="..tostring(org_id).." search="..tostring(data.search).." from="..tostring(data.from).." count="..tostring(data.count))
+  local query_param = [[ select id,name from PA_CENTER where TYPE=2 and VOUCHER_ALLOW=1 and org_id=]]..org_id
+  if org_id ~= nil and tonumber(org_id) ~= nil then
+    query_param = query_param .. [[ and ORG_ID=]]..org_id
+  end
+  if data.search ~= nil and #data.search > 0 then
+    query_param = query_param .. [[ and name like N'%]]..data.search..[[%' ]]
+  end
+  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);
+  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));
+end
+-------------------------------------------
 function queryResultcrm(select_query,user_param)
   db.use_db("0000000")
   local params = {
@@ -427,7 +518,7 @@ end
 function sendSms(crm_id,segment,box_id,txt)
   local res_str=""
   local q = [[select p.fullname,(select jndate from report_dimdate where ]]..currentdate..[[ 
-  between datekey and datekey+(60*60*24*10000000)-(60*10000000)) dd,(case when uf.sex=2 then 'خانم' else 'آقا' end) gender 
+  between datekey and datekey+(60*60*24*10000000)-(60*10000000)) dd,(case when uf.sex=2 then 'Ø®Ø§Ù†Ù…' else 'Ø¢Ù‚Ø§' end) gender 
   from profile_main p inner join profile_user_info uf on uf.id=p.id where p.id=]]..crm_id
   teamyar.write_log(q)
   local data = queryResultcrm(q, {})
@@ -440,9 +531,9 @@ function sendSms(crm_id,segment,box_id,txt)
   local   res = teamyar.call_api(16, '/api/sms/send', info);
   teamyar.write_log("res----"..json.encode(res))
   if res.success ==true then 
-    res_str="<div style='color:green;'>".."ارسال پیامک برای کاربر :  "..crm_id.." ،  شناسه پیامک :"..res.data.message_ids[1].."</div>"
+    res_str="<div style='color:green;'>".."Ø§Ø±Ø³Ø§Ù„ Ù¾ÛŒØ§Ù…Ú© Ø¨Ø±Ø§ÛŒ Ú©Ø§Ø±Ø¨Ø± :  "..crm_id.." ØŒ  Ø´Ù†Ø§Ø³Ù‡ Ù¾ÛŒØ§Ù…Ú© :"..res.data.message_ids[1].."</div>"
   else 
-    res_str="<div style='color:red;'>".."خطا در ارسال پیامک :  "..res.error.message.."<div>"
+    res_str="<div style='color:red;'>".."Ø®Ø·Ø§ Ø¯Ø± Ø§Ø±Ø³Ø§Ù„ Ù¾ÛŒØ§Ù…Ú© :  "..res.error.message.."<div>"
 
   end 
   return res_str
@@ -474,6 +565,8 @@ elseif type ~= nil and type == 7 then
   crmAcl(teamyar.get_input().data)
 elseif type ~= nil and type == 6 then
   getAclOrg(teamyar.get_input().data)
+elseif type ~= nil and type == 12 then
+  centerAcl(teamyar.get_input().data)
 elseif type ~= nil and type == 10 then
   local input = teamyar.get_input()
   local res_str = sendSms(input.data.crm_id,input.data.segment,input.data.box_id, input.data.txt)
@@ -491,7 +584,7 @@ elseif type ~= nil and type == 11 then
     sendSms(crm_id_in, segment_in, data.box_id, data.txt)
     count_send = count_send+1
   end
-  res_str = " تعداد  "..count_send.." پیامک ارسال شد ."
+  res_str = " ØªØ¹Ø¯Ø§Ø¯  "..count_send.." Ù¾ÛŒØ§Ù…Ú© Ø§Ø±Ø³Ø§Ù„ Ø´Ø¯ ."
   local res_data={msg=res_str}
   teamyar.write_result(json.encode(res_data))
 elseif type ~= nil and type == 101 then

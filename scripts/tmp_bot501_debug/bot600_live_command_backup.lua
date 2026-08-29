@@ -94,27 +94,6 @@ readyCodes();
 --------------------------------------------
 --- data
 --------------------------------------------
----- getInput() برای هر فیلدی که در درخواست ارسال نشده باشد یک userdata نال
----- ("userdata: 0000000000000000") برمی‌گرداند — نه nil و نه table. آن مقدار در Lua
----- truthy است ولی index نمی‌شود، پس چک «x ~= nil and x[1] ~= nil» با خطای
----- "attempt to index a userdata value" کل بات را می‌شکند. این همان علت «لودینگ گیر
----- می‌کند» در داشبورد CRM است (فرم فیلتر Submit نمی‌شود، پس هیچ فیلدی ارسال نمی‌شود).
-local function acl_selection(value)
-  if value == nil then return nil end
-  if _G.type(value) ~= "table" then return nil end
-  if value[1] == nil then return nil end
-  if _G.type(value[1]) ~= "table" then return nil end
-  if tonumber(value[1].id) == nil then return nil end
-  return value
-end
-
-local function scalar_input(value)
-  if value == nil then return nil end
-  local t = _G.type(value)
-  if t ~= "string" and t ~= "number" then return nil end
-  return value
-end
-
 function getData(queryType , pageFrom , perPage , pageTo )
   ---- init Query
   local dataQuery = {
@@ -147,13 +126,6 @@ function getData(queryType , pageFrom , perPage , pageTo )
   local crm = getInput("crm");
   local datef = getInput("datef");
   local datet = getInput("datet");
-  ---- نرمال‌سازی: userdata نال (فیلد ارسال‌نشده) به nil تبدیل می‌شود
-  ctype = acl_selection(ctype)
-  cat = acl_selection(cat)
-  org = acl_selection(org)
-  crm = acl_selection(crm)
-  datef = scalar_input(datef)
-  datet = scalar_input(datet)
   local qs = getQuery_select(queryType)
   local inp = teamyar.get_input()
 

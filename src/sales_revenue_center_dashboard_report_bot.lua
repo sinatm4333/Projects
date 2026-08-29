@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/26 23:25
+-- Last Edit = 1405/05/31 10:30
 
 -- Bot: Sales Revenue Center Dashboard
 -- botName = sales_revenue_center_dashboard
@@ -46,10 +46,14 @@ local CONFIG = {
     -- Quirk escape_html در CLAUDE.md).
     CRM_EDIT_URL_SUFFIX = "&" .. "section=2",
     INVOICE_VIEW_URL_PREFIX = "/?page=/sales/invoice/view_invoice/",
-    -- تفکیک B2B/B2C — همان Rule تأییدشدهٔ crm_geo_sales_dashboard_bot.lua v03 (ر.ک. یادداشت بالای فایل)
-    CHANNEL_B2B_LIKE = "%همکار%",
-    CHANNEL_B2C_LIKE = "%مصرف%",
-    CHANNEL_LABELS = { b2b = "B2B (همکار)", b2c = "B2C (مصرف‌کننده)", other = "سایر" },
+    -- تفکیک B2B/B2C — همان Rule تأییدشدهٔ crm_geo_sales_dashboard_bot.lua v03 (ر.ک. یادداشت بالای فایل).
+    -- CHANNEL_B2B_MATCH/CHANNEL_B2C_MATCH رشتهٔ خام (بدون %) هستند — هم در Lua (string.find ساده، برای
+    -- طبقه‌بندی مراکز درآمد از دادهٔ از‌قبل‌واکشی‌شده بدون Query اضافه) و هم در SQL (با % اطرافش) استفاده می‌شوند.
+    CHANNEL_B2B_MATCH = "همکار",
+    CHANNEL_B2C_MATCH = "مصرف",
+    CHANNEL_LABELS = { all = "کل فروش", b2b = "B2B (همکار)", b2c = "B2C (مصرف‌کننده)", other = "سایر" },
+    NEW_CUSTOMER_TOP_PRODUCTS_COUNT = 10,
+    NEW_CUSTOMER_BOTTOM_PRODUCTS_COUNT = 10,
     -- لوگو «۱۴۰» (الزام CLAUDE.md برای بات‌های HTML جدید) — نسخهٔ White، چون روی نوار Accent هدر می‌نشیند
     -- (assets/brand140/logo140-mark-white.b64.txt — طبق قانون Background-pairing گایدلاین برند ۱۴۰)
     LOGO140_WHITE_B64 = "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",
@@ -246,25 +250,64 @@ end
 -- Subquery/Join دیگری) — این یک محدودیت پلتفرم است، نه باگ در ساختار Query. چون CHANNEL_B2B_LIKE و
 -- CHANNEL_B2C_LIKE ثابت‌های Hardcode همین فایل‌اند (هرگز از ورودی کاربر خوانده نمی‌شوند)، بدون ریسک SQL
 -- Injection مستقیماً به‌صورت Literal رشته‌ای درج می‌شوند، نه به‌عنوان Param — تنها همین دو مقدار.
+local function channel_like_pattern(match)
+    return "%" .. match .. "%"
+end
+
+-- طبقه‌بندی محلی بدون Query — دقیقاً همان Rule که با LIKE در SQL اعمال می‌شود؛ برای وقتی لیست مراکز از
+-- قبل واکشی شده و فقط باید بین تب‌ها (کل/B2B/B2C/سایر) سطربندی شود، بدون Query اضافه.
+local function classify_channel(center_name)
+    if center_name == nil then return "other" end
+    local s = tostring(center_name)
+    if s:find(CONFIG.CHANNEL_B2B_MATCH, 1, true) then return "b2b" end
+    if s:find(CONFIG.CHANNEL_B2C_MATCH, 1, true) then return "b2c" end
+    return "other"
+end
+
+-- عبارت شرطی SQL برای یک کانال مشخص، روی یک ستون/عبارت نام مرکز از‌قبل‌JOIN‌شده (مثلاً pcc.NAME) —
+-- برای Aggregate شرطی (COUNT(CASE WHEN ... THEN ...)) در Query های چندکاناله (fetch_*_by_channel).
+-- channel = "b2b" | "b2c" | "other" (الزامی، هرگز "all"/nil اینجا صدا زده نمی‌شود).
+local function channel_bool_expr(name_col, channel)
+    local b2b_pat = channel_like_pattern(CONFIG.CHANNEL_B2B_MATCH)
+    local b2c_pat = channel_like_pattern(CONFIG.CHANNEL_B2C_MATCH)
+    if channel == "b2b" then return name_col .. " LIKE '" .. b2b_pat .. "'" end
+    if channel == "b2c" then return name_col .. " LIKE '" .. b2c_pat .. "'" end
+    return "(" .. name_col .. " IS NULL OR (" .. name_col .. " NOT LIKE '" .. b2b_pat .. "' AND " .. name_col .. " NOT LIKE '" .. b2c_pat .. "'))"
+end
+
+-- عبارت SQL که نام کانال را به‌صورت رشته برمی‌گرداند (برای GROUP BY/تفکیک ردیف به ردیف، مثل کوئری
+-- کالاهای چندکاناله) — روی همان ستون/عبارت نام مرکز.
+local function channel_case_expr(name_col)
+    return "(CASE WHEN " .. name_col .. " LIKE '" .. channel_like_pattern(CONFIG.CHANNEL_B2B_MATCH) .. "' THEN 'b2b' " ..
+        "WHEN " .. name_col .. " LIKE '" .. channel_like_pattern(CONFIG.CHANNEL_B2C_MATCH) .. "' THEN 'b2c' " ..
+        "ELSE 'other' END)"
+end
+
+-- فاصلهٔ انتهایی عمداً اضافه شده — پیشگیرانه، همان دلیل مستندشدهٔ build_center_clause پایین‌تر (Quirk
+-- Lua long-bracket string که Newline اول بعد از `[[` را حذف می‌کند و می‌تواند این Clause را بی‌فاصله
+-- به کلیدواژهٔ بعدی بچسباند).
 local function build_channel_clause(filters, forced_channel)
     local channel = forced_channel or (filters and filters.channel)
     local extra = ""
     local center_name_expr = "(SELECT pcc_f.NAME FROM pa_center pcc_f WHERE pcc_f.ID = si.SALES_CENTER)"
-    if channel == "b2b" then
-        extra = " AND " .. center_name_expr .. " LIKE '" .. CONFIG.CHANNEL_B2B_LIKE .. "'"
-    elseif channel == "b2c" then
-        extra = " AND " .. center_name_expr .. " LIKE '" .. CONFIG.CHANNEL_B2C_LIKE .. "'"
-    elseif channel == "other" then
-        extra = " AND (" .. center_name_expr .. " IS NULL OR (" .. center_name_expr .. " NOT LIKE '" .. CONFIG.CHANNEL_B2B_LIKE ..
-            "' AND " .. center_name_expr .. " NOT LIKE '" .. CONFIG.CHANNEL_B2C_LIKE .. "'))"
+    if channel == "b2b" or channel == "b2c" or channel == "other" then
+        extra = " AND " .. channel_bool_expr(center_name_expr, channel) .. " "
     end
     return extra, {}
 end
 
+-- نکتهٔ حیاتی (کشف‌شده 1405/05/31 با دیباگ زندهٔ فیلتر مرکز درآمد — نه حدس): این Clause همیشه با یک
+-- فاصلهٔ انتهایی برمی‌گردد. علتش Quirk خودِ Lua long-bracket string است: هرجا این عبارت با
+-- `]] .. extra .. [[\nKEYWORD` به کوئری وصل می‌شود، Lua اولین Newline بعد از `[[` را حذف می‌کند
+-- (طبق مشخصات زبان) — یعنی نتیجه می‌شود `extra .. "KEYWORD..."` بدون هیچ جداکننده‌ای. وقتی extra با «?»
+-- (Placeholder پارامتری) تمام شود و بلافاصله یک کلیدواژه مثل GROUP بیاید («?GROUP BY»)، سرور با
+-- «sql error» شکست می‌خورد — تأیید شد با تست زندهٔ ایزوله روی fetch_center_aggregation (کوئری کاملاً
+-- یکسان با فاصلهٔ دستی موفق بود، بدون فاصله شکست می‌خورد). فاصلهٔ انتهایی همینجا این را برای همهٔ
+-- Query هایی که از این Clause استفاده می‌کنند یک‌جا رفع می‌کند.
 local function build_center_clause(filters)
     local extra, params = "", {}
     if filters ~= nil and filters.center ~= nil then
-        extra = " AND (SELECT pcc_c.NAME FROM pa_center pcc_c WHERE pcc_c.ID = si.SALES_CENTER) = ?"
+        extra = " AND (SELECT pcc_c.NAME FROM pa_center pcc_c WHERE pcc_c.ID = si.SALES_CENTER) = ? "
         params = { filters.center }
     end
     return extra, params
@@ -276,7 +319,17 @@ end
 -- منبع: دو بات تولیدی مستقل («گزارش جامع فروش نسخه اصلی» id=433 و «گزارش فروش به تفکیک فاکتور» id=440 —
 -- ر.ک. docs/context/SalesReportBotsReference.md یافتهٔ ۳) + تأیید صریح کاربر (1405/05/24) روی
 -- crm_geo_sales_dashboard_bot.lua. الحاق به «si» (alias ثابت sales_invoice در همهٔ Query های این بات).
-local INVOICE_AMOUNT_JOIN = [[
+-- نکتهٔ عملکردی (کشف‌شده 1405/05/31 با تست زندهٔ ایزوله — نه حدس): این Subquery بدون فیلتر تاریخ داخلی،
+-- روی ~۲۰۴٬۰۰۰ ردیف فاکتور کل تاریخچه SUM می‌گرفت (هر بار ~۶ ثانیه، حتی برای یک بازهٔ کوچک بیرونی) —
+-- چون این بات (برخلاف بات مرجع اصلی‌اش) این Join را ۵-۶ بار در یک بار اجرای کامل صدا می‌زند، این هزینه
+-- تکرار می‌شد و کندی ~۷۰ ثانیه‌ای کل داشبورد را رقم می‌زد. تست زنده نشان داد افزودن همان بازهٔ تاریخ
+-- بیرونی به داخل این Subquery هم (روی i2.RUN_DATE) زمان اجرا را تقریباً نصف می‌کند (۶.۱ ثانیه → ۳.۱ ثانیه)
+-- بدون تغییر در نتیجه — چون هر فاکتوری که این فیلتر داخلی حذفش کند، از فیلتر تاریخ Query بیرونی
+-- (WHERE si.RUN_DATE ...) هم رد نمی‌شد؛ فقط محاسبهٔ زودهنگام و بی‌فایدهٔ تاریخچهٔ نامربوط را حذف می‌کند.
+-- به همین دلیل، به یک تابع تبدیل شد که پارامتر بازهٔ فعال را می‌گیرد؛ هر فراخوان باید from_key/to_key
+-- را دقیقاً همان‌جایی که این Join در متن Query ظاهر می‌شود (همیشه قبل از WHERE بیرونی) به params اضافه کند.
+local function invoice_amount_join_sql()
+    return [[
 LEFT JOIN (
     SELECT
         ip.INVOICE_ID AS invoice_id,
@@ -300,9 +353,11 @@ LEFT JOIN (
         FROM pa_organizations po
         INNER JOIN pa_symbols ps ON ps.ID = po.BASE_CURRENCY AND ps.ORG_ID = po.ORG_ID
     ) dd ON dd.ORG_ID = i2.ORG_ID
+    WHERE i2.RUN_DATE >= ? AND i2.RUN_DATE < (? + ]] .. CONFIG.DAY_TICKS .. [[)
     GROUP BY ip.INVOICE_ID
 ) ia ON ia.invoice_id = si.ID
 ]]
+end
 
 -- همان فرمول، ولی برای Query هایی که در سطح ردیف کالا (sales_invoice_product) گروه‌بندی می‌کنند
 -- (پرفروش‌ترین/کم‌فروش‌ترین کالا، فاکتورهای یک کالای خاص) — چون INVOICE_AMOUNT_JOIN در سطح فاکتور
@@ -336,39 +391,66 @@ SUM(
 -- QUERIES
 -- ============================================================
 
-local function fetch_sales_kpi(date_range, filters)
-    local channel_extra, channel_params = build_channel_clause(filters)
+-- تجمیع KPI فروش برای هر ۴ حالت (کل/B2B/B2C/سایر) در یک Query (Aggregate شرطی)، نه ۴ Query جدا —
+-- طبق درخواست کاربر برای Preload کامل همهٔ تب‌ها موقع لود اولیه/فیلتر (تعویض تب بعداً بدون هیچ
+-- Round-trip تازه به سرور، کاملاً سمت کلاینت).
+local function fetch_sales_kpi_by_channel(date_range, filters)
     local center_extra, center_params = build_center_clause(filters)
-    local params = { date_range.from_key, date_range.to_key }
-    for _, p in ipairs(channel_params) do table.insert(params, p) end
+    -- ترتیب پارامتر مهم است: دو تای اول برای Placeholder های داخل invoice_amount_join_sql() (که قبل از
+    -- WHERE بیرونی در متن Query می‌آید)، دو تای بعدی برای WHERE بیرونی خودِ این Query.
+    local params = { date_range.from_key, date_range.to_key, date_range.from_key, date_range.to_key }
     for _, p in ipairs(center_params) do table.insert(params, p) end
+
+    local name_col = "pcc.NAME"
+    local b2b_cond = channel_bool_expr(name_col, "b2b")
+    local b2c_cond = channel_bool_expr(name_col, "b2c")
+    local other_cond = channel_bool_expr(name_col, "other")
 
     local rows, err = fetch_rows([[
 SELECT
-    COUNT(si.ID) AS total_invoices,
-    COUNT(DISTINCT si.CLIENT_ID) AS distinct_clients,
-    COALESCE(SUM(ia.amount), 0) AS total_sales_amount,
-    COUNT(DISTINCT si.SALES_CENTER) AS distinct_centers
+    COUNT(si.ID) AS inv_all,
+    COUNT(CASE WHEN ]] .. b2b_cond .. [[ THEN si.ID END) AS inv_b2b,
+    COUNT(CASE WHEN ]] .. b2c_cond .. [[ THEN si.ID END) AS inv_b2c,
+    COUNT(CASE WHEN ]] .. other_cond .. [[ THEN si.ID END) AS inv_other,
+    COUNT(DISTINCT si.CLIENT_ID) AS cli_all,
+    COUNT(DISTINCT CASE WHEN ]] .. b2b_cond .. [[ THEN si.CLIENT_ID END) AS cli_b2b,
+    COUNT(DISTINCT CASE WHEN ]] .. b2c_cond .. [[ THEN si.CLIENT_ID END) AS cli_b2c,
+    COUNT(DISTINCT CASE WHEN ]] .. other_cond .. [[ THEN si.CLIENT_ID END) AS cli_other,
+    COALESCE(SUM(ia.amount), 0) AS amt_all,
+    COALESCE(SUM(CASE WHEN ]] .. b2b_cond .. [[ THEN ia.amount END), 0) AS amt_b2b,
+    COALESCE(SUM(CASE WHEN ]] .. b2c_cond .. [[ THEN ia.amount END), 0) AS amt_b2c,
+    COALESCE(SUM(CASE WHEN ]] .. other_cond .. [[ THEN ia.amount END), 0) AS amt_other,
+    COUNT(DISTINCT si.SALES_CENTER) AS ctr_all,
+    COUNT(DISTINCT CASE WHEN ]] .. b2b_cond .. [[ THEN si.SALES_CENTER END) AS ctr_b2b,
+    COUNT(DISTINCT CASE WHEN ]] .. b2c_cond .. [[ THEN si.SALES_CENTER END) AS ctr_b2c,
+    COUNT(DISTINCT CASE WHEN ]] .. other_cond .. [[ THEN si.SALES_CENTER END) AS ctr_other
 FROM sales_invoice si
-]] .. INVOICE_AMOUNT_JOIN .. [[
+LEFT JOIN pa_center pcc ON pcc.ID = si.SALES_CENTER
+]] .. invoice_amount_join_sql() .. [[
 WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
   AND si.RUN_DATE >= ? AND si.RUN_DATE < (? + ]] .. CONFIG.DAY_TICKS .. [[)
-]] .. channel_extra .. center_extra .. [[
+]] .. center_extra .. [[
 ]], params)
     if rows == nil or #rows == 0 then return nil, err end
     local r = rows[1]
+    local function chan(inv, cli, amt, ctr)
+        return {
+            total_invoices = tonumber(inv) or 0, distinct_clients = tonumber(cli) or 0,
+            total_sales_amount = tonumber(amt) or 0, distinct_centers = tonumber(ctr) or 0,
+        }
+    end
     return {
-        total_invoices = tonumber(r[1]) or 0,
-        distinct_clients = tonumber(r[2]) or 0,
-        total_sales_amount = tonumber(r[3]) or 0,
-        distinct_centers = tonumber(r[4]) or 0,
-    }
+        all   = chan(r[1], r[5], r[9], r[13]),
+        b2b   = chan(r[2], r[6], r[10], r[14]),
+        b2c   = chan(r[3], r[7], r[11], r[15]),
+        other = chan(r[4], r[8], r[12], r[16]),
+    }, nil
 end
 
 local function fetch_center_aggregation(date_range, filters)
     local channel_extra, channel_params = build_channel_clause(filters)
     local center_extra, center_params = build_center_clause(filters)
-    local params = { date_range.from_key, date_range.to_key }
+    local params = { date_range.from_key, date_range.to_key, date_range.from_key, date_range.to_key }
     for _, p in ipairs(channel_params) do table.insert(params, p) end
     for _, p in ipairs(center_params) do table.insert(params, p) end
 
@@ -379,7 +461,7 @@ SELECT
     COUNT(DISTINCT si.CLIENT_ID) AS distinct_clients,
     COALESCE(SUM(ia.amount), 0) AS total_sales_amount
 FROM sales_invoice si
-]] .. INVOICE_AMOUNT_JOIN .. [[
+]] .. invoice_amount_join_sql() .. [[
 WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
   AND si.RUN_DATE >= ? AND si.RUN_DATE < (? + ]] .. CONFIG.DAY_TICKS .. [[)
 ]] .. channel_extra .. center_extra .. [[
@@ -408,51 +490,85 @@ local function fetch_center_options()
     return list
 end
 
--- Base FROM/WHERE مشترک بین «پرفروش‌ترین» و «کم‌فروش‌ترین» کالا (فقط ORDER BY/LIMIT/HAVING فرق می‌کند)
-local function build_product_agg_from_where(date_range, filters)
-    local channel_extra, channel_params = build_channel_clause(filters)
+-- Query واحد برای هر ۴ کانال (کل/B2B/B2C/سایر) — به‌جای ۸ Query جدا (۴ کانال × پرفروش/کم‌فروش)، طبق
+-- درخواست کاربر برای Preload کامل. همهٔ ردیف‌های (کالا×کانال) بدون LIMIT واکشی می‌شوند؛ چینش Top-N/
+-- Bottom-N هر کانال و تجمیع «کل فروش» (جمع روی چهار کانال برای همان کالا) سمت Lua انجام می‌شود — حجم
+-- داده محدود به کالاهای واقعاً فروخته‌شده در بازهٔ فعال است، نه کل جدول. فقط کالای واقعی (نه خدمت):
+-- IS_SERVICE=0 (ستون wh_product.IS_SERVICE، تأییدشده با Query زنده — کدهای ۱۷/۹۸ = بیمه/ارسال/بسته‌بندی/…)
+-- تا رتبه‌بندی «پرفروش‌ترین/کم‌فروش‌ترین کالا» با ردیف‌های خدماتی آلوده نشود.
+local function fetch_product_aggregation_by_channel(date_range, filters)
     local center_extra, center_params = build_center_clause(filters)
-    local from_where = [[
+    local params = { date_range.from_key, date_range.to_key }
+    for _, p in ipairs(center_params) do table.insert(params, p) end
+
+    local rows, err = fetch_rows([[
+SELECT
+    ]] .. channel_case_expr("pcc.NAME") .. [[ AS channel,
+    COALESCE(wp.FULL_CODE, 'نامشخص') AS product_code,
+    COALESCE(pn.PRODUCT_NAME, wp.FULL_CODE, 'کالای نامشخص') AS product_name,
+    ]] .. PRODUCT_LINE_QTY_SQL .. [[,
+    ]] .. PRODUCT_LINE_AMOUNT_SQL .. [[,
+    COUNT(DISTINCT si.ID) AS invoice_count
 FROM sales_invoice_product ip
 INNER JOIN sales_invoice si ON si.ID = ip.INVOICE_ID
-LEFT JOIN wh_product wp ON wp.ID = ip.PRODUCT_ID
+INNER JOIN wh_product wp ON wp.ID = ip.PRODUCT_ID AND COALESCE(wp.IS_SERVICE, 0) = 0
+LEFT JOIN pa_center pcc ON pcc.ID = si.SALES_CENTER
 LEFT JOIN WH_VIEW_GET_PRODUCT_NAMES pn ON pn.PRODUCT_ID = ip.PRODUCT_ID AND pn.ATTRIBUTE_ID = ip.ATTRIBUTE_ID
 LEFT JOIN wh_stock_capacity sc ON sc.ID = wp.CAPACITY_ID
 LEFT JOIN ]] .. DIGIT_FEE_SUBQUERY .. [[ ON dd.ORG_ID = si.ORG_ID
 WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
   AND si.RUN_DATE >= ? AND si.RUN_DATE < (? + ]] .. CONFIG.DAY_TICKS .. [[)
-]] .. channel_extra .. center_extra
-    local params = { date_range.from_key, date_range.to_key }
-    for _, p in ipairs(channel_params) do table.insert(params, p) end
-    for _, p in ipairs(center_params) do table.insert(params, p) end
-    return from_where, params
+]] .. center_extra .. [[
+GROUP BY channel, ip.PRODUCT_ID, ip.ATTRIBUTE_ID, wp.FULL_CODE, pn.PRODUCT_NAME
+]], params)
+    if rows == nil then return nil, err end
+
+    local by_channel = { b2b = {}, b2c = {}, other = {} }
+    local all_map = {}
+    local all_order = {}
+    for _, r in ipairs(rows) do
+        local ch = r[1]
+        local row = {
+            product_code = r[2], product_name = r[3],
+            total_quantity = tonumber(r[4]) or 0, total_amount = tonumber(r[5]) or 0,
+            invoice_count = tonumber(r[6]) or 0,
+        }
+        if by_channel[ch] == nil then by_channel[ch] = {} end
+        table.insert(by_channel[ch], row)
+
+        local merged = all_map[row.product_code]
+        if merged == nil then
+            merged = { product_code = row.product_code, product_name = row.product_name,
+                total_quantity = row.total_quantity, total_amount = row.total_amount, invoice_count = row.invoice_count }
+            all_map[row.product_code] = merged
+            table.insert(all_order, merged)
+        else
+            merged.total_quantity = merged.total_quantity + row.total_quantity
+            merged.total_amount = merged.total_amount + row.total_amount
+            merged.invoice_count = merged.invoice_count + row.invoice_count
+        end
+    end
+    by_channel.all = all_order
+    return by_channel, nil
 end
 
--- order_dir: "DESC" (پرفروش‌ترین) یا "ASC" (کم‌فروش‌ترین) — هر دو مقدار در همین فایل Hardcode می‌شوند،
--- هرگز از ورودی کاربر گرفته نمی‌شوند (بدون ریسک SQL Injection).
-local function fetch_product_aggregation(date_range, filters, order_dir, only_positive, limit)
-    local from_where, params = build_product_agg_from_where(date_range, filters)
-    local having = only_positive and " HAVING total_amount > 0" or ""
-    table.insert(params, limit)
-    local query = "SELECT COALESCE(wp.FULL_CODE, 'نامشخص') AS product_code, " ..
-        "COALESCE(pn.PRODUCT_NAME, wp.FULL_CODE, 'کالای نامشخص') AS product_name, " ..
-        PRODUCT_LINE_QTY_SQL .. ", " .. PRODUCT_LINE_AMOUNT_SQL .. ", " ..
-        "COUNT(DISTINCT si.ID) AS invoice_count " .. from_where ..
-        " GROUP BY ip.PRODUCT_ID, ip.ATTRIBUTE_ID, wp.FULL_CODE, pn.PRODUCT_NAME" ..
-        having .. " ORDER BY total_amount " .. order_dir .. " LIMIT ?"
-    local rows, err = fetch_rows(query, params)
-    if rows == nil then return nil, err end
-    local list = {}
-    for _, r in ipairs(rows) do
-        table.insert(list, {
-            product_code = r[1],
-            product_name = r[2],
-            total_quantity = tonumber(r[3]) or 0,
-            total_amount = tonumber(r[4]) or 0,
-            invoice_count = tonumber(r[5]) or 0,
-        })
+-- از یک لیست (کالا/مشتری/...) با فیلد total_amount، Top-N نزولی و Bottom-N صعودی (فقط مثبت) برمی‌گرداند
+-- — سمت Lua، بدون Query اضافه (لیست ورودی از قبل با یک Query واحد کامل واکشی شده).
+local function slice_top_bottom(list, top_n, bottom_n)
+    local sorted_desc = {}
+    for _, r in ipairs(list) do table.insert(sorted_desc, r) end
+    table.sort(sorted_desc, function(a, b) return a.total_amount > b.total_amount end)
+    local top = {}
+    for i = 1, math.min(top_n, #sorted_desc) do table.insert(top, sorted_desc[i]) end
+
+    local positive_only = {}
+    for _, r in ipairs(list) do
+        if r.total_amount > 0 then table.insert(positive_only, r) end
     end
-    return list
+    table.sort(positive_only, function(a, b) return a.total_amount < b.total_amount end)
+    local bottom = {}
+    for i = 1, math.min(bottom_n, #positive_only) do table.insert(bottom, positive_only[i]) end
+    return top, bottom
 end
 
 -- forced_channel: "b2b"/"b2c" — همیشه صریح داده می‌شود (نه از تب فعال فیلتر)، چون ۱۰ مشتری برتر B2B/B2C
@@ -460,7 +576,7 @@ end
 local function fetch_top_customers(date_range, filters, forced_channel, limit)
     local channel_extra, channel_params = build_channel_clause(filters, forced_channel)
     local center_extra, center_params = build_center_clause(filters)
-    local params = { date_range.from_key, date_range.to_key }
+    local params = { date_range.from_key, date_range.to_key, date_range.from_key, date_range.to_key }
     for _, p in ipairs(channel_params) do table.insert(params, p) end
     for _, p in ipairs(center_params) do table.insert(params, p) end
     table.insert(params, limit)
@@ -474,7 +590,7 @@ INNER JOIN pa_client pc ON pc.ID = si.CLIENT_ID
 INNER JOIN crm_info ci ON ci.ID = pc.REFFERE_ID
 INNER JOIN profile_main pm ON pm.ID = ci.ID
 LEFT JOIN profile_user_info ui ON ui.ID = ci.ID
-]] .. INVOICE_AMOUNT_JOIN .. [[
+]] .. invoice_amount_join_sql() .. [[
 WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
   AND si.RUN_DATE >= ? AND si.RUN_DATE < (? + ]] .. CONFIG.DAY_TICKS .. [[)
 ]] .. channel_extra .. center_extra .. [[
@@ -491,6 +607,191 @@ LIMIT ?
         })
     end
     return list
+end
+
+-- ============================================================
+-- «مشتریان جدید» — طبق تصریح صریح کاربر (1405/05/29): تعریف «جدید» فقط بر مبنای اولین فاکتور معتبر
+-- ثبت‌شدهٔ آن مشتری در **کل تاریخچهٔ سیستم** است (بدون هیچ محدودیت تاریخی — نه بازهٔ انتخابی‌شدهٔ فیلتر،
+-- نه سال مالی جاری): اگر MIN(RUN_DATE) همان مشتری روی هیچ فاکتوری، در هیچ بازه‌ای، داخل بازهٔ فعال
+-- نیفتد، آن مشتری «جدید» محسوب نمی‌شود — حتی اگر در بازهٔ فعال خرید هم داشته باشد. مبلغ خرید/AOV/میانگین
+-- اقلام این کوهورت به بازهٔ فعال محدود می‌شوند؛ ولی جدول «بیشترین/کمترین کالا» طبق تصریح کاربر روی
+-- **کل تاریخچهٔ خرید همین مشتریان** حساب می‌شود (حتی خریدهای بعد از پایان بازه، اگر دوباره خریده باشند).
+-- ============================================================
+
+local NEW_CUSTOMERS_CTE_SQL = [[
+WITH new_customers AS (
+    SELECT pc1.REFFERE_ID AS crm_id
+    FROM sales_invoice si1
+    INNER JOIN pa_client pc1 ON pc1.ID = si1.CLIENT_ID
+    WHERE si1.DELETED = 0 AND si1.CANCELED = 0 AND si1.PRE_INVOICE = 0
+    GROUP BY pc1.REFFERE_ID
+    HAVING MIN(si1.RUN_DATE) >= ? AND MIN(si1.RUN_DATE) < (? + ]] .. CONFIG.DAY_TICKS .. [[)
+)
+]]
+
+-- تعداد مشتری جدید/تعداد فاکتور/مبلغ خرید (AOV از این دو در Lua محاسبه می‌شود) در بازهٔ فعال، هر ۴ کانال
+-- در یک Query.
+local function fetch_new_customer_kpi_by_channel(date_range, filters)
+    local center_extra, center_params = build_center_clause(filters)
+    -- ترتیب: ۲تای اول برای HAVING داخل NEW_CUSTOMERS_CTE_SQL، ۲تای دوم برای WHERE بیرونی این Query،
+    -- ۲تای سوم برای Placeholder های داخل invoice_amount_join_sql() (که بعد از آن‌ها می‌آید).
+    local params = { date_range.from_key, date_range.to_key, date_range.from_key, date_range.to_key, date_range.from_key, date_range.to_key }
+    for _, p in ipairs(center_params) do table.insert(params, p) end
+
+    local name_col = "pcc.NAME"
+    local b2b_cond = channel_bool_expr(name_col, "b2b")
+    local b2c_cond = channel_bool_expr(name_col, "b2c")
+    local other_cond = channel_bool_expr(name_col, "other")
+
+    local rows, err = fetch_rows(NEW_CUSTOMERS_CTE_SQL .. [[
+SELECT
+    COUNT(DISTINCT nc.crm_id) AS cnt_all,
+    COUNT(DISTINCT CASE WHEN ]] .. b2b_cond .. [[ THEN nc.crm_id END) AS cnt_b2b,
+    COUNT(DISTINCT CASE WHEN ]] .. b2c_cond .. [[ THEN nc.crm_id END) AS cnt_b2c,
+    COUNT(DISTINCT CASE WHEN ]] .. other_cond .. [[ THEN nc.crm_id END) AS cnt_other,
+    COUNT(si.ID) AS inv_all,
+    COUNT(CASE WHEN ]] .. b2b_cond .. [[ THEN si.ID END) AS inv_b2b,
+    COUNT(CASE WHEN ]] .. b2c_cond .. [[ THEN si.ID END) AS inv_b2c,
+    COUNT(CASE WHEN ]] .. other_cond .. [[ THEN si.ID END) AS inv_other,
+    COALESCE(SUM(ia.amount), 0) AS amt_all,
+    COALESCE(SUM(CASE WHEN ]] .. b2b_cond .. [[ THEN ia.amount END), 0) AS amt_b2b,
+    COALESCE(SUM(CASE WHEN ]] .. b2c_cond .. [[ THEN ia.amount END), 0) AS amt_b2c,
+    COALESCE(SUM(CASE WHEN ]] .. other_cond .. [[ THEN ia.amount END), 0) AS amt_other
+FROM new_customers nc
+INNER JOIN pa_client pc2 ON pc2.REFFERE_ID = nc.crm_id
+INNER JOIN sales_invoice si ON si.CLIENT_ID = pc2.ID
+    AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
+    AND si.RUN_DATE >= ? AND si.RUN_DATE < (? + ]] .. CONFIG.DAY_TICKS .. [[)
+LEFT JOIN pa_center pcc ON pcc.ID = si.SALES_CENTER
+]] .. invoice_amount_join_sql() .. [[
+WHERE 1 = 1
+]] .. center_extra .. [[
+]], params)
+    if rows == nil or #rows == 0 then return nil, err end
+    local r = rows[1]
+    local function chan(cnt, inv, amt)
+        local c = tonumber(cnt) or 0
+        local i = tonumber(inv) or 0
+        local a = tonumber(amt) or 0
+        return { new_customer_count = c, invoice_count = i, purchase_amount = a, aov = (i > 0) and (a / i) or 0 }
+    end
+    return {
+        all   = chan(r[1], r[5], r[9]),
+        b2b   = chan(r[2], r[6], r[10]),
+        b2c   = chan(r[3], r[7], r[11]),
+        other = chan(r[4], r[8], r[12]),
+    }, nil
+end
+
+-- میانگین تعداد اقلام کالا (بدون خدمت — IS_SERVICE=0) در هر فاکتور مشتریان جدید، در بازهٔ فعال، هر ۴ کانال.
+local function fetch_new_customer_item_avg_by_channel(date_range, filters)
+    local center_extra, center_params = build_center_clause(filters)
+    local params = { date_range.from_key, date_range.to_key, date_range.from_key, date_range.to_key }
+    for _, p in ipairs(center_params) do table.insert(params, p) end
+
+    local rows, err = fetch_rows(NEW_CUSTOMERS_CTE_SQL .. [[,
+nc_invoices AS (
+    SELECT si.ID AS invoice_id, ]] .. channel_case_expr("pcc.NAME") .. [[ AS channel
+    FROM new_customers nc
+    INNER JOIN pa_client pc2 ON pc2.REFFERE_ID = nc.crm_id
+    INNER JOIN sales_invoice si ON si.CLIENT_ID = pc2.ID
+        AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
+        AND si.RUN_DATE >= ? AND si.RUN_DATE < (? + ]] .. CONFIG.DAY_TICKS .. [[)
+    LEFT JOIN pa_center pcc ON pcc.ID = si.SALES_CENTER
+    WHERE 1 = 1
+    ]] .. center_extra .. [[
+),
+item_counts AS (
+    SELECT nci.invoice_id, nci.channel, COUNT(*) AS item_count
+    FROM nc_invoices nci
+    INNER JOIN sales_invoice_product ip ON ip.INVOICE_ID = nci.invoice_id
+    INNER JOIN wh_product wp ON wp.ID = ip.PRODUCT_ID AND COALESCE(wp.IS_SERVICE, 0) = 0
+    GROUP BY nci.invoice_id, nci.channel
+)
+SELECT
+    AVG(item_count) AS avg_all,
+    AVG(CASE WHEN channel = 'b2b' THEN item_count END) AS avg_b2b,
+    AVG(CASE WHEN channel = 'b2c' THEN item_count END) AS avg_b2c,
+    AVG(CASE WHEN channel = 'other' THEN item_count END) AS avg_other
+FROM item_counts
+]], params)
+    if rows == nil or #rows == 0 then return nil, err end
+    local r = rows[1]
+    return { all = tonumber(r[1]) or 0, b2b = tonumber(r[2]) or 0, b2c = tonumber(r[3]) or 0, other = tonumber(r[4]) or 0 }, nil
+end
+
+-- بیشترین/کمترین کالاهای این مشتریان جدید — طبق تصریح کاربر: کل تاریخچهٔ خرید همین مشتریان (حتی
+-- خریدهای بعد از پایان بازه)، نه فقط بازهٔ فعال. IS_SERVICE=0 مثل بقیهٔ بخش‌های محصول این بات.
+local function fetch_new_customer_products_by_channel(date_range, filters)
+    local center_extra, center_params = build_center_clause(filters)
+    local params = { date_range.from_key, date_range.to_key }
+    for _, p in ipairs(center_params) do table.insert(params, p) end
+
+    local rows, err = fetch_rows(NEW_CUSTOMERS_CTE_SQL .. [[,
+nc_all_invoices AS (
+    SELECT si.ID AS invoice_id, si.TYPE AS inv_type, si.ORG_ID AS org_id,
+        ]] .. channel_case_expr("pcc.NAME") .. [[ AS channel
+    FROM new_customers nc
+    INNER JOIN pa_client pc2 ON pc2.REFFERE_ID = nc.crm_id
+    INNER JOIN sales_invoice si ON si.CLIENT_ID = pc2.ID
+        AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
+    LEFT JOIN pa_center pcc ON pcc.ID = si.SALES_CENTER
+    WHERE 1 = 1
+    ]] .. center_extra .. [[
+)
+SELECT
+    nai.channel,
+    COALESCE(wp.FULL_CODE, 'نامشخص') AS product_code,
+    COALESCE(pn.PRODUCT_NAME, wp.FULL_CODE, 'کالای نامشخص') AS product_name,
+    SUM((CASE WHEN nai.inv_type = 3 THEN -1 ELSE 1 END) * COALESCE(ip.QUANTITY / POW(10, COALESCE(sc.DECIMAL_NUM, 0)), 0)) AS total_quantity,
+    SUM(
+        (CASE WHEN nai.inv_type = 3 THEN -1 ELSE 1 END) *
+        (
+            COALESCE((ip.QUANTITY / POW(10, COALESCE(sc.DECIMAL_NUM, 0))) * (ip.FEE / POW(10, COALESCE(dd.digit_fee, 0))), 0)
+            - COALESCE(ip.DISCOUNT, 0)
+            + COALESCE(ip.VALUE_ADDED, 0)
+            + COALESCE(ip.TAX / POW(10, COALESCE(dd.digit_fee, 0)), 0)
+            + COALESCE(ip.TOLL / POW(10, COALESCE(dd.digit_fee, 0)), 0)
+        )
+    ) AS total_amount,
+    COUNT(DISTINCT nai.invoice_id) AS invoice_count
+FROM nc_all_invoices nai
+INNER JOIN sales_invoice_product ip ON ip.INVOICE_ID = nai.invoice_id
+INNER JOIN wh_product wp ON wp.ID = ip.PRODUCT_ID AND COALESCE(wp.IS_SERVICE, 0) = 0
+LEFT JOIN WH_VIEW_GET_PRODUCT_NAMES pn ON pn.PRODUCT_ID = ip.PRODUCT_ID AND pn.ATTRIBUTE_ID = ip.ATTRIBUTE_ID
+LEFT JOIN wh_stock_capacity sc ON sc.ID = wp.CAPACITY_ID
+LEFT JOIN ]] .. DIGIT_FEE_SUBQUERY .. [[ ON dd.ORG_ID = nai.org_id
+GROUP BY nai.channel, ip.PRODUCT_ID, ip.ATTRIBUTE_ID, wp.FULL_CODE, pn.PRODUCT_NAME
+]], params)
+    if rows == nil then return nil, err end
+
+    local by_channel = { b2b = {}, b2c = {}, other = {} }
+    local all_map = {}
+    local all_order = {}
+    for _, r in ipairs(rows) do
+        local ch = r[1]
+        local row = {
+            product_code = r[2], product_name = r[3],
+            total_quantity = tonumber(r[4]) or 0, total_amount = tonumber(r[5]) or 0,
+            invoice_count = tonumber(r[6]) or 0,
+        }
+        if by_channel[ch] == nil then by_channel[ch] = {} end
+        table.insert(by_channel[ch], row)
+
+        local merged = all_map[row.product_code]
+        if merged == nil then
+            merged = { product_code = row.product_code, product_name = row.product_name,
+                total_quantity = row.total_quantity, total_amount = row.total_amount, invoice_count = row.invoice_count }
+            all_map[row.product_code] = merged
+            table.insert(all_order, merged)
+        else
+            merged.total_quantity = merged.total_quantity + row.total_quantity
+            merged.total_amount = merged.total_amount + row.total_amount
+            merged.invoice_count = merged.invoice_count + row.invoice_count
+        end
+    end
+    by_channel.all = all_order
+    return by_channel, nil
 end
 
 -- ------------- Drill-down: فاکتورهای یک کالای خاص (Lazy — هنگام کلیک روی نمودار کالا) -------------
@@ -535,7 +836,9 @@ end
 local function fetch_customer_invoices(crm_id, date_range, filters)
     local channel_extra, channel_params = build_channel_clause(filters)
     local center_extra, center_params = build_center_clause(filters)
-    local params = { crm_id, date_range.from_key, date_range.to_key }
+    -- ترتیب: ۲تای اول برای Placeholder های داخل invoice_amount_join_sql() (که قبل از WHERE می‌آید)،
+    -- بعد crm_id و بازهٔ تاریخ خودِ WHERE بیرونی.
+    local params = { date_range.from_key, date_range.to_key, crm_id, date_range.from_key, date_range.to_key }
     for _, p in ipairs(channel_params) do table.insert(params, p) end
     for _, p in ipairs(center_params) do table.insert(params, p) end
 
@@ -544,7 +847,7 @@ SELECT si.ID, si.INVOICE_CODE, rd.JNDATE, COALESCE(ia.amount, 0)
 FROM sales_invoice si
 INNER JOIN pa_client pc ON pc.ID = si.CLIENT_ID
 LEFT JOIN report_dimdate rd ON rd.DATEKEY = (si.RUN_DATE - MOD(si.RUN_DATE, ]] .. CONFIG.DAY_TICKS .. [[))
-]] .. INVOICE_AMOUNT_JOIN .. [[
+]] .. invoice_amount_join_sql() .. [[
 WHERE pc.REFFERE_ID = ? AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
   AND si.RUN_DATE >= ? AND si.RUN_DATE < (? + ]] .. CONFIG.DAY_TICKS .. [[)
 ]] .. channel_extra .. center_extra .. [[
@@ -730,52 +1033,11 @@ footer{ text-align:center; font-size:14px; color:var(--muted); padding:16px 0; }
 -- RENDER: KPI CARDS / HIGHLIGHTS / TABLE ROWS
 -- ============================================================
 
-local function render_kpi_cards(sales_kpi)
-    local html = {}
-    local function card(label, value, sub)
-        table.insert(html, '<div class="kpi-card"><div class="label">' .. escape_html(label) ..
-            '</div><div class="value">' .. value .. '</div>' ..
-            (sub and ('<div class="sub">' .. sub .. '</div>') or '') .. '</div>')
-    end
-    card("مبلغ کل فروش", fmt_num(sales_kpi.total_sales_amount) .. " ریال")
-    card("تعداد کل فاکتور", fmt_num(sales_kpi.total_invoices))
-    card("تعداد مشتری خریدار", fmt_num(sales_kpi.distinct_clients))
-    card("تعداد مراکز درآمد فعال", fmt_num(sales_kpi.distinct_centers))
-    local avg_invoice = (sales_kpi.total_invoices > 0) and (sales_kpi.total_sales_amount / sales_kpi.total_invoices) or 0
-    card("میانگین مبلغ فاکتور", fmt_num(avg_invoice) .. " ریال")
-    return table.concat(html)
-end
-
-local function render_product_highlight_cards(top_products, bottom_products)
-    local html = {}
-    local function card(title, p)
-        if p == nil then
-            table.insert(html, '<div class="minmax-card"><div class="t">' .. escape_html(title) .. '</div><div class="n">—</div></div>')
-            return
-        end
-        table.insert(html, '<div class="minmax-card"><div class="t">' .. escape_html(title) .. '</div><div class="n">' ..
-            escape_html(p.product_name) .. '</div><div class="v">' .. fmt_num(p.total_amount) .. ' ریال — ' ..
-            fmt_num(p.total_quantity) .. ' عدد در ' .. fmt_num(p.invoice_count) .. ' فاکتور</div></div>')
-    end
-    card("پرفروش‌ترین کالا (بر اساس مبلغ فروش)", top_products[1])
-    card("کم‌فروش‌ترین کالا (در میان کالاهای دارای حداقل یک فروش)", bottom_products[1])
-    return table.concat(html)
-end
-
-local function render_center_rows(centers)
-    local html = {}
-    for _, c in ipairs(centers) do
-        table.insert(html, '<tr class="clickable" data-center="' .. escape_html(c.center_name) ..
-            '" onclick="setCenterFilterFromRow(this)"><td>' .. escape_html(c.center_name) .. '</td><td>' ..
-            fmt_num(c.invoice_count) .. '</td><td>' .. fmt_num(c.distinct_clients) .. '</td><td>' ..
-            fmt_num(c.total_sales_amount) .. '</td><td>' .. fmt_num(c.avg_invoice_amount) .. '</td><td>' ..
-            fmt_dec1(c.sales_share_pct) .. '٪</td></tr>')
-    end
-    if #centers == 0 then
-        table.insert(html, '<tr><td colspan="6" class="empty-row">در این بازه/فیلتر دادهٔ فروشی یافت نشد</td></tr>')
-    end
-    return table.concat(html)
-end
+-- توجه معماری (طبق درخواست کاربر 1405/05/29): کارت‌های KPI، جدول/نمودار مراکز درآمد، برجستهٔ کالا،
+-- و بخش «مشتریان جدید» دیگر سمت Lua رندر نمی‌شوند — چون هر ۴ تب (کل/B2B/B2C/سایر) همین حالا موقع لود
+-- اولیه/فیلتر Preload می‌شوند (ر.ک. dash_data.channels در main/render_html)، تعویض تب باید کاملاً سمت
+-- کلاینت و بدون Round-trip جدید انجام شود — پس معادل JS همین رندرها (renderChannelView در REPORT_JS)
+-- تنها نسخهٔ رندر این بخش‌هاست؛ اینجا فقط بخش‌های مستقل از کانال (که تعویض تب رویشان اثر ندارد) می‌مانند.
 
 local function render_top_customers_rows(list)
     local html = {}
@@ -890,12 +1152,18 @@ function getActiveCenter(){
 function submitFilterForm(){
   if (filterFormEl) { filterFormEl.requestSubmit ? filterFormEl.requestSubmit() : filterFormEl.dispatchEvent(new Event('submit', {cancelable:true})); }
 }
+function getActiveChannelKey(){
+  var ch = getActiveChannel();
+  return ch === '' ? 'all' : ch;
+}
+/* تعویض تب (کل/B2B/B2C/سایر) — طبق درخواست صریح کاربر: بدون هیچ Round-trip تازه به سرور، چون هر ۴ تب
+   موقع لود اولیه/فیلتر Preload شده‌اند (DASH.channels) — فقط رندر مجدد سمت کلاینت. */
 function setActiveChannel(btn){
   var el = document.getElementById('channelInput');
   if (el) el.value = btn.getAttribute('data-channel');
   document.querySelectorAll('.channel-tab').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
-  submitFilterForm();
+  renderChannelView(getActiveChannelKey());
 }
 function setCenterFilter(name){
   var sel = document.getElementById('centerFilterInput');
@@ -1206,27 +1474,80 @@ function resetFilters(){
 }
 function applyDashboardUpdate(payload){
   DASH = payload.dash_data;
-  document.getElementById('kpiGrid').innerHTML = payload.kpi_cards_html;
-  document.getElementById('productHighlightGrid').innerHTML = payload.product_highlight_html;
-  document.getElementById('centerTbody').innerHTML = payload.center_rows_html;
   document.getElementById('topB2BTbody').innerHTML = payload.top_customers_b2b_html;
   document.getElementById('topB2CTbody').innerHTML = payload.top_customers_b2c_html;
   document.getElementById('footerText').textContent = payload.footer_text;
   if (payload.header_sub_text) document.getElementById('headerSubText').textContent = payload.header_sub_text;
-  initCharts();
-  initSortableTables();
+  renderChannelView(getActiveChannelKey());
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ---------------- راه‌اندازی اولیه ---------------- */
-function initCharts(){
-  renderBarChart('salesByCenterChart', DASH.centers, { valueKey: 'total_sales_amount', labelKey: 'center_name', color: 'var(--accent)', onClick: function(it){ setCenterFilter(it.center_name); } });
-  renderDonutChart('salesCenterDonutChart', DASH.pie_slices, function(name){ setCenterFilter(name); });
-  renderComboChart('centerComboChart', DASH.centers, { key: 'invoice_count', label: 'تعداد فاکتور' }, { key: 'total_sales_amount', label: 'مبلغ فروش' }, 'center_name');
-  renderBarChart('topProductsChart', DASH.top_products, { valueKey: 'total_amount', labelKey: 'product_name', color: 'var(--accent)', onClick: function(it){ openProductInvoices(it.product_code, it.product_name); } });
-  renderBarChart('bottomProductsChart', DASH.bottom_products, { valueKey: 'total_amount', labelKey: 'product_name', color: 'var(--accent-light)', onClick: function(it){ openProductInvoices(it.product_code, it.product_name); } });
+/* ---------------- رندر بخش‌های وابسته به تب فعال (کل/B2B/B2C/سایر) — کاملاً سمت کلاینت، از
+   DASH.channels[key] که موقع لود اولیه/فیلتر Preload شده — بدون Query/Fetch جدید هنگام تعویض تب ---------------- */
+function kpiCard(label, value, sub){
+  return '<div class="kpi-card"><div class="label">' + escapeHtml(label) + '</div><div class="value">' + value + '</div>' +
+    (sub ? ('<div class="sub">' + sub + '</div>') : '') + '</div>';
 }
-initCharts();
+function buildKpiCardsHtml(kpi){
+  var avgInvoice = (kpi.total_invoices > 0) ? (kpi.total_sales_amount / kpi.total_invoices) : 0;
+  return kpiCard('مبلغ کل فروش', fmtNum(kpi.total_sales_amount) + ' ریال') +
+    kpiCard('تعداد کل فاکتور', fmtNum(kpi.total_invoices)) +
+    kpiCard('تعداد مشتری خریدار', fmtNum(kpi.distinct_clients)) +
+    kpiCard('تعداد مراکز درآمد فعال', fmtNum(kpi.distinct_centers)) +
+    kpiCard('میانگین مبلغ فاکتور', fmtNum(avgInvoice) + ' ریال');
+}
+function buildCenterRowsHtml(centers){
+  if (!centers || centers.length === 0) return '<tr><td colspan="6" class="empty-row">در این بازه/فیلتر دادهٔ فروشی یافت نشد</td></tr>';
+  return centers.map(function(c){
+    return '<tr class="clickable" data-center="' + escapeHtml(c.center_name) + '" onclick="setCenterFilterFromRow(this)"><td>' +
+      escapeHtml(c.center_name) + '</td><td>' + fmtNum(c.invoice_count) + '</td><td>' + fmtNum(c.distinct_clients) + '</td><td>' +
+      fmtNum(c.total_sales_amount) + '</td><td>' + fmtNum(c.avg_invoice_amount) + '</td><td>' + fmtDec1(c.sales_share_pct) + '٪</td></tr>';
+  }).join('');
+}
+function buildProductHighlightHtml(topList, bottomList, topTitle, bottomTitle){
+  function card(title, p){
+    if (!p) return '<div class="minmax-card"><div class="t">' + escapeHtml(title) + '</div><div class="n">—</div></div>';
+    return '<div class="minmax-card"><div class="t">' + escapeHtml(title) + '</div><div class="n">' + escapeHtml(p.product_name) +
+      '</div><div class="v">' + fmtNum(p.total_amount) + ' ریال — ' + fmtNum(p.total_quantity) + ' عدد در ' + fmtNum(p.invoice_count) + ' فاکتور</div></div>';
+  }
+  return card(topTitle, topList && topList[0]) + card(bottomTitle, bottomList && bottomList[0]);
+}
+function buildNewCustomerKpiHtml(nk, itemAvg){
+  return kpiCard('تعداد مشتری جدید', fmtNum(nk.new_customer_count), 'اولین فاکتور ثبت‌شدهٔ این مشتریان در کل تاریخچهٔ سیستم، داخل بازهٔ فعال است') +
+    kpiCard('مبلغ خرید مشتریان جدید', fmtNum(nk.purchase_amount) + ' ریال', 'در بازهٔ فعال') +
+    kpiCard('AOV مشتریان جدید', fmtNum(nk.aov) + ' ریال', 'میانگین مبلغ هر فاکتور، در بازهٔ فعال') +
+    kpiCard('میانگین اقلام کالا در فاکتور', fmtDec1(itemAvg) + ' قلم', 'بدون احتساب خدمت — در بازهٔ فعال');
+}
+function renderChannelView(channelKey){
+  var ch = DASH.channels && DASH.channels[channelKey];
+  if (!ch) return;
+
+  document.getElementById('kpiGrid').innerHTML = buildKpiCardsHtml(ch.sales_kpi);
+
+  document.getElementById('centerTbody').innerHTML = buildCenterRowsHtml(ch.centers);
+  renderBarChart('salesByCenterChart', ch.centers, { valueKey: 'total_sales_amount', labelKey: 'center_name', color: 'var(--accent)', onClick: function(it){ setCenterFilter(it.center_name); } });
+  renderDonutChart('salesCenterDonutChart', ch.pie_slices, function(name){ setCenterFilter(name); });
+  renderComboChart('centerComboChart', ch.centers, { key: 'invoice_count', label: 'تعداد فاکتور' }, { key: 'total_sales_amount', label: 'مبلغ فروش' }, 'center_name');
+
+  document.getElementById('productHighlightGrid').innerHTML = buildProductHighlightHtml(
+    ch.top_products, ch.bottom_products,
+    'پرفروش‌ترین کالا (بر اساس مبلغ فروش)', 'کم‌فروش‌ترین کالا (در میان کالاهای دارای حداقل یک فروش)');
+  renderBarChart('topProductsChart', ch.top_products, { valueKey: 'total_amount', labelKey: 'product_name', color: 'var(--accent)', onClick: function(it){ openProductInvoices(it.product_code, it.product_name); } });
+  renderBarChart('bottomProductsChart', ch.bottom_products, { valueKey: 'total_amount', labelKey: 'product_name', color: 'var(--accent-light)', onClick: function(it){ openProductInvoices(it.product_code, it.product_name); } });
+
+  document.getElementById('newCustomerKpiGrid').innerHTML = buildNewCustomerKpiHtml(ch.new_customer_kpi, ch.new_customer_item_avg);
+  document.getElementById('newCustomerProductHighlightGrid').innerHTML = buildProductHighlightHtml(
+    ch.new_customer_top_products, ch.new_customer_bottom_products,
+    'پرفروش‌ترین کالا نزد مشتریان جدید (کل تاریخچهٔ خرید این مشتریان)',
+    'کم‌فروش‌ترین کالا نزد مشتریان جدید (کل تاریخچهٔ خرید این مشتریان)');
+  renderBarChart('newCustomerTopProductsChart', ch.new_customer_top_products, { valueKey: 'total_amount', labelKey: 'product_name', color: 'var(--accent)', onClick: function(it){ openProductInvoices(it.product_code, it.product_name); } });
+  renderBarChart('newCustomerBottomProductsChart', ch.new_customer_bottom_products, { valueKey: 'total_amount', labelKey: 'product_name', color: 'var(--accent-light)', onClick: function(it){ openProductInvoices(it.product_code, it.product_name); } });
+
+  initSortableTables();
+}
+
+/* ---------------- راه‌اندازی اولیه ---------------- */
+renderChannelView(getActiveChannelKey());
 initSortableTables();
 </script>
 ]]
@@ -1257,7 +1578,10 @@ local function render_html(args)
 
     table.insert(html, args.filter_bar_html)
 
-    table.insert(html, '<div class="kpi-grid" id="kpiGrid">' .. args.kpi_cards_html .. '</div>\n')
+    -- کارت‌های KPI و بخش‌های مراکز درآمد/کالا/مشتریان جدید در ادامه خالی (Container) رندر می‌شوند —
+    -- محتوایشان کاملاً سمت کلاینت از DASH.channels[تب فعال] پر می‌شود (renderChannelView در REPORT_JS)،
+    -- چون هر ۴ تب موقع لود اولیه Preload شده‌اند و تعویض تب نباید Round-trip تازه بزند.
+    table.insert(html, '<div class="kpi-grid" id="kpiGrid"></div>\n')
 
     table.insert(html, [[
 <div class="section" id="centerSection">
@@ -1269,20 +1593,30 @@ local function render_html(args)
   <div class="card" style="margin-top:16px;"><h3>مقایسه تعداد فاکتور و مبلغ فروش</h3><div class="desc">مرکزی با فاکتور زیاد لزوماً مبلغ فروش بالا ندارد و برعکس</div><div class="chart-box" id="centerComboChart"></div></div>
   <div class="table-scroll" style="margin-top:16px;"><table class="data-table" id="centerTable"><thead><tr>
     <th>مرکز درآمد</th><th>تعداد فاکتور</th><th>تعداد مشتری</th><th>مبلغ فروش</th><th>میانگین فاکتور</th><th>سهم از فروش</th>
-  </tr></thead><tbody id="centerTbody">]] .. args.center_rows_html .. [[</tbody></table></div>
+  </tr></thead><tbody id="centerTbody"></tbody></table></div>
 </div>
 
 <div class="section" id="productSection">
-  <div class="section-head"><h2><span class="num">۲</span>عملکرد فروش کالاها</h2><p>روی هر میله کلیک کنید تا فهرست فاکتورهای همان کالا در بازه/فیلتر فعال باز شود</p></div>
-  <div class="minmax-grid" id="productHighlightGrid">]] .. args.product_highlight_html .. [[</div>
+  <div class="section-head"><h2><span class="num">۲</span>عملکرد فروش کالاها</h2><p>روی هر میله کلیک کنید تا فهرست فاکتورهای همان کالا در بازه/فیلتر فعال باز شود — فقط کالای واقعی، خدمت (بیمه/ارسال/بسته‌بندی/…) حذف شده</p></div>
+  <div class="minmax-grid" id="productHighlightGrid"></div>
   <div class="grid-2">
     <div class="card"><h3>پرفروش‌ترین کالاها</h3><div class="desc">بر اساس مبلغ فروش، نزولی</div><div class="chart-box" id="topProductsChart"></div></div>
     <div class="card"><h3>کم‌فروش‌ترین کالاها</h3><div class="desc">در میان کالاهای دارای حداقل یک فروش، صعودی</div><div class="chart-box" id="bottomProductsChart"></div></div>
   </div>
 </div>
 
+<div class="section" id="newCustomerSection">
+  <div class="section-head"><h2><span class="num">۳</span>مشتریان جدید</h2><p>مشتری «جدید» یعنی اولین فاکتور معتبر ثبت‌شدهٔ او در کل تاریخچهٔ سیستم (بدون هیچ محدودیت تاریخی) داخل بازهٔ فعال افتاده — مبلغ خرید/AOV/میانگین اقلام محدود به بازهٔ فعال است؛ جدول کالاها کل تاریخچهٔ خرید همین مشتریان را نشان می‌دهد (حتی خریدهای بعد از پایان بازه)</p></div>
+  <div class="kpi-grid" id="newCustomerKpiGrid"></div>
+  <div class="minmax-grid" id="newCustomerProductHighlightGrid" style="margin-top:12px;"></div>
+  <div class="grid-2">
+    <div class="card"><h3>پرفروش‌ترین کالا نزد مشتریان جدید</h3><div class="desc">کل تاریخچهٔ خرید این مشتریان، نزولی</div><div class="chart-box" id="newCustomerTopProductsChart"></div></div>
+    <div class="card"><h3>کم‌فروش‌ترین کالا نزد مشتریان جدید</h3><div class="desc">کل تاریخچهٔ خرید این مشتریان، صعودی</div><div class="chart-box" id="newCustomerBottomProductsChart"></div></div>
+  </div>
+</div>
+
 <div class="section" id="topCustomersSection">
-  <div class="section-head"><h2><span class="num">۳</span>۱۰ مشتری برتر</h2><p>مستقل از تب فعال، همیشه بر اساس دستهٔ B2B/B2C خودشان محاسبه می‌شوند (فقط بازهٔ تاریخ و مرکز درآمد انتخابی روی آن‌ها اثر دارد) — روی هر ردیف کلیک کنید تا فاکتورهای آن مشتری نمایش داده شود</p></div>
+  <div class="section-head"><h2><span class="num">۴</span>۱۰ مشتری برتر</h2><p>مستقل از تب فعال، همیشه بر اساس دستهٔ B2B/B2C خودشان محاسبه می‌شوند (فقط بازهٔ تاریخ و مرکز درآمد انتخابی روی آن‌ها اثر دارد) — روی هر ردیف کلیک کنید تا فاکتورهای آن مشتری نمایش داده شود</p></div>
   <div class="grid-2">
     <div class="card"><h3>۱۰ مشتری برتر B2B (همکار)</h3>
       <div class="table-scroll"><table class="data-table" id="topB2BTable"><thead><tr><th>#</th><th>نام مشتری</th><th>تعداد فاکتور</th><th>مبلغ خرید</th><th>CRM</th></tr></thead>
@@ -1310,15 +1644,22 @@ local function render_html(args)
     </ul>
     <h4>دستهٔ کسب‌وکار (B2B/B2C)</h4>
     <ul>
-      <li>تب‌های «کل فروش / B2B (همکار) / B2C (مصرف‌کننده) / سایر» بر اساس نام مرکز درآمد فاکتور («فروش همکار»/«فروش همکار آفلاین» = B2B، «فروش مصرف کننده» = B2C) کل داشبورد (KPIها، نمودار/جدول مراکز درآمد، پرفروش‌ترین/کم‌فروش‌ترین کالا) را فیلتر می‌کنند.</li>
+      <li>تب‌های «کل فروش / B2B (همکار) / B2C (مصرف‌کننده) / سایر» بر اساس نام مرکز درآمد فاکتور («فروش همکار»/«فروش همکار آفلاین» = B2B، «فروش مصرف کننده» = B2C) کل داشبورد (KPIها، نمودار/جدول مراکز درآمد، پرفروش‌ترین/کم‌فروش‌ترین کالا، مشتریان جدید) را فیلتر می‌کنند — چون هر ۴ تب موقع بارگذاری صفحه یک‌جا محاسبه می‌شوند، تعویض تب آنی است و منتظر بارگذاری نمی‌ماند.</li>
       <li>این یک تشخیص بر مبنای نام مرکز است، نه یک فیلد دستهٔ مستقل — اگر مرکز درآمد جدیدی با نام‌گذاری متفاوت اضافه شود، ممکن است در «سایر» قرار گیرد.</li>
       <li>جدول‌های «۱۰ مشتری برتر B2B/B2C» همیشه هر دو نمایش داده می‌شوند و مستقل از تب فعال هستند (فقط بازهٔ تاریخ و فیلتر مرکز درآمد روی آن‌ها اثر دارد).</li>
+    </ul>
+    <h4>مشتریان جدید</h4>
+    <ul>
+      <li>مشتری «جدید» یعنی اولین فاکتور معتبر ثبت‌شدهٔ او در <b>کل تاریخچهٔ سیستم</b> (بدون هیچ محدودیت تاریخی — نه بازهٔ انتخابی، نه سال مالی جاری) داخل بازهٔ فعال فیلتر افتاده باشد؛ اگر مشتری قبل از این بازه هم خرید داشته، حتی اگر در بازهٔ فعال هم خریده باشد، «جدید» محسوب نمی‌شود.</li>
+      <li>مبلغ خرید، AOV (میانگین مبلغ فاکتور)، و میانگین تعداد اقلام کالا در فاکتور، همگی به بازهٔ فعال محدودند — یعنی رفتار خرید این مشتریان در همان دوره‌ای که «جدید» شدند.</li>
+      <li>میانگین اقلام کالا فقط کالای واقعی را می‌شمارد؛ ردیف‌های خدماتی فاکتور (بیمه، ارسال، بسته‌بندی، …) حساب نمی‌شوند.</li>
+      <li><b>جدول پرفروش‌ترین/کم‌فروش‌ترین کالا در این بخش استثناست:</b> برخلاف بقیهٔ داشبورد، محدود به بازهٔ فعال نیست — کل تاریخچهٔ خرید همین مشتریان را نشان می‌دهد، حتی خریدهایی که بعد از پایان بازه (در دوره‌های بعدی) انجام داده‌اند.</li>
     </ul>
     <h4>تعامل‌ها</h4>
     <ul>
       <li>فیلترهای بالای صفحه («از تاریخ»، «تا تاریخ»، «مرکز درآمد») کل داشبورد را محدود می‌کنند — بازهٔ تاریخ همیشه اعمال می‌شود، حتی اگر خالی گذاشته شود (پیش‌فرض: از ابتدای سال مالی جاری تا امروز).</li>
       <li>روی هر میله/برش نمودار «مراکز درآمد» یا هر ردیف جدول مراکز کلیک کنید تا داشبورد به همان مرکز محدود شود (برای پاک کردن، «همهٔ مراکز» را از فیلتر انتخاب کنید).</li>
-      <li>روی هر میلهٔ نمودار «پرفروش‌ترین/کم‌فروش‌ترین کالاها» کلیک کنید تا فهرست فاکتورهای همان کالا (در بازه/فیلتر فعال) در یک پنجره باز شود.</li>
+      <li>روی هر میلهٔ نمودار «پرفروش‌ترین/کم‌فروش‌ترین کالاها» کلیک کنید تا فهرست فاکتورهای همان کالا در یک پنجره باز شود؛ این فهرست همیشه با بازهٔ فعال فیلتر می‌شود — برای نمودار کالای «مشتریان جدید» هم همین‌طور، حتی اگر خودِ نمودار کل تاریخچه را نشان دهد.</li>
       <li>روی هر ردیف «۱۰ مشتری برتر» کلیک کنید تا فهرست فاکتورهای همان مشتری باز شود؛ لینک «مشاهده CRM» صفحهٔ مشتری را در تب جدید Teamyar باز می‌کند.</li>
       <li>روی هدر هر جدول کلیک کنید تا صعودی/نزولی مرتب شود.</li>
       <li>تمام‌صفحه / خروجی Excel (از جدول کامل مراکز درآمد) از نوار ابزار بالا در دسترس است.</li>
@@ -1327,6 +1668,7 @@ local function render_html(args)
     <ul>
       <li>تفکیک B2B/B2C بر اساس نام مرکز درآمد فاکتور است (LIKE «همکار»/«مصرف»)، همان Rule تأییدشدهٔ داشبورد جغرافیایی CRM/فروش این پروژه — نه یک فیلد دستهٔ مستقل در دیتابیس.</li>
       <li>فهرست «مراکز درآمد» در فیلتر بالای صفحه از جدول pa_center خوانده می‌شود و شامل مراکزی هم می‌شود که ممکن است در بازهٔ انتخابی فروشی نداشته باشند.</li>
+      <li>تغییر بازهٔ تاریخ یا مرکز درآمد، همهٔ ۴ تب را دوباره از سرور می‌گیرد (نیاز به Query تازه)؛ فقط تعویض خودِ تب (کل/B2B/B2C/سایر) آنی و بدون بارگذاری تازه است.</li>
     </ul>
   </div>
 </div></div>
@@ -1403,31 +1745,77 @@ local function main()
         return
     end
 
-    local sales_kpi, sales_err = fetch_sales_kpi(date_range, filters)
-    if sales_kpi == nil then
+    -- KPI فروش هر ۴ کانال (کل/B2B/B2C/سایر) در یک Query — طبق درخواست کاربر برای Preload کامل موقع لود.
+    local sales_kpi_by_channel, sales_err = fetch_sales_kpi_by_channel(date_range, filters)
+    if sales_kpi_by_channel == nil then
         teamyar.write_result(render_error_html("خطا در محاسبهٔ KPI فروش: " .. tostring(sales_err)))
         return
     end
 
-    local centers, centers_err = fetch_center_aggregation(date_range, filters)
-    if centers == nil then
+    -- مراکز درآمد: یک Query کامل بدون فیلتر کانال (filters.channel اینجا عمداً نادیده گرفته می‌شود —
+    -- حتی اگر از قبل روی یک تب خاص مانده باشد، چون باید هر ۴ تب از همین یک لیست ساخته شوند)، بعد بر
+    -- اساس نام هر مرکز، در Lua بین ۴ تب سطربندی می‌شود (بدون Query اضافه).
+    local centers_all, centers_err = fetch_center_aggregation(date_range, { center = filters.center })
+    if centers_all == nil then
         teamyar.write_result(render_error_html("خطا در تجمیع مراکز درآمد: " .. tostring(centers_err)))
         return
     end
-    enrich_center_list(centers, sales_kpi.total_sales_amount)
-    local pie_slices = build_center_pie_slices(centers)
-
-    local top_products, top_err = fetch_product_aggregation(date_range, filters, "DESC", false, CONFIG.TOP_PRODUCTS_COUNT)
-    if top_products == nil then
-        teamyar.write_result(render_error_html("خطا در دریافت پرفروش‌ترین کالاها: " .. tostring(top_err)))
-        return
+    local centers_by_channel = { all = centers_all, b2b = {}, b2c = {}, other = {} }
+    for _, c in ipairs(centers_all) do
+        table.insert(centers_by_channel[classify_channel(c.center_name)], c)
     end
-    local bottom_products, bottom_err = fetch_product_aggregation(date_range, filters, "ASC", true, CONFIG.BOTTOM_PRODUCTS_COUNT)
-    if bottom_products == nil then
-        teamyar.write_result(render_error_html("خطا در دریافت کم‌فروش‌ترین کالاها: " .. tostring(bottom_err)))
+
+    -- کالاها هر ۴ کانال در یک Query (بدون خدمت).
+    local products_by_channel, prod_err = fetch_product_aggregation_by_channel(date_range, filters)
+    if products_by_channel == nil then
+        teamyar.write_result(render_error_html("خطا در دریافت عملکرد کالاها: " .. tostring(prod_err)))
         return
     end
 
+    -- مشتریان جدید: KPI + میانگین اقلام + کالاها، هر کدام هر ۴ کانال در یک Query.
+    local new_cust_kpi_by_channel, nc_kpi_err = fetch_new_customer_kpi_by_channel(date_range, filters)
+    if new_cust_kpi_by_channel == nil then
+        teamyar.write_result(render_error_html("خطا در محاسبهٔ KPI مشتریان جدید: " .. tostring(nc_kpi_err)))
+        return
+    end
+    local new_cust_item_avg_by_channel, nc_item_err = fetch_new_customer_item_avg_by_channel(date_range, filters)
+    if new_cust_item_avg_by_channel == nil then
+        teamyar.write_result(render_error_html("خطا در محاسبهٔ میانگین اقلام مشتریان جدید: " .. tostring(nc_item_err)))
+        return
+    end
+    local new_cust_products_by_channel, nc_prod_err = fetch_new_customer_products_by_channel(date_range, filters)
+    if new_cust_products_by_channel == nil then
+        teamyar.write_result(render_error_html("خطا در دریافت کالاهای مشتریان جدید: " .. tostring(nc_prod_err)))
+        return
+    end
+
+    -- ساخت DASH.channels نهایی — هر ۴ تب کاملاً آمادهٔ رندر سمت کلاینت (بدون هیچ Query تازه موقع تعویض تب).
+    local channels = {}
+    for _, ch in ipairs({ "all", "b2b", "b2c", "other" }) do
+        local ch_centers = centers_by_channel[ch] or {}
+        enrich_center_list(ch_centers, sales_kpi_by_channel[ch].total_sales_amount)
+        local pie_slices = build_center_pie_slices(ch_centers)
+
+        local top_products, bottom_products = slice_top_bottom(
+            products_by_channel[ch] or {}, CONFIG.TOP_PRODUCTS_COUNT, CONFIG.BOTTOM_PRODUCTS_COUNT)
+        local nc_top_products, nc_bottom_products = slice_top_bottom(
+            new_cust_products_by_channel[ch] or {}, CONFIG.NEW_CUSTOMER_TOP_PRODUCTS_COUNT, CONFIG.NEW_CUSTOMER_BOTTOM_PRODUCTS_COUNT)
+
+        channels[ch] = {
+            sales_kpi = sales_kpi_by_channel[ch],
+            centers = ch_centers,
+            pie_slices = pie_slices,
+            top_products = top_products,
+            bottom_products = bottom_products,
+            new_customer_kpi = new_cust_kpi_by_channel[ch],
+            new_customer_item_avg = new_cust_item_avg_by_channel[ch],
+            new_customer_top_products = nc_top_products,
+            new_customer_bottom_products = nc_bottom_products,
+        }
+    end
+
+    -- ۱۰ مشتری برتر B2B/B2C — طبق درخواست کاربر مستقل از تب فعال، همیشه هر دو محاسبه می‌شوند
+    -- (forced_channel صریح داده می‌شود، پس filters.channel روی این دو Query اثری ندارد).
     local top_customers_b2b, b2b_err = fetch_top_customers(date_range, filters, "b2b", CONFIG.TOP_CUSTOMERS_COUNT)
     if top_customers_b2b == nil then
         teamyar.write_result(render_error_html("خطا در دریافت مشتریان برتر B2B: " .. tostring(b2b_err)))
@@ -1438,14 +1826,10 @@ local function main()
         teamyar.write_result(render_error_html("خطا در دریافت مشتریان برتر B2C: " .. tostring(b2c_err)))
         return
     end
-
     local center_options = fetch_center_options()
 
     local dash_data = {
-        centers = centers,
-        pie_slices = pie_slices,
-        top_products = top_products,
-        bottom_products = bottom_products,
+        channels = channels,
         default_date_from = date_range.from_label,
         default_date_to = date_range.to_label,
     }
@@ -1454,21 +1838,15 @@ local function main()
         " — دسته: " .. (CONFIG.CHANNEL_LABELS[filters.channel] or "کل فروش") ..
         (filters.center and (" — مرکز درآمد: " .. filters.center) or "")
 
-    local kpi_cards_html = render_kpi_cards(sales_kpi)
-    local product_highlight_html = render_product_highlight_cards(top_products, bottom_products)
-    local center_rows_html = render_center_rows(centers)
     local top_customers_b2b_html = render_top_customers_rows(top_customers_b2b)
     local top_customers_b2c_html = render_top_customers_rows(top_customers_b2c)
-    local footer_text = "تولید شده — " .. fmt_num(#centers) .. " مرکز درآمد فعال در این بازه" ..
+    local footer_text = "تولید شده — " .. fmt_num(#centers_all) .. " مرکز درآمد فعال در این بازه" ..
         (date_range.warning and (" — هشدار: " .. date_range.warning) or "")
 
     if input["format"] == "json" then
         teamyar.write_result(json.encode({
             ok = true,
             dash_data = dash_data,
-            kpi_cards_html = kpi_cards_html,
-            product_highlight_html = product_highlight_html,
-            center_rows_html = center_rows_html,
             top_customers_b2b_html = top_customers_b2b_html,
             top_customers_b2c_html = top_customers_b2c_html,
             footer_text = footer_text,
@@ -1483,9 +1861,6 @@ local function main()
         dash_data = dash_data,
         header_sub_text = header_sub_text,
         filter_bar_html = filter_bar_html,
-        kpi_cards_html = kpi_cards_html,
-        product_highlight_html = product_highlight_html,
-        center_rows_html = center_rows_html,
         top_customers_b2b_html = top_customers_b2b_html,
         top_customers_b2c_html = top_customers_b2c_html,
         footer_text = footer_text,

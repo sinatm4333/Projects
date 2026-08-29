@@ -1,9 +1,54 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/26 23:10
+-- Last Edit = 1405/05/29 20:15
 
 -- Bot: CRM + Sales Geographic Dashboard
 -- botName = crm_geo_sales_dashboard
--- version = v03
+-- version = v04.1
+-- تغییرات v04.1 (طبق گزارش زندهٔ کاربر پس از تست v04):
+--   ۱) رفع باگ ساختاری «ارور JSON هنگام فیلتر»: بخش Dashboard اصلی (هم صفحهٔ کامل هم AJAX با format=json)
+--      در همهٔ مسیرهای خطا (نه‌فقط خطای خاص) قبلاً همیشه HTML برمی‌گرداند (render_error_html) حتی وقتی
+--      کلاینت صریحاً format=json خواسته بود — یعنی هر SQL error واقعی به‌جای JSON قابل‌Parse به شکل صفحهٔ
+--      HTML به fetch().then(res.json()) می‌رسید و خطای عمومی «Unexpected token '<'» ایجاد می‌کرد (پیام
+--      واقعی خطا هرگز دیده نمی‌شد). تابع جدید write_dashboard_error(input, message) اضافه شد که بر اساس
+--      input.format تصمیم می‌گیرد JSON برگرداند یا HTML؛ همهٔ ۹ نقطهٔ خطای Dashboard اصلی (شامل pcall(main)
+--      بیرونی) اصلاح شدند.
+--   ۲) Preload ۳ تب غیرفعال، طبق درخواست صریح کاربر «موقع فراخوانی، B2B/B2C هم فراخوانی شود و تغییر تب
+--      دوباره فراخوانی نکند». **تلاش اول** (همان روز، همین نسخه): هر ۴ تب در یک درخواست واحد سمت سرور
+--      (حلقهٔ build_channel_view روی ۴ کانال) محاسبه می‌شد — این به گزارش زندهٔ کاربر «باز هم ارور JSON»
+--      منجر شد: ۴× حجم Query (۲۵ کوئری، شامل ۴ بار اجرای Subquery سنگین بدون فیلتر تاریخ INVOICE_AMOUNT_JOIN
+--      که خودش از قبل به‌عنوان ریسک Performance مستند بود) به محدودیت max_execute_time پلتفرم Teamyar
+--      می‌خورد و یک صفحهٔ خطای HTML سطح پلتفرم برمی‌گشت (نه خطای Lua — write_dashboard_error نمی‌توانست آن
+--      را ببیند). **طرح نهایی**: هر درخواست سرور فقط یک تب (تب فعال) را با build_channel_view محاسبه
+--      می‌کند — دقیقاً هم‌سنگین قبل از v04. سه تب دیگر با ۳ درخواست جداگانه سمت کلاینت (fetchChannelView/
+--      prefetchOtherChannels در REPORT_JS)، در پس‌زمینه و بعد از رندر تب فعال، پر می‌شوند — نه هم‌زمان در
+--      یک درخواست. نتیجه: بارگذاری اولیه سریع (مثل قبل)، و بعد از چند ثانیهٔ پس‌زمینه، سوییچ تب هم بدون
+--      Round-trip. اگر کاربر تبی را قبل از اتمام Prefetch کلیک کند، setActiveChannel یک Fallback ایمن
+--      (fetchChannelView فقط برای همان یک تب) دارد.
+--   ۳) رفع باگ «مشتری جدید»: MIN(RUN_DATE) قبلاً روی همان JOIN محدودشده به channel_extra محاسبه می‌شد —
+--      یعنی زیر تب B2B، «اولین فاکتور» یعنی «اولین فاکتور B2B»، نه واقعاً اولین فاکتور مشتری در کل
+--      Teamyar؛ مشتری چندسالهٔ B2C که امسال اولین‌بار B2B خریده، اشتباهاً «جدید» شمرده می‌شد. طبق اصلاح
+--      صریح کاربر («کل تاریخ تیم‌یار را در نظر بگیر، نه بازهٔ فیلترشده») رفع شد: اکنون یک Subquery همبستهٔ
+--      جدا (بدون channel_extra، بدون کران تاریخ) اولین فاکتور واقعی مشتری را در کل تاریخچه محاسبه می‌کند؛
+--      JOIN اصلی (که مبلغ/تعداد این بازه را جمع می‌زند) همچنان به بازه+دسته فعال محدود است.
+--   ۴) بهینه‌سازی Performance واقعی کوئری‌ها (طبق درخواست صریح کاربر): INVOICE_AMOUNT_JOIN/INVOICE_QUANTITY_JOIN
+--      (Subquery مشترک محاسبهٔ مبلغ/تعداد فاکتور، مصرف‌شده در ۹+۱ محل این فایل) اکنون داخل خودشان
+--      i2/i3.DELETED=0 AND CANCELED=0 AND PRE_INVOICE=0 را فیلتر می‌کنند. بدون‌ریسک — تک‌تک محل‌های مصرف
+--      بررسی شد (2026-08-23) و همه از قبل دقیقاً همین سه شرط را روی همان فاکتور (si) اعمال می‌کردند؛ این
+--      تغییر فقط ردیف‌های بی‌ربط (فاکتور حذف/کنسل/پیش‌فاکتور که در نتیجهٔ هیچ Query‌ای استفاده نمی‌شد) را
+--      زودتر از GROUP BY حذف می‌کند — نتیجهٔ نهایی هیچ Query‌ای عوض نشد. فیلتر تاریخ (ریسک بالاتر، نیاز به
+--      Threading پارامتر در هر محل مصرف) عمداً به بعد از تست زنده موکول شد (ر.ک. یادداشت بالای
+--      INVOICE_AMOUNT_JOIN).
+--   ۵) رفع باگ واقعی «بات باز نمی‌شود، در Loading گیر می‌کند» (کشف‌شده با دیباگ زندهٔ کاربر روی DevTools
+--      Network — نه حدس): تأیید شد که خروجی خودِ بات همیشه سریع/موفق برمی‌گشت (200، ~۶۰ms)، ولی پنل
+--      Teamyar خودش در یک Loop از فراخوانی مکرر Endpoint های داخلی‌اش (view/info/exist/acltypes/
+--      active_session) گیر می‌افتاد و صفحه هرگز «تمام‌شده» حساب نمی‌شد (تأیید شد با تست کنترل: بات دیگری
+--      از همان پنل مشکلی نداشت، یعنی خاص همین بات بود). علت یافت‌شده: بلوک <script> این بات بدون IIFE بود،
+--      یعنی ده‌ها var/function سطح بالای آن (DASH, STATE_MAP, CHANNEL_CACHE, ACTIVE_CHANNEL,
+--      applyDashboardUpdate, ...) مستقیم روی window (همان Scope سراسری صفحهٔ پنل) قرار می‌گرفتند — چون
+--      صفحهٔ بات داخل DOM خودِ پنل Render می‌شود (نه iframe مجزا)، این نام‌های سراسری با متغیر/تابع داخلی
+--      پنل (که چرخهٔ Loading/Session/ACL را مدیریت می‌کند) برخورد می‌کردند. رفع شد: کل REPORT_JS داخل یک
+--      IIFE پیچیده شد؛ فقط ۱۸ تابعی که HTML با onclick="..." صدا می‌زند (ذاتاً باید Global باشند) صریحاً
+--      روی window Export شدند، بقیه محبوس در Scope محلی ماندند.
 -- v02 با موفقیت روی بات ۶۰۴ دیپلوی و تأیید شد (بعد از رفع باگ escape_html — رشتهٔ Entity پیوستهٔ Literal
 -- هنگام ذخیرهٔ command توسط Teamyar بی‌صدا Decode می‌شد و کامپایل را می‌شکست؛ رفع شد با Concatenation،
 -- طبق قانون از قبل مستند در CLAUDE.md). طبق دستور کاربر، منطق سالم v02 در v03 دست‌نخورده ماند.
@@ -15,6 +60,25 @@
 --      Drill-down مشتری/فاکتور، فاکتورهای بدون نگاشت جغرافیایی) اکنون channel-aware هستند؛ شمارش صرف
 --      وجود مشتری در CRM (نه خریدش) عمداً مستقل از این تب ماند — چون خودِ مشتری ذاتاً B2B/B2C نیست، فقط
 --      خریدهای او دسته دارند (ر.ک. build_channel_clause برای توضیح فنی محل صحیح این شرط در هر Query).
+-- باگ v03 (پیدا و رفع شد قبل از v04): کلیک تب B2B/B2C گاهی خطای «Unexpected token '<'» می‌داد — علت
+--   Submit خودکار native فرم (GET) که هم‌زمان با fetch AJAX (POST) رقابت می‌کرد؛ رفع شد با استخراج منطق
+--   fetch به تابع مستقل submitFilterForm() که مستقیم صدا زده می‌شود، نه از طریق requestSubmit()/Event مصنوعی.
+-- تغییرات v04 (طبق درخواست صریح کاربر):
+--   ۱) کارت‌های KPI بالای صفحه اکنون واقعاً channel-aware هستند: fetch_crm_kpi اکنون filters می‌گیرد و از
+--      یک EXISTS subquery (بدون محدودیت تاریخ، چون خودِ مشتری ذاتاً B2B/B2C نیست) برای فیلتر تب استفاده می‌کند.
+--   ۲) فیلتر «تاریخ تا (شمسی)» اضافه شد (resolve_active_date_to_key + ورودی dateToInput)؛ همهٔ Query های
+--      فروش/Drill-down اکنون هم date_from_key و هم date_to_key می‌گیرند (بازهٔ [از, تا) به‌جای فقط [از, ∞)).
+--   ۳) کوئری «مجموع خرید بر اساس مرکز درآمد» (fetch_center_comparison) اضافه/بازبینی شد؛ نیاز به تأیید
+--      نهایی با داده زنده پس از دیپلوی دارد (ر.ک. یادداشت پایین تابع).
+--   ۴) بخش «۱۰ مشتری برتر» (fetch_top_customers) اکنون channel-aware است — با سوییچ تب B2B/B2C همان
+--      بخش، فهرست مشتریان همان کانال را نشان می‌دهد (به‌جای دو بخش جدا برای B2B/B2C).
+--   ۵) بخش «مقایسهٔ مراکز درآمد» (fetch_center_comparison/render_center_comparison_rows) فقط در تب «همه»
+--      نمایش داده می‌شود (show_center_comparison)، چون در تب B2B/B2C خودِ مقایسه بی‌معنی است.
+--   ۶) بخش «مشتریان جدید در این بازه» (fetch_new_customers_stats): تعداد + مجموع مبلغ خرید + مجموع تعداد
+--      اقلام (بر اساس اولین فاکتور مشتری که در بازهٔ فعال افتاده)، در هر تب نمایش داده می‌شود.
+--   نکتهٔ v04 (پیاده‌سازی/اصلاح‌شده در v04.1، ر.ک. Changelog بالا): Preload سه تب غیرفعال اکنون با
+--      درخواست‌های جداگانهٔ پس‌زمینه سمت کلاینت انجام می‌شود، نه در یک درخواست سرور واحد (که به Timeout
+--      می‌خورد).
 
 -- داشبورد مدیریتی توزیع جغرافیایی مشتریان CRM و فروش (استان/شهر) — بر پایهٔ دادهٔ زندهٔ
 -- crm_info / profile_main / profile_user_address / pa_client / sales_invoice / report_dimdate.
@@ -225,6 +289,30 @@ local function resolve_active_date_from_key(input)
     return fy_key, fy_jndate
 end
 
+-- بازهٔ تاریخ اکنون دو‌سر است (طبق درخواست کاربر: «تاریخ از داره تا نداره») — کران بالا Exclusive است
+-- (RUN_DATE < date_to_key) تا روز date_to کامل شامل شود؛ محاسبهٔ «DATEKEY + یک روز» همیشه در SQL انجام
+-- می‌شود (نه Lua) چون FILETIME از دقت صحیح double عبور می‌کند. پیش‌فرض بدون ورودی: تا پایان امروز.
+local function resolve_active_date_to_key(input)
+    local date_to_text = input["date_to"]
+    if date_to_text == "" then date_to_text = nil end
+    if date_to_text ~= nil then
+        local text = tostring(date_to_text):gsub("^%s+", ""):gsub("%s+$", "")
+        if text:match("^%d%d%d%d/%d%d?/%d%d?$") then
+            local rows = fetch_rows(
+                "SELECT (DATEKEY + " .. CONFIG.DAY_TICKS .. ") FROM report_dimdate WHERE JNDATE = ? LIMIT 1",
+                { text })
+            if rows ~= nil and #rows > 0 then return rows[1][1], text end
+        end
+    end
+    local now_raw = fetch_now_raw()
+    if now_raw == nil then return nil, nil end
+    local rows = fetch_rows(
+        "SELECT (DATEKEY + " .. CONFIG.DAY_TICKS .. "), JNDATE FROM report_dimdate WHERE DATEKEY = (? - MOD(?, " .. CONFIG.DAY_TICKS .. ")) LIMIT 1",
+        { now_raw, now_raw })
+    if rows == nil or #rows == 0 then return nil, nil end
+    return rows[1][1], rows[1][2]
+end
+
 -- ============================================================
 -- INPUT / FILTER PARSING
 -- ============================================================
@@ -238,6 +326,8 @@ local function parse_filters(input)
     local user_type = tonumber(input["user_type"])
     local date_from_text = input["date_from"]
     if date_from_text == "" then date_from_text = nil end
+    local date_to_text = input["date_to"]
+    if date_to_text == "" then date_to_text = nil end
     -- دستهٔ کسب‌وکار (v03): "b2b" | "b2c" | "other" | nil (= همه)
     local channel = input["channel"]
     if channel ~= "b2b" and channel ~= "b2c" and channel ~= "other" then channel = nil end
@@ -246,6 +336,7 @@ local function parse_filters(input)
         city = city,
         user_type = user_type,
         date_from_text = date_from_text,
+        date_to_text = date_to_text,
         channel = channel,
     }
 end
@@ -260,9 +351,19 @@ end
 -- - DISCOUNT + VALUE_ADDED + TAX/۱۰^رقم‌اعشار + TOLL/۱۰^رقم‌اعشار — با علامت منفی برای TYPE=3 (برگشت از فروش).
 -- توجه Performance: این Subquery روی کل sales_invoice_product (بدون فیلتر تاریخ) SUM می‌گیرد — چون GROUP BY
 -- دارد، MySQL معمولاً آن را قبل از JOIN با si کامل می‌سازد (Derived Table Merge برای Query های Aggregate
--- تضمین‌شده نیست). قبل از اجرای زنده روی محیط Production، زمان اجرا را بررسی کنید؛ اگر کند بود، Index روی
--- sales_invoice_product(INVOICE_ID) (احتمالاً به‌عنوان FK از قبل موجود است) را تأیید کنید — بدون اجازهٔ کاربر
--- Index جدید ساخته نشود.
+-- تضمین‌شده نیست). **بهینه‌سازی v04.1 (بدون‌ریسک)**: فیلتر i2.DELETED/CANCELED/PRE_INVOICE داخل خودِ
+-- Subquery (پایین‌تر) اضافه شد — هر ۹ محل مصرف این Join در این فایل از قبل دقیقاً همین سه شرط را روی همان
+-- فاکتور (si، هم‌ارز i2 چون ia.invoice_id = si.ID) اعمال می‌کنند؛ بررسی‌شده (2026-08-23)، هیچ محل مصرفی
+-- بدون این فیلتر روی si نیست. پس این تغییر هیچ نتیجهٔ نهایی را عوض نمی‌کند، فقط فاکتورهای بی‌ربط
+-- (حذف‌شده/کنسل‌شده/پیش‌فاکتور) را زودتر از GROUP BY کنار می‌گذارد. **مهم — این توضیح عمداً بیرون از
+-- رشتهٔ [[...]] نوشته شده، نه داخل خودِ متن SQL**: قرار دادن کامنت‌های طولانی فارسی داخل رشتهٔ SQL واقعی
+-- (که مستقیماً به db.query می‌رود) ریسک غیرضروری است — طبق سابقهٔ مستند این پروژه در CLAUDE.md، متن‌های
+-- غیرمعمول گاهی حین ذخیرهٔ command توسط Teamyar به‌طور غیرمنتظره Mangle می‌شوند؛ کامنت SQL تنها اگر واقعاً
+-- لازم باشد باید کوتاه و ساده (`-- text`) بماند، نه یک بلوک چندخطی مستندسازی.
+-- فیلتر تاریخ هنوز عمداً اضافه نشد (نیاز به Threading پارامتر در هر ۹ محل مصرف دارد، ریسک بالاتر بدون تست
+-- زنده). قبل از اجرای زنده روی محیط Production، زمان اجرا را با/بدون این بهینه‌سازی مقایسه کنید؛ اگر هنوز
+-- کند بود، گام بعدی افزودن فیلتر تاریخ (i2.RUN_DATE) یا Index روی sales_invoice_product(INVOICE_ID)
+-- (احتمالاً به‌عنوان FK از قبل موجود است) — بدون اجازهٔ کاربر Index جدید ساخته نشود.
 local INVOICE_AMOUNT_JOIN = [[
 LEFT JOIN (
     SELECT
@@ -287,36 +388,34 @@ LEFT JOIN (
         FROM pa_organizations po
         INNER JOIN pa_symbols ps ON ps.ID = po.BASE_CURRENCY AND ps.ORG_ID = po.ORG_ID
     ) dd ON dd.ORG_ID = i2.ORG_ID
+    WHERE i2.DELETED = 0 AND i2.CANCELED = 0 AND i2.PRE_INVOICE = 0
     GROUP BY ip.INVOICE_ID
 ) ia ON ia.invoice_id = si.ID
+]]
+
+-- تعداد خالص اقلام کالای خریداری‌شده (برای KPI «مشتریان جدید»، v04) — همان قرارداد علامت TYPE=3
+-- (برگشت از فروش با علامت منفی) و همان نرمال‌سازی اعشار انبار (wh_stock_capacity.DECIMAL_NUM) که در
+-- INVOICE_AMOUNT_JOIN استفاده شده، برای هم‌خوانی؛ این تفسیر (SUM تعداد واحد، نه COUNT ردیف کالا) تأییدشدهٔ
+-- کاربر نیست، فرض معقول است — بعد از دیپلوی روی داده واقعی سنجیده شود.
+-- همان بهینه‌سازی بدون‌ریسک INVOICE_AMOUNT_JOIN (ر.ک. یادداشت آنجا برای توضیح کامل) — تنها محل مصرف این
+-- Join (fetch_new_customers_stats) از قبل si.DELETED=0/CANCELED=0/PRE_INVOICE=0 را روی همان فاکتور دارد.
+local INVOICE_QUANTITY_JOIN = [[
+LEFT JOIN (
+    SELECT
+        ip.INVOICE_ID AS invoice_id,
+        SUM((CASE WHEN i3.TYPE = 3 THEN -1 ELSE 1 END) * COALESCE(ip.QUANTITY / POW(10, COALESCE(sc3.DECIMAL_NUM, 0)), 0)) AS qty
+    FROM sales_invoice_product ip
+    INNER JOIN sales_invoice i3 ON i3.ID = ip.INVOICE_ID
+    LEFT JOIN wh_product wp3 ON wp3.ID = ip.PRODUCT_ID
+    LEFT JOIN wh_stock_capacity sc3 ON sc3.ID = wp3.CAPACITY_ID
+    WHERE i3.DELETED = 0 AND i3.CANCELED = 0 AND i3.PRE_INVOICE = 0
+    GROUP BY ip.INVOICE_ID
+) iq ON iq.invoice_id = si.ID
 ]]
 
 -- ============================================================
 -- EXECUTIVE KPI QUERIES
 -- ============================================================
-
--- سمت CRM/مشتری — بدون بازهٔ تاریخ (مستقل از فروش)
-local function fetch_crm_kpi()
-    local rows, err = fetch_rows([[
-SELECT
-    COUNT(DISTINCT ci.ID) AS total_crm_customers,
-    COUNT(DISTINCT CASE WHEN addr.STATE IS NOT NULL AND addr.STATE <> '' THEN addr.STATE END) AS states_with_customers,
-    COUNT(DISTINCT CASE WHEN addr.CITY IS NOT NULL AND addr.CITY <> '' THEN addr.CITY END) AS cities_with_customers,
-    SUM(CASE WHEN addr.USER_ID IS NULL OR addr.STATE IS NULL OR addr.STATE = '' THEN 1 ELSE 0 END) AS customers_without_state,
-    SUM(CASE WHEN addr.USER_ID IS NULL OR addr.CITY IS NULL OR addr.CITY = '' THEN 1 ELSE 0 END) AS customers_without_city
-FROM crm_info ci
-LEFT JOIN profile_user_address addr ON addr.USER_ID = ci.ID AND addr.TYPE = ]] .. CONFIG.ADDRESS_TYPE_PRIMARY .. [[
-]], {})
-    if rows == nil or #rows == 0 then return nil, err end
-    local r = rows[1]
-    return {
-        total_crm_customers = tonumber(r[1]) or 0,
-        states_with_customers = tonumber(r[2]) or 0,
-        cities_with_customers = tonumber(r[3]) or 0,
-        customers_without_state = tonumber(r[4]) or 0,
-        customers_without_city = tonumber(r[5]) or 0,
-    }
-end
 
 -- سمت فروش — پارامتری با بازهٔ تاریخ + فیلتر استان/شهر/نوع مشتری اختیاری
 local function build_sales_filter_clause(filters)
@@ -366,11 +465,161 @@ local function build_channel_clause(filters)
     return extra, {}
 end
 
-local function fetch_sales_kpi(date_from_key, filters)
+-- سمت CRM/مشتری — بدون بازهٔ تاریخ (تاریخچهٔ کامل)، ولی channel-aware (v04، طبق درخواست کاربر: کارت‌های
+-- هدر باید با تغییر تب واقعاً تغییر کنند). وقتی دسته‌ای انتخاب شده، «تعداد کل مشتریان CRM» یعنی «مشتریانی
+-- که حداقل یک فاکتور معتبر در این دسته دارند» — عمداً بدون کران تاریخ (کل تاریخچه، نه فقط بازهٔ فعال) تا
+-- با «تعداد مشتریان خریدار» (که هم دسته و هم بازهٔ تاریخ را لحاظ می‌کند) یک مفهوم جدا و معنادار بماند، نه
+-- عدد تکراری. customers_without_state/city هم به همین ترتیب در دستهٔ انتخاب‌شده محاسبه می‌شوند.
+local function fetch_crm_kpi(filters)
+    local channel_extra = ""
+    if filters ~= nil and filters.channel ~= nil then
+        local inner_extra = build_channel_clause(filters)
+        channel_extra = [[
+WHERE EXISTS (
+    SELECT 1 FROM pa_client pc
+    INNER JOIN sales_invoice si ON si.CLIENT_ID = pc.ID AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0]] .. inner_extra .. [[
+
+    WHERE pc.REFFERE_ID = ci.ID
+)
+]]
+    end
+    local rows, err = fetch_rows([[
+SELECT
+    COUNT(DISTINCT ci.ID) AS total_crm_customers,
+    COUNT(DISTINCT CASE WHEN addr.STATE IS NOT NULL AND addr.STATE <> '' THEN addr.STATE END) AS states_with_customers,
+    COUNT(DISTINCT CASE WHEN addr.CITY IS NOT NULL AND addr.CITY <> '' THEN addr.CITY END) AS cities_with_customers,
+    SUM(CASE WHEN addr.USER_ID IS NULL OR addr.STATE IS NULL OR addr.STATE = '' THEN 1 ELSE 0 END) AS customers_without_state,
+    SUM(CASE WHEN addr.USER_ID IS NULL OR addr.CITY IS NULL OR addr.CITY = '' THEN 1 ELSE 0 END) AS customers_without_city
+FROM crm_info ci
+LEFT JOIN profile_user_address addr ON addr.USER_ID = ci.ID AND addr.TYPE = ]] .. CONFIG.ADDRESS_TYPE_PRIMARY .. [[
+
+]] .. channel_extra .. [[
+]], {})
+    if rows == nil or #rows == 0 then return nil, err end
+    local r = rows[1]
+    return {
+        total_crm_customers = tonumber(r[1]) or 0,
+        states_with_customers = tonumber(r[2]) or 0,
+        cities_with_customers = tonumber(r[3]) or 0,
+        customers_without_state = tonumber(r[4]) or 0,
+        customers_without_city = tonumber(r[5]) or 0,
+    }
+end
+
+-- ۱۰ مشتری برتر (بر اساس مبلغ خرید) در بازهٔ تاریخ + دستهٔ فعال — طبق درخواست کاربر v04، هر تب فهرست
+-- برتر خودش را نشان می‌دهد (B2B/B2C جدا). city-independent — کل کشور، نه محدود به یک شهر خاص.
+local function fetch_top_customers(date_from_key, date_to_key, filters, limit)
+    local channel_extra = build_channel_clause(filters or {})
+    local rows, err = fetch_rows([[
+SELECT
+    ci.ID, pm.FULLNAME, addr.STATE, addr.CITY,
+    COUNT(si.ID) AS invoice_count,
+    COALESCE(SUM(ia.amount), 0) AS total_purchase_amount
+FROM crm_info ci
+INNER JOIN profile_main pm ON pm.ID = ci.ID
+LEFT JOIN profile_user_address addr ON addr.USER_ID = ci.ID AND addr.TYPE = ]] .. CONFIG.ADDRESS_TYPE_PRIMARY .. [[
+
+INNER JOIN pa_client pc ON pc.REFFERE_ID = ci.ID
+INNER JOIN sales_invoice si ON si.CLIENT_ID = pc.ID AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
+  AND si.RUN_DATE >= ? AND si.RUN_DATE < ?]] .. channel_extra .. [[
+
+]] .. INVOICE_AMOUNT_JOIN .. [[
+GROUP BY ci.ID, pm.FULLNAME, addr.STATE, addr.CITY
+ORDER BY total_purchase_amount DESC
+LIMIT ?
+]], { date_from_key, date_to_key, limit })
+    if rows == nil then return nil, err end
+    local list = {}
+    for _, r in ipairs(rows) do
+        table.insert(list, {
+            crm_id = r[1], customer_name = r[2], state_name = r[3], city_name = r[4],
+            invoice_count = tonumber(r[5]) or 0, total_purchase_amount = tonumber(r[6]) or 0,
+        })
+    end
+    return list
+end
+
+-- مقایسهٔ تعداد فاکتور/مبلغ/تعداد مشتری بر اساس مرکز درآمد خام (نه فقط دستهٔ B2B/B2C جمع‌شده) — طبق
+-- درخواست کاربر v04، فقط در تب «همه» نمایش داده می‌شود؛ عمداً مستقل از فیلتر channel است (خودش این تفکیک
+-- را کامل‌تر نشان می‌دهد).
+local function fetch_center_comparison(date_from_key, date_to_key)
+    local rows, err = fetch_rows([[
+SELECT
+    COALESCE(ctr.NAME, 'نامشخص') AS center_name,
+    COUNT(si.ID) AS invoice_count,
+    COUNT(DISTINCT ci.ID) AS customer_count,
+    COALESCE(SUM(ia.amount), 0) AS total_amount
+FROM sales_invoice si
+INNER JOIN pa_client pc ON pc.ID = si.CLIENT_ID
+INNER JOIN crm_info ci ON ci.ID = pc.REFFERE_ID
+LEFT JOIN pa_center ctr ON ctr.ID = si.SALES_CENTER
+]] .. INVOICE_AMOUNT_JOIN .. [[
+WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
+  AND si.RUN_DATE >= ? AND si.RUN_DATE < ?
+GROUP BY ctr.NAME
+ORDER BY total_amount DESC
+]], { date_from_key, date_to_key })
+    if rows == nil then return nil, err end
+    local list = {}
+    for _, r in ipairs(rows) do
+        table.insert(list, {
+            center_name = r[1], invoice_count = tonumber(r[2]) or 0,
+            customer_count = tonumber(r[3]) or 0, total_amount = tonumber(r[4]) or 0,
+        })
+    end
+    return list
+end
+
+-- مشتریان «جدید»: کسانی که اولین فاکتور معتبرشان در کل تاریخچهٔ تیم‌یار (همهٔ مراکز درآمد/دسته‌ها، بدون هیچ
+-- کران زمانی یا فیلتر channel — طبق اصلاح صریح کاربر v04: «کل تاریخ تیم‌یار را در نظر بگیر نه بازهٔ فیلترشده»)
+-- داخل بازهٔ تاریخ فعال افتاده. باگ نسخهٔ قبلی: MIN(si.RUN_DATE) روی همان JOIN محدودشده به channel_extra
+-- محاسبه می‌شد — یعنی وقتی تب B2B فعال بود، «اولین فاکتور» یعنی «اولین فاکتور B2B»، نه واقعاً اولین فاکتور
+-- مشتری در کل Teamyar؛ مشتری‌ای که سال‌ها مشتری B2C بوده و امسال اولین‌بار از B2B خرید کرده، اشتباهاً
+-- «جدید» شمرده می‌شد. رفع شد: تاریخ اولین فاکتور واقعی با Subquery همبستهٔ جداگانه (بدون channel_extra و
+-- بدون کران تاریخ) محاسبه می‌شود؛ JOIN اصلی (که مبلغ/تعداد این بازه را جمع می‌زند) همچنان به بازه+دسته
+-- فعال محدود است — هم برای معنای صحیح «خرید این تب در این بازه» و هم برای Performance (فیلتر RUN_DATE در
+-- شرط JOIN اعمال می‌شود، نه با CASE WHEN بعد از Join کل تاریخچه).
+local function fetch_new_customers_stats(date_from_key, date_to_key, filters)
+    local channel_extra = build_channel_clause(filters or {})
+    local rows, err = fetch_rows([[
+SELECT COUNT(*), COALESCE(SUM(t.window_amount), 0), COALESCE(SUM(t.window_qty), 0)
+FROM (
+    SELECT
+        ci.ID AS crm_id,
+        (
+            SELECT MIN(si_all.RUN_DATE)
+            FROM sales_invoice si_all
+            INNER JOIN pa_client pc_all ON pc_all.ID = si_all.CLIENT_ID
+            WHERE pc_all.REFFERE_ID = ci.ID
+              AND si_all.DELETED = 0 AND si_all.CANCELED = 0 AND si_all.PRE_INVOICE = 0
+        ) AS global_first_run_date,
+        COALESCE(SUM(ia.amount), 0) AS window_amount,
+        COALESCE(SUM(iq.qty), 0) AS window_qty
+    FROM crm_info ci
+    INNER JOIN pa_client pc ON pc.REFFERE_ID = ci.ID
+    INNER JOIN sales_invoice si ON si.CLIENT_ID = pc.ID AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
+      AND si.RUN_DATE >= ? AND si.RUN_DATE < ?]] .. channel_extra .. [[
+
+    ]] .. INVOICE_AMOUNT_JOIN .. [[
+    ]] .. INVOICE_QUANTITY_JOIN .. [[
+    GROUP BY ci.ID
+) t
+WHERE t.global_first_run_date >= ? AND t.global_first_run_date < ?
+]], { date_from_key, date_to_key, date_from_key, date_to_key })
+    if rows == nil or #rows == 0 then return nil, err end
+    local r = rows[1]
+    return {
+        new_customer_count = tonumber(r[1]) or 0,
+        new_customer_amount = tonumber(r[2]) or 0,
+        new_customer_qty = tonumber(r[3]) or 0,
+    }
+end
+
+local function fetch_sales_kpi(date_from_key, date_to_key, filters)
     local extra, extra_params = build_sales_filter_clause(filters)
     local channel_extra, channel_params = build_channel_clause(filters)
     extra = extra .. channel_extra -- sales_invoice پایهٔ اصلی FROM است، پس افزودن به WHERE درست است
-    local params = { date_from_key }
+    local params = { date_from_key, date_to_key }
     for _, p in ipairs(extra_params) do table.insert(params, p) end
     for _, p in ipairs(channel_params) do table.insert(params, p) end
 
@@ -390,7 +639,7 @@ LEFT JOIN profile_user_address addr ON addr.USER_ID = pc.REFFERE_ID AND addr.TYP
 LEFT JOIN profile_user_info ui ON ui.ID = pc.REFFERE_ID
 ]] .. INVOICE_AMOUNT_JOIN .. [[
 WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-  AND si.RUN_DATE >= ?]] .. extra .. [[
+  AND si.RUN_DATE >= ? AND si.RUN_DATE < ?]] .. extra .. [[
 ]], params)
     if rows == nil or #rows == 0 then return nil, err end
     local r = rows[1]
@@ -408,10 +657,10 @@ end
 -- STATE / CITY AGGREGATION
 -- ============================================================
 
-local function fetch_state_aggregation(date_from_key, filters)
+local function fetch_state_aggregation(date_from_key, date_to_key, filters)
     local extra, extra_params = build_sales_filter_clause(filters)
     local channel_extra, channel_params = build_channel_clause(filters)
-    local params = { date_from_key }
+    local params = { date_from_key, date_to_key }
     for _, p in ipairs(channel_params) do table.insert(params, p) end
     for _, p in ipairs(extra_params) do table.insert(params, p) end
 
@@ -431,7 +680,7 @@ LEFT JOIN profile_user_info ui ON ui.ID = ci.ID
 LEFT JOIN pa_client pc ON pc.REFFERE_ID = ci.ID
 LEFT JOIN sales_invoice si
        ON si.CLIENT_ID = pc.ID AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-      AND si.RUN_DATE >= ?]] .. channel_extra .. [[
+      AND si.RUN_DATE >= ? AND si.RUN_DATE < ?]] .. channel_extra .. [[
 
 ]] .. INVOICE_AMOUNT_JOIN .. [[
 WHERE addr.STATE IS NOT NULL AND addr.STATE <> ''
@@ -456,10 +705,10 @@ ORDER BY total_sales_amount DESC
     return list
 end
 
-local function fetch_city_aggregation(date_from_key, filters)
+local function fetch_city_aggregation(date_from_key, date_to_key, filters)
     local extra, extra_params = build_sales_filter_clause(filters)
     local channel_extra, channel_params = build_channel_clause(filters)
-    local params = { date_from_key }
+    local params = { date_from_key, date_to_key }
     for _, p in ipairs(channel_params) do table.insert(params, p) end
     for _, p in ipairs(extra_params) do table.insert(params, p) end
 
@@ -478,7 +727,7 @@ LEFT JOIN profile_user_info ui ON ui.ID = ci.ID
 LEFT JOIN pa_client pc ON pc.REFFERE_ID = ci.ID
 LEFT JOIN sales_invoice si
        ON si.CLIENT_ID = pc.ID AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-      AND si.RUN_DATE >= ?]] .. channel_extra .. [[
+      AND si.RUN_DATE >= ? AND si.RUN_DATE < ?]] .. channel_extra .. [[
 
 ]] .. INVOICE_AMOUNT_JOIN .. [[
 WHERE addr.STATE IS NOT NULL AND addr.STATE <> '' AND addr.CITY IS NOT NULL AND addr.CITY <> ''
@@ -527,10 +776,10 @@ end
 
 -- توجه (طبق درخواست کاربر): مبلغ/تعداد فاکتور هر مشتری اینجا باید با همان بازهٔ تاریخ فعال Dashboard
 -- (پیش‌فرض سال مالی جاری، مشابه محاسبهٔ Monetary در بات ۶۰۰) محاسبه شود، نه کل تاریخچه.
-local function fetch_customers(state, city, filters, date_from_key, limit, offset)
+local function fetch_customers(state, city, filters, date_from_key, date_to_key, limit, offset)
     local extra = ""
     local channel_extra, channel_params = build_channel_clause(filters)
-    local params = { date_from_key }
+    local params = { date_from_key, date_to_key }
     for _, p in ipairs(channel_params) do table.insert(params, p) end
     table.insert(params, state)
     table.insert(params, city)
@@ -563,7 +812,7 @@ FROM (
     LEFT JOIN pa_client pc ON pc.REFFERE_ID = ci.ID
     LEFT JOIN sales_invoice si
            ON si.CLIENT_ID = pc.ID AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-          AND si.RUN_DATE >= ?]] .. channel_extra .. [[
+          AND si.RUN_DATE >= ? AND si.RUN_DATE < ?]] .. channel_extra .. [[
 
     ]] .. INVOICE_AMOUNT_JOIN .. [[
     WHERE addr.STATE = ? AND addr.CITY = ?]] .. extra .. [[
@@ -593,9 +842,9 @@ end
 
 -- توجه: همان بازهٔ تاریخ فعال (fetch_customers) اینجا هم اعمال می‌شود تا جمع این فهرست دقیقاً با
 -- «مبلغ کل خرید» نمایش‌داده‌شده در ردیف مشتری (که با همین فیلتر محاسبه شده) یکی باشد.
-local function fetch_invoices(crm_id, date_from_key, filters)
+local function fetch_invoices(crm_id, date_from_key, date_to_key, filters)
     local channel_extra, channel_params = build_channel_clause(filters or {})
-    local params = { crm_id, date_from_key }
+    local params = { crm_id, date_from_key, date_to_key }
     for _, p in ipairs(channel_params) do table.insert(params, p) end
     local rows, err = fetch_rows([[
 SELECT
@@ -609,7 +858,7 @@ LEFT JOIN report_dimdate rd ON rd.DATEKEY = (si.RUN_DATE - MOD(si.RUN_DATE, ]] .
 ]] .. INVOICE_AMOUNT_JOIN .. [[
 WHERE pc.REFFERE_ID = ?
   AND si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-  AND si.RUN_DATE >= ?]] .. channel_extra .. [[
+  AND si.RUN_DATE >= ? AND si.RUN_DATE < ?]] .. channel_extra .. [[
 
 ORDER BY si.RUN_DATE DESC
 ]], params)
@@ -680,9 +929,9 @@ end
 
 -- توجه: با همان بازهٔ تاریخ فعال فیلتر می‌شود تا مجموع این فهرست دقیقاً با KPI «فاکتورهای بدون
 -- نگاشت جغرافیایی» (که خودش با همین date_from_key محاسبه می‌شود) یکی باشد.
-local function fetch_invoices_missing_geo_count(date_from_key, filters)
+local function fetch_invoices_missing_geo_count(date_from_key, date_to_key, filters)
     local channel_extra, channel_params = build_channel_clause(filters or {})
-    local params = { date_from_key }
+    local params = { date_from_key, date_to_key }
     for _, p in ipairs(channel_params) do table.insert(params, p) end
     local rows, err = fetch_rows([[
 SELECT COUNT(si.ID)
@@ -691,7 +940,7 @@ INNER JOIN pa_client pc ON pc.ID = si.CLIENT_ID
 LEFT JOIN profile_user_address addr ON addr.USER_ID = pc.REFFERE_ID AND addr.TYPE = ]] .. CONFIG.ADDRESS_TYPE_PRIMARY .. [[
 
 WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-  AND si.RUN_DATE >= ?]] .. channel_extra .. [[
+  AND si.RUN_DATE >= ? AND si.RUN_DATE < ?]] .. channel_extra .. [[
 
   AND (addr.USER_ID IS NULL OR addr.STATE IS NULL OR addr.STATE = '' OR addr.CITY IS NULL OR addr.CITY = '')
 ]], params)
@@ -699,9 +948,9 @@ WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
     return tonumber(rows[1][1]) or 0
 end
 
-local function fetch_invoices_missing_geo(date_from_key, filters, limit, offset)
+local function fetch_invoices_missing_geo(date_from_key, date_to_key, filters, limit, offset)
     local channel_extra, channel_params = build_channel_clause(filters or {})
-    local params = { date_from_key }
+    local params = { date_from_key, date_to_key }
     for _, p in ipairs(channel_params) do table.insert(params, p) end
     table.insert(params, limit)
     table.insert(params, offset)
@@ -716,7 +965,7 @@ LEFT JOIN profile_user_address addr ON addr.USER_ID = pc.REFFERE_ID AND addr.TYP
 LEFT JOIN report_dimdate rd ON rd.DATEKEY = (si.RUN_DATE - MOD(si.RUN_DATE, ]] .. CONFIG.DAY_TICKS .. [[))
 ]] .. INVOICE_AMOUNT_JOIN .. [[
 WHERE si.DELETED = 0 AND si.CANCELED = 0 AND si.PRE_INVOICE = 0
-  AND si.RUN_DATE >= ?]] .. channel_extra .. [[
+  AND si.RUN_DATE >= ? AND si.RUN_DATE < ?]] .. channel_extra .. [[
 
   AND (addr.USER_ID IS NULL OR addr.STATE IS NULL OR addr.STATE = '' OR addr.CITY IS NULL OR addr.CITY = '')
 ORDER BY si.RUN_DATE DESC
@@ -993,6 +1242,45 @@ local function render_data_quality_cards(crm_kpi, sales_kpi)
     return table.concat(html)
 end
 
+-- کارت‌های «مشتریان جدید» (v04) — تعداد مشتریانی که اولین فاکتورشان در این بازه/دسته افتاده + مجموع خرید و اقلام آن‌ها
+local function render_new_customers_cards(stats)
+    if stats == nil then return "" end
+    local html = {}
+    local function card(label, value)
+        table.insert(html, '<div class="kpi-card"><div class="label">' .. escape_html(label) ..
+            '</div><div class="value">' .. value .. '</div></div>')
+    end
+    card("مشتریان جدید در این بازه", fmt_num(stats.new_customer_count))
+    card("مجموع خرید مشتریان جدید", fmt_num(stats.new_customer_amount) .. " ریال")
+    card("تعداد اقلام خریداری‌شده (جدید)", fmt_num(stats.new_customer_qty))
+    return table.concat(html)
+end
+
+-- جدول ۱۰ مشتری برتر (v04) — هر تب دستهٔ خودش را نشان می‌دهد
+local function render_top_customers_rows(list)
+    local html = {}
+    for i, c in ipairs(list) do
+        table.insert(html, '<tr class="clickable" data-crmid="' .. c.crm_id .. '" onclick="openInvoiceDrill(' .. c.crm_id .. ')"><td>' ..
+            i .. '</td><td>' .. escape_html(c.customer_name) .. '</td><td>' .. escape_html(safe_str(c.state_name, "—")) ..
+            '</td><td>' .. escape_html(safe_str(c.city_name, "—")) .. '</td><td>' .. fmt_num(c.invoice_count) .. '</td><td>' ..
+            fmt_num(c.total_purchase_amount) .. '</td></tr>')
+    end
+    return table.concat(html)
+end
+
+-- جدول مقایسهٔ مراکز درآمد خام (v04) — فقط در تب «همه»
+local function render_center_comparison_rows(list)
+    local html = {}
+    local total = 0
+    for _, c in ipairs(list) do total = total + c.total_amount end
+    for _, c in ipairs(list) do
+        table.insert(html, '<tr><td>' .. escape_html(c.center_name) .. '</td><td>' .. fmt_num(c.invoice_count) ..
+            '</td><td>' .. fmt_num(c.customer_count) .. '</td><td>' .. fmt_num(c.total_amount) .. '</td><td>' ..
+            fmt_dec1(fmt_pct(c.total_amount, total)) .. '٪</td></tr>')
+    end
+    return table.concat(html)
+end
+
 local function render_minmax_cards(mm)
     if mm == nil then return "" end
     local html = {}
@@ -1071,13 +1359,15 @@ local function render_channel_tabs(filters)
     return table.concat(html)
 end
 
-local function render_filter_bar(filters, default_date_from, state_options, user_type_options)
+local function render_filter_bar(filters, default_date_from, default_date_to, state_options, user_type_options)
     local html = {}
     table.insert(html, '<form id="filterForm" class="filter-bar">')
     table.insert(html, '<input type="hidden" name="channel" id="channelInput" value="' .. escape_html(filters.channel or "") .. '">')
     table.insert(html, render_channel_tabs(filters))
     table.insert(html, '<div class="filter-field"><label>تاریخ از (شمسی)</label><input type="text" name="date_from" id="dateFromInput" placeholder="1405/01/01" value="' ..
         escape_html(filters.date_from_text or default_date_from) .. '"></div>')
+    table.insert(html, '<div class="filter-field"><label>تاریخ تا (شمسی)</label><input type="text" name="date_to" id="dateToInput" placeholder="' ..
+        escape_html(default_date_to) .. '" value="' .. escape_html(filters.date_to_text or "") .. '"></div>')
     table.insert(html, '<div class="filter-field"><label>استان</label><select name="state" id="stateFilterInput"><option value="">همه استان‌ها</option>')
     for _, st in ipairs(state_options) do
         local sel = (filters.state == st) and ' selected' or ''
@@ -1115,14 +1405,42 @@ local function render_error_html(message)
         '</div>\n</body>\n</html>'
 end
 
+-- رفع باگ v04 (طبق گزارش زندهٔ کاربر: «فیلتر می‌زنم ارور JSON می‌دهد»): بخش «Dashboard اصلی» هم برای
+-- بار اول صفحه (HTML کامل) و هم برای Refresh با AJAX (format=json، هنگام تغییر فیلتر/تب) استفاده می‌شود؛
+-- ولی همهٔ مسیرهای خطای آن قبلاً همیشه HTML برمی‌گرداندند (render_error_html)، حتی وقتی خودِ کلاینت
+-- format=json خواسته بود — یعنی هر خطای واقعی SQL (که پیام فارسی دقیق داشت) به‌جای JSON قابل‌Parse به
+-- شکل یک صفحهٔ HTML به دست fetch().then(res.json()) می‌رسید و خطای عمومی و بی‌فایدهٔ مرورگر
+-- «Unexpected token '<'» را ایجاد می‌کرد — پیام واقعی خطا هرگز به کاربر/کنسول نمی‌رسید. این تابع جایگزین
+-- همهٔ فراخوانی‌های render_error_html داخل بخش Dashboard اصلی شد تا خروجی همیشه با نوع درخواست‌شده یکی باشد.
+local function write_dashboard_error(input, message)
+    if input ~= nil and input["format"] == "json" then
+        teamyar.write_result(json.encode({ ok = false, error = message }))
+    else
+        teamyar.write_result(render_error_html(message))
+    end
+end
+
 -- ============================================================
 -- JS
 -- ============================================================
 
+-- رفع باگ v04.1 (کشف‌شده حین دیباگ زندهٔ کاربر — بات ۶۰۴ در پنل بی‌نهایت «Loading» می‌ماند و پنل Teamyar
+-- خودش را در یک Loop از فراخوانی مکرر Endpoint های داخلی‌اش (view/info/exist/acltypes/active_session)
+-- گیر می‌انداخت، بدون هیچ خطای مشخص سمت بات؛ با DevTools Network تأیید شد که خروجی خودِ بات همیشه سریع و
+-- 200 برمی‌گشت — یعنی مشکل از کوئری‌های DB نبود). این بلوک اسکریپت قبلاً بدون IIFE بود، یعنی هر var/function
+-- سطح بالای آن (DASH, STATE_MAP, CHANNEL_CACHE, ACTIVE_CHANNEL, setActiveChannel, applyDashboardUpdate, ...
+-- ده‌ها اسم دیگر) مستقیم روی window (Scope سراسری صفحه) قرار می‌گرفت. صفحهٔ ما داخل همان DOM پنل Teamyar
+-- Render می‌شود (نه یک iframe مجزا)، پس این نام‌های سراسری می‌توانستند با متغیر/تابع داخلی خودِ پنل Teamyar
+-- (که چرخهٔ Loading/Session/ACL را مدیریت می‌کند) تصادفی هم‌نام شوند و آن را بشکنند — دقیقاً هم‌خانواده با
+-- الگوی Namespace-Pollution که علت این‌طور Symptom های عجیب (نه خطای مستقیم، فقط یک Loop بی‌پایان در چیزی
+-- کاملاً بی‌ربط) است. رفع شد: کل اسکریپت داخل یک IIFE پیچیده شد تا هیچ نامی نشتی به window نداشته باشد؛ فقط
+-- توابعی که HTML این بات مستقیم با onclick="..." صدا می‌زند (این‌ها ذاتاً باید Global باشند چون Attribute
+-- inline در Global Scope اجرا می‌شود) صریحاً در انتهای اسکریپت روی window Export شده‌اند — ر.ک. لیست کامل
+-- window.X = X در همان‌جا.
 local REPORT_JS = [[
 <script>
+(function(){
 'use strict';
-
 function fmtNum(v){
   var n = Math.round(Number(v) || 0);
   var sign = n < 0 ? '-' : ''; n = Math.abs(n);
@@ -1140,17 +1458,32 @@ function getActiveDateFrom(){
   var v = el && el.value ? el.value.trim() : '';
   return v || (DASH && DASH.default_date_from) || '';
 }
+function getActiveDateTo(){
+  var el = document.getElementById('dateToInput');
+  var v = el && el.value ? el.value.trim() : '';
+  return v || (DASH && DASH.default_date_to) || '';
+}
 /* دستهٔ کسب‌وکار فعال (b2b/b2c/other/''=همه) — برای هماهنگی همهٔ Drill-down های Lazy با تب فعال. */
 function getActiveChannel(){
   var el = document.getElementById('channelInput');
   return el ? el.value : '';
 }
 function setActiveChannel(btn){
+  var channel = btn.getAttribute('data-channel');
   var el = document.getElementById('channelInput');
-  if (el) el.value = btn.getAttribute('data-channel');
+  if (el) el.value = channel;
   document.querySelectorAll('.channel-tab').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
-  submitFilterForm();
+  /* v04.1: اگر این تب قبلاً در پس‌زمینه Prefetch شده (prefetchOtherChannels)، سوییچ آنی و بدون fetch است.
+     اگر کاربر خیلی زود کلیک کرده (Prefetch هنوز تمام نشده)، فقط همین یک تب را می‌گیرد — نه هر ۴ تا. */
+  var cached = CHANNEL_CACHE && CHANNEL_CACHE[channel];
+  if (cached) {
+    applyDashboardUpdate(cached);
+    return;
+  }
+  fetchChannelView(channel)
+    .then(function(view){ CHANNEL_CACHE[channel] = view; applyDashboardUpdate(view); })
+    .catch(function(err){ alert('خطا در بارگذاری این تب: ' + err.message); });
 }
 function escapeHtml(v){
   if (v === null || v === undefined) return '';
@@ -1391,6 +1724,7 @@ function openDataQualityInvoices(offset){
   fd.append('action', 'dq_invoices');
   fd.append('date_from', getActiveDateFrom());
   fd.append('channel', getActiveChannel());
+  fd.append('date_to', getActiveDateTo());
   fd.append('offset', String(offset || 0));
   fetch(window.location.href, { method: 'POST', body: fd })
     .then(function(res){ return res.json(); })
@@ -1437,7 +1771,13 @@ function exportToExcel(){
 }
 
 /* ---------------- داده تعبیه‌شده (Executive KPI + State/City Aggregation) ---------------- */
-var DASH = JSON.parse(document.getElementById('dashData').textContent);
+/* رفع v04.1 (خطای JSON زندهٔ کاربر بعد از v04: سرور با محاسبهٔ هر ۴ تب در یک درخواست به Timeout پلتفرم
+   می‌خورد): صفحه فقط داده تب فعال را Embed می‌کند؛ سه تب دیگر با درخواست‌های جدا در پس‌زمینه (پایین همین
+   فایل: prefetchOtherChannels، بعد از initCharts) پر می‌شوند — نه در همان درخواست اول صفحه. */
+var ACTIVE_CHANNEL = JSON.parse(document.getElementById('activeChannelKey').textContent);
+var CHANNEL_CACHE = {};
+CHANNEL_CACHE[ACTIVE_CHANNEL] = JSON.parse(document.getElementById('activeChannelView').textContent);
+var DASH = CHANNEL_CACHE[ACTIVE_CHANNEL].dash_data;
 var STATE_MAP = {};
 DASH.states.forEach(function(s){ STATE_MAP[s.state_name] = s; });
 
@@ -1502,6 +1842,7 @@ function openCustomerDrill(stateName, cityName, offset){
   fd.append('city', cityName);
   fd.append('date_from', getActiveDateFrom());
   fd.append('channel', getActiveChannel());
+  fd.append('date_to', getActiveDateTo());
   fd.append('offset', String(custDrillState.offset));
   var utSel = document.querySelector('select[name="user_type"]');
   if (utSel && utSel.value) fd.append('user_type', utSel.value);
@@ -1553,6 +1894,7 @@ function openInvoiceDrill(crmId){
   fd.append('crm_id', String(crmId));
   fd.append('date_from', getActiveDateFrom());
   fd.append('channel', getActiveChannel());
+  fd.append('date_to', getActiveDateTo());
   fetch(window.location.href, { method: 'POST', body: fd })
     .then(function(res){ return res.json(); })
     .then(function(payload){
@@ -1624,17 +1966,45 @@ var filterRequestInFlight = false;
    کل صفحهٔ HTML را برمی‌گرداند و fetch().then(res=>res.json()) با خطای
    «Unexpected token '<', "<!DOCTYPE"» می‌شکست. راه‌حل: منطق اعمال فیلتر یک تابع مستقل شد
    (submitFilterForm) که مستقیم صدا زده می‌شود — نه از طریق Submit بومی/شبیه‌سازی‌شدهٔ Form. */
+/* یک تب مشخص را از سرور می‌گیرد (همان فیلترهای تاریخ/استان/شهر/نوع مشتری فعلی فرم + channel داده‌شده) —
+   رفع v04.1: هر فراخوانی فقط یک تب حساب می‌کند (نه هر ۴تا با هم) تا به Timeout سرور نخوریم. */
+function fetchChannelView(channel){
+  var formData = new FormData(filterFormEl);
+  formData.set('format', 'json');
+  formData.set('channel', channel);
+  return fetch(window.location.href, { method: 'POST', body: formData })
+    .then(function(res){ if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+    .then(function(payload){
+      if (!payload.ok) throw new Error(payload.error || 'خطای ناشناخته سمت سرور');
+      return payload.view;
+    });
+}
+/* سه تب غیرفعال را یکی‌یکی و در پس‌زمینه (بدون قفل‌کردن UI) می‌گیرد تا سوییچ بعدی بین تب‌ها دیگر fetch
+   نزند — بعد از رندر تب فعال صدا زده می‌شود (بار اول صفحه، یا بعد از هر «اعمال فیلتر»/«بازنشانی»، چون آن
+   فیلترها روی هر ۴ تب اثر می‌گذارند و کش‌های قبلی را نامعتبر می‌کنند). خطای پس‌زمینه بی‌صدا نادیده گرفته
+   می‌شود — اگر کاربر همان تب را دستی کلیک کند، setActiveChannel به‌صورت Fallback خودش یک fetch مستقل می‌زند. */
+function prefetchOtherChannels(){
+  var ALL_CHANNELS = ['', 'b2b', 'b2c', 'other'];
+  var active = getActiveChannel();
+  ALL_CHANNELS.forEach(function(ch){
+    if (ch === active || CHANNEL_CACHE[ch]) return;
+    fetchChannelView(ch).then(function(view){ CHANNEL_CACHE[ch] = view; }).catch(function(){ /* پس‌زمینه — نادیده */ });
+  });
+}
 function submitFilterForm(){
   if (filterRequestInFlight) return;
   filterRequestInFlight = true;
   var btn = document.getElementById('filterSubmitBtn');
   var originalText = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = 'در حال بارگذاری...'; }
-  var formData = new FormData(filterFormEl);
-  formData.set('format', 'json');
-  fetch(window.location.href, { method: 'POST', body: formData })
-    .then(function(res){ if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-    .then(function(payload){ if (!payload.ok) throw new Error(payload.error || 'خطای ناشناخته سمت سرور'); applyDashboardUpdate(payload); })
+  var channel = getActiveChannel();
+  CHANNEL_CACHE = {}; // فیلترها عوض شدند؛ کش هر ۴ تب نامعتبر است
+  fetchChannelView(channel)
+    .then(function(view){
+      CHANNEL_CACHE[channel] = view;
+      applyDashboardUpdate(view);
+      prefetchOtherChannels(); // تب فعال سریع رندر شد؛ بقیه در پس‌زمینه
+    })
     .catch(function(err){ alert('خطا در اعمال فیلتر: ' + err.message); })
     .finally(function(){ filterRequestInFlight = false; if (btn) { btn.disabled = false; btn.textContent = originalText; } });
 }
@@ -1646,6 +2016,7 @@ if (filterFormEl) {
 }
 function resetFilters(){
   document.getElementById('dateFromInput').value = DASH.default_date_from;
+  document.getElementById('dateToInput').value = DASH.default_date_to;
   document.querySelector('select[name="state"]').value = '';
   document.querySelector('input[name="city"]').value = '';
   document.querySelector('select[name="user_type"]').value = '';
@@ -1659,6 +2030,10 @@ function applyDashboardUpdate(payload){
   DASH.states.forEach(function(s){ STATE_MAP[s.state_name] = s; });
   document.getElementById('kpiGrid').innerHTML = payload.kpi_cards_html;
   document.getElementById('dataQualityGrid').innerHTML = payload.data_quality_html;
+  document.getElementById('newCustomersGrid').innerHTML = payload.new_customers_html;
+  document.getElementById('topCustomersTbody').innerHTML = payload.top_customers_html;
+  document.getElementById('centerComparisonTbody').innerHTML = payload.center_rows_html;
+  document.getElementById('centerComparisonSection').style.display = payload.show_center_comparison ? '' : 'none';
   document.getElementById('minmaxGrid').innerHTML = payload.minmax_html;
   document.getElementById('stateTbody').innerHTML = payload.state_rows_html;
   document.getElementById('topCityTbody').innerHTML = payload.top_city_rows_html;
@@ -1687,6 +2062,30 @@ function initCharts(){
 }
 initCharts();
 initSortableTables();
+prefetchOtherChannels(); /* سه تب دیگر را در پس‌زمینه Preload کن تا سوییچ بعدی تب بدون fetch باشد (v04.1) */
+
+/* Export صریح — فقط توابعی که HTML این بات با onclick="..." صدا می‌زند (inline attribute در Global Scope
+   اجرا می‌شود، پس باید روی window باشد)؛ بقیهٔ نام‌های این اسکریپت (DASH, CHANNEL_CACHE, applyDashboardUpdate،
+   fetchChannelView، ...) عمداً داخل IIFE محبوس می‌مانند و به window نشت نمی‌کنند. */
+window.scrollToKpiTarget = scrollToKpiTarget;
+window.setActiveChannel = setActiveChannel;
+window.resetFilters = resetFilters;
+window.openDataQualityCustomers = openDataQualityCustomers;
+window.openDataQualityInvoices = openDataQualityInvoices;
+window.openCustomerDrillFromRow = openCustomerDrillFromRow;
+window.closeStateDrill = closeStateDrill;
+window.closeCustomerDrill = closeCustomerDrill;
+window.openCustomerDrill = openCustomerDrill;
+window.openInvoiceDrill = openInvoiceDrill;
+window.openCustomerDrillFromFullList = openCustomerDrillFromFullList;
+window.toggleFullScreen = toggleFullScreen;
+window.exportToExcel = exportToExcel;
+window.openHelp = openHelp;
+window.toggleFullCityList = toggleFullCityList;
+window.closeHelp = closeHelp;
+window.closeInvoiceModal = closeInvoiceModal;
+window.closeDqModal = closeDqModal;
+})();
 </script>
 ]]
 
@@ -1694,12 +2093,13 @@ initSortableTables();
 -- DASH DATA BUILDER
 -- ============================================================
 
-local function build_dash_data(states, cities, default_date_from)
+local function build_dash_data(states, cities, default_date_from, default_date_to)
     return {
         states = states,
         cities = cities,
         pie_slices = build_pie_slices(states),
         default_date_from = default_date_from,
+        default_date_to = default_date_to,
     }
 end
 
@@ -1708,7 +2108,10 @@ end
 -- ============================================================
 
 local function render_html(args)
-    local dash_json = json.encode(args.dash_data):gsub("</", "<\\/")
+    -- v04.1: فقط تب فعال هنگام رندر صفحه Embed می‌شود (نه هر ۴ تب — ر.ک. یادداشت Performance/Timeout در
+    -- main()). سه تب دیگر با درخواست‌های جداگانهٔ پس‌زمینه (prefetchOtherChannels در REPORT_JS) پر می‌شوند.
+    local active_channel_json = json.encode(args.active_channel)
+    local active_view_json = json.encode(args.active_view):gsub("</", "<\\/")
 
     local html = {}
     table.insert(html, '<!DOCTYPE html>\n<html dir="rtl" lang="fa">\n<head>\n<meta charset="UTF-8">\n')
@@ -1725,8 +2128,9 @@ local function render_html(args)
     table.insert(html, '<header class="hero"><img class="brand140-logo" alt="140" ' ..
         'src="data:image/png;base64,' .. CONFIG.LOGO140_WHITE_B64 .. '">' ..
         '<h1>داشبورد مدیریتی توزیع جغرافیایی مشتریان و فروش</h1>' ..
-        '<p class="sub" id="headerSubText">بازه: از ' .. escape_html(args.date_from_label) .. ' تا امروز — دسته: ' ..
-        escape_html(args.channel_label) .. ' — تولید در ' .. escape_html(args.generated_jdate) .. '</p></header>\n')
+        '<p class="sub" id="headerSubText">بازه: از ' .. escape_html(args.date_from_label) .. ' تا ' ..
+        escape_html(args.date_to_label) .. ' — دسته: ' .. escape_html(args.channel_label) .. ' — تولید در ' ..
+        escape_html(args.generated_jdate) .. '</p></header>\n')
 
     table.insert(html, args.filter_bar_html)
 
@@ -1738,8 +2142,27 @@ local function render_html(args)
   <div class="kpi-grid" id="dataQualityGrid">]] .. args.data_quality_html .. [[</div>
 </div>
 
+<div class="section">
+  <div class="section-head"><h2><span class="num">۲</span>مشتریان جدید در این بازه</h2><p>مشتریانی که اولین فاکتور معتبرشان (در دستهٔ فعال) در همین بازهٔ تاریخ ثبت شده است</p></div>
+  <div class="kpi-grid" id="newCustomersGrid">]] .. args.new_customers_html .. [[</div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2><span class="num">۳</span>۱۰ مشتری برتر</h2><p>بر اساس مبلغ خرید در بازهٔ تاریخ و دستهٔ فعال — مستقل از استان/شهر</p></div>
+  <div class="table-scroll"><table class="data-table" id="topCustomersTable"><thead><tr>
+    <th>#</th><th>نام مشتری</th><th>استان</th><th>شهر</th><th>تعداد فاکتور</th><th>مبلغ خرید</th>
+  </tr></thead><tbody id="topCustomersTbody">]] .. args.top_customers_html .. [[</tbody></table></div>
+</div>
+
+<div class="section" id="centerComparisonSection" style="]] .. (args.show_center_comparison and "" or "display:none;") .. [[">
+  <div class="section-head"><h2><span class="num">۴</span>مقایسهٔ مراکز درآمد</h2><p>فقط در تب «همه» — تعداد فاکتور، مشتری و مبلغ به تفکیک مرکز درآمد واقعی فاکتور (نه فقط B2B/B2C)</p></div>
+  <div class="table-scroll"><table class="data-table"><thead><tr>
+    <th>مرکز درآمد</th><th>تعداد فاکتور</th><th>تعداد مشتری</th><th>مبلغ فروش</th><th>سهم</th>
+  </tr></thead><tbody id="centerComparisonTbody">]] .. args.center_rows_html .. [[</tbody></table></div>
+</div>
+
 <div class="section" id="chartsSection">
-  <div class="section-head"><h2><span class="num">۲</span>نمودارهای استانی</h2><p>روی هر ردیف/بخش کلیک کنید تا جزئیات همان استان باز شود</p></div>
+  <div class="section-head"><h2><span class="num">۵</span>نمودارهای استانی</h2><p>روی هر ردیف/بخش کلیک کنید تا جزئیات همان استان باز شود</p></div>
   <div class="grid-2">
     <div class="card"><h3>مبلغ فروش به تفکیک استان</h3><div class="desc">مرتب‌شده نزولی بر اساس مبلغ فروش</div><div class="chart-box" id="salesByStateChart"></div></div>
     <div class="card"><h3>تعداد مشتری خریدار به تفکیک استان</h3><div class="desc">مقایسهٔ تعداد مشتری فعال هر استان</div><div class="chart-box" id="buyersByStateChart"></div></div>
@@ -1751,12 +2174,12 @@ local function render_html(args)
 </div>
 
 <div class="section">
-  <div class="section-head"><h2><span class="num">۳</span>بیشترین و کمترین</h2><p>کمترین‌ها فقط در میان استان‌های دارای حداقل یک فروش محاسبه شده‌اند</p></div>
+  <div class="section-head"><h2><span class="num">۶</span>بیشترین و کمترین</h2><p>کمترین‌ها فقط در میان استان‌های دارای حداقل یک فروش محاسبه شده‌اند</p></div>
   <div class="minmax-grid" id="minmaxGrid">]] .. args.minmax_html .. [[</div>
 </div>
 
 <div class="section" id="stateSection">
-  <div class="section-head"><h2><span class="num">۴</span>جدول کامل استان‌ها</h2><p>روی هدر ستون‌ها کلیک کنید تا مرتب شود؛ روی هر ردیف کلیک کنید تا جزئیات استان باز شود</p></div>
+  <div class="section-head"><h2><span class="num">۷</span>جدول کامل استان‌ها</h2><p>روی هدر ستون‌ها کلیک کنید تا مرتب شود؛ روی هر ردیف کلیک کنید تا جزئیات استان باز شود</p></div>
   <div class="table-scroll"><table class="data-table" id="stateTable"><thead><tr>
     <th>استان</th><th>تعداد مشتری</th><th>تعداد مشتری خریدار</th><th>تعداد فاکتور</th><th>مبلغ فروش</th>
     <th>میانگین فاکتور</th><th>میانگین فروش/خریدار</th><th>تعداد شهر (مشتری)</th><th>تعداد شهر (فروش)</th>
@@ -1765,7 +2188,7 @@ local function render_html(args)
 </div>
 
 <div class="section" id="citySection">
-  <div class="section-head"><h2><span class="num">۵</span>شهرهای برتر بر اساس فروش</h2><p>]] .. fmt_num(CONFIG.TOP_CITIES_ON_DASHBOARD) .. [[ شهر برتر — برای فهرست کامل، «نمایش تمام شهرها» را بزنید</p></div>
+  <div class="section-head"><h2><span class="num">۸</span>شهرهای برتر بر اساس فروش</h2><p>]] .. fmt_num(CONFIG.TOP_CITIES_ON_DASHBOARD) .. [[ شهر برتر — برای فهرست کامل، «نمایش تمام شهرها» را بزنید</p></div>
   <div class="table-scroll"><table class="data-table" id="topCityTable"><thead><tr>
     <th>استان</th><th>شهر</th><th>تعداد مشتری</th><th>تعداد مشتری خریدار</th><th>تعداد فاکتور</th><th>مبلغ فروش</th><th>میانگین فاکتور</th><th>سهم از فروش استان</th>
   </tr></thead><tbody id="topCityTbody">]] .. args.top_city_rows_html .. [[</tbody></table></div>
@@ -1825,11 +2248,97 @@ local function render_html(args)
 </div></div>
 ]])
 
-    table.insert(html, '<script id="dashData" type="application/json">' .. dash_json .. '</script>\n')
+    table.insert(html, '<script id="activeChannelKey" type="application/json">' .. active_channel_json .. '</script>\n')
+    table.insert(html, '<script id="activeChannelView" type="application/json">' .. active_view_json .. '</script>\n')
     table.insert(html, REPORT_JS)
     table.insert(html, '</div>\n</body>\n</html>')
 
     return table.concat(html)
+end
+
+-- ============================================================
+-- CHANNEL VIEW
+-- ============================================================
+-- کلید کانال سمت کلاینت هم "" (همه) است (ر.ک. hidden input #channelInput در render_filter_bar) — همان مقدار
+-- اینجا هم برای هماهنگی مستقیم (بدون نگاشت جداگانه در JS) استفاده می‌شود. چهار مقدار ممکن ("", "b2b",
+-- "b2c", "other") سمت کلاینت در آرایهٔ ALL_CHANNELS در REPORT_JS تکرار شده‌اند (ر.ک. یادداشت v04.1 پایین‌تر
+-- در main() دربارهٔ این‌که چرا هر ۴ تب دیگر در یک درخواست واحد سمت سرور محاسبه نمی‌شوند).
+local function channel_key_to_filter_value(key)
+    if key == "" then return nil end
+    return key
+end
+
+-- محاسبهٔ کامل یک تب — هر بار فراخوانی این تابع دقیقاً یک تب (channel_key) را محاسبه می‌کند. main() این را
+-- فقط برای تب فعال درخواست صدا می‌زند؛ سه تب دیگر با درخواست‌های جداگانهٔ سمت کلاینت (fetchChannelView در
+-- REPORT_JS) پر می‌شوند — نه در همین یک درخواست (ر.ک. یادداشت v04.1 در main() برای چرایی این تصمیم).
+-- base_filters باید فاقد کلید channel باشد (channel اینجا از channel_key ساخته می‌شود).
+local function build_channel_view(date_from_key, date_to_key, date_from_label, date_to_label, generated_jdate, date_warning, base_filters, channel_key)
+    local filters = {}
+    for k, v in pairs(base_filters) do filters[k] = v end
+    filters.channel = channel_key_to_filter_value(channel_key)
+
+    local crm_kpi, crm_err = fetch_crm_kpi(filters)
+    if crm_kpi == nil then return nil, "خطا در محاسبهٔ KPI مشتریان: " .. tostring(crm_err) end
+
+    local sales_kpi, sales_err = fetch_sales_kpi(date_from_key, date_to_key, filters)
+    if sales_kpi == nil then return nil, "خطا در محاسبهٔ KPI فروش: " .. tostring(sales_err) end
+
+    local states, states_err = fetch_state_aggregation(date_from_key, date_to_key, filters)
+    if states == nil then return nil, "خطا در تجمیع استان‌ها: " .. tostring(states_err) end
+
+    local cities, cities_err = fetch_city_aggregation(date_from_key, date_to_key, filters)
+    if cities == nil then return nil, "خطا در تجمیع شهرها: " .. tostring(cities_err) end
+
+    local top_customers, tc_err = fetch_top_customers(date_from_key, date_to_key, filters, 10)
+    if top_customers == nil then return nil, "خطا در محاسبهٔ مشتریان برتر: " .. tostring(tc_err) end
+
+    local new_stats, nc_err = fetch_new_customers_stats(date_from_key, date_to_key, filters)
+    if new_stats == nil then return nil, "خطا در محاسبهٔ مشتریان جدید: " .. tostring(nc_err) end
+
+    local show_center_comparison = (filters.channel == nil)
+    local center_rows_html = ""
+    if show_center_comparison then
+        local centers, cc_err = fetch_center_comparison(date_from_key, date_to_key)
+        if centers == nil then return nil, "خطا در مقایسهٔ مراکز درآمد: " .. tostring(cc_err) end
+        center_rows_html = render_center_comparison_rows(centers)
+    end
+
+    local state_totals_by_name = {}
+    for _, s in ipairs(states) do state_totals_by_name[s.state_name] = s end
+    enrich_state_list(states, sales_kpi)
+    enrich_city_list(cities, state_totals_by_name)
+    table.sort(cities, function(a, b) return a.total_sales_amount > b.total_sales_amount end)
+
+    local coverage = {
+        cities_with_sales = sales_kpi.cities_with_sales,
+        total_cities = CONFIG.TOTAL_CITIES_IRAN,
+        pct = fmt_pct(sales_kpi.cities_with_sales, CONFIG.TOTAL_CITIES_IRAN),
+    }
+
+    local state_options = {}
+    for _, s in ipairs(states) do table.insert(state_options, s.state_name) end
+
+    local footer_text = "تولید شده — " .. fmt_num(#states) .. " استان و " .. fmt_num(#cities) .. " شهر دارای مشتری" ..
+        (date_warning and (" — هشدار: " .. date_warning) or "")
+    local header_sub_text = "بازه: از " .. tostring(date_from_label) .. " تا " .. tostring(date_to_label) .. " — دسته: " ..
+        (CONFIG.CHANNEL_LABELS[filters.channel] or "همه") .. " — تولید در " .. tostring(generated_jdate)
+
+    return {
+        dash_data = build_dash_data(states, cities, date_from_label, date_to_label),
+        channel_label = CONFIG.CHANNEL_LABELS[filters.channel] or "همه",
+        state_options = state_options,
+        kpi_cards_html = render_kpi_cards(crm_kpi, sales_kpi, coverage),
+        data_quality_html = render_data_quality_cards(crm_kpi, sales_kpi),
+        new_customers_html = render_new_customers_cards(new_stats),
+        top_customers_html = render_top_customers_rows(top_customers),
+        center_rows_html = center_rows_html,
+        show_center_comparison = show_center_comparison,
+        minmax_html = render_minmax_cards(compute_minmax(states)),
+        state_rows_html = render_state_table_rows(states),
+        top_city_rows_html = render_city_table_rows(cities, CONFIG.TOP_CITIES_ON_DASHBOARD),
+        footer_text = footer_text,
+        header_sub_text = header_sub_text,
+    }, nil
 end
 
 -- ============================================================
@@ -1853,12 +2362,13 @@ local function main()
             teamyar.write_result(json.encode({ ok = false, error = "تعیین بازهٔ زمانی گزارش ممکن نشد" }))
             return
         end
+        local date_to_key = resolve_active_date_to_key(input)
         local filters = parse_filters(input)
         local offset = tonumber(input["offset"]) or 0
         if offset < 0 then offset = 0 end
         local limit = CONFIG.CUSTOMER_PAGE_SIZE
         local total, cnt_err = fetch_customers_count(state, city, filters)
-        local rows, err = fetch_customers(state, city, filters, date_from_key, limit, offset)
+        local rows, err = fetch_customers(state, city, filters, date_from_key, date_to_key, limit, offset)
         if rows == nil then
             teamyar.write_result(json.encode({ ok = false, error = "خطا در دریافت فهرست مشتریان: " .. tostring(err or cnt_err) }))
             return
@@ -1879,9 +2389,10 @@ local function main()
             teamyar.write_result(json.encode({ ok = false, error = "تعیین بازهٔ زمانی گزارش ممکن نشد" }))
             return
         end
+        local date_to_key = resolve_active_date_to_key(input)
         local filters = parse_filters(input)
         local customer = fetch_customer_header(crm_id)
-        local rows, err = fetch_invoices(crm_id, date_from_key, filters)
+        local rows, err = fetch_invoices(crm_id, date_from_key, date_to_key, filters)
         if rows == nil then
             teamyar.write_result(json.encode({ ok = false, error = "خطا در دریافت فاکتورها: " .. tostring(err) }))
             return
@@ -1915,12 +2426,13 @@ local function main()
             teamyar.write_result(json.encode({ ok = false, error = "تعیین بازهٔ زمانی گزارش ممکن نشد" }))
             return
         end
+        local date_to_key = resolve_active_date_to_key(input)
         local filters = parse_filters(input)
         local offset = tonumber(input["offset"]) or 0
         if offset < 0 then offset = 0 end
         local limit = CONFIG.CUSTOMER_PAGE_SIZE
-        local total, cnt_err = fetch_invoices_missing_geo_count(date_from_key, filters)
-        local rows, err = fetch_invoices_missing_geo(date_from_key, filters, limit, offset)
+        local total, cnt_err = fetch_invoices_missing_geo_count(date_from_key, date_to_key, filters)
+        local rows, err = fetch_invoices_missing_geo(date_from_key, date_to_key, filters, limit, offset)
         if rows == nil then
             teamyar.write_result(json.encode({ ok = false, error = "خطا در دریافت فهرست: " .. tostring(err or cnt_err) }))
             return
@@ -1949,96 +2461,86 @@ local function main()
         date_from_label = fy_jndate
     end
     if date_from_key == nil then
-        teamyar.write_result(render_error_html("امکان تعیین بازهٔ زمانی گزارش وجود ندارد (خطا در report_dimdate): " .. tostring(now_err)))
+        write_dashboard_error(input, "امکان تعیین بازهٔ زمانی گزارش وجود ندارد (خطا در report_dimdate): " .. tostring(now_err))
         return
     end
 
-    local crm_kpi, crm_err = fetch_crm_kpi()
-    if crm_kpi == nil then
-        teamyar.write_result(render_error_html("خطا در محاسبهٔ KPI مشتریان: " .. tostring(crm_err)))
+    local date_to_key, date_to_label = resolve_active_date_to_key(input)
+    if date_to_key == nil then
+        write_dashboard_error(input, "امکان تعیین انتهای بازهٔ زمانی گزارش وجود ندارد (خطا در report_dimdate).")
         return
     end
 
-    local sales_kpi, sales_err = fetch_sales_kpi(date_from_key, filters)
-    if sales_kpi == nil then
-        teamyar.write_result(render_error_html("خطا در محاسبهٔ KPI فروش: " .. tostring(sales_err)))
-        return
-    end
-
-    local states, states_err = fetch_state_aggregation(date_from_key, filters)
-    if states == nil then
-        teamyar.write_result(render_error_html("خطا در تجمیع استان‌ها: " .. tostring(states_err)))
-        return
-    end
-    local cities, cities_err = fetch_city_aggregation(date_from_key, filters)
-    if cities == nil then
-        teamyar.write_result(render_error_html("خطا در تجمیع شهرها: " .. tostring(cities_err)))
-        return
-    end
-
-    local state_totals_by_name = {}
-    for _, s in ipairs(states) do state_totals_by_name[s.state_name] = s end
-    enrich_state_list(states, sales_kpi)
-    enrich_city_list(cities, state_totals_by_name)
-    table.sort(cities, function(a, b) return a.total_sales_amount > b.total_sales_amount end)
-
-    local coverage = {
-        cities_with_sales = sales_kpi.cities_with_sales,
-        total_cities = CONFIG.TOTAL_CITIES_IRAN,
-        pct = fmt_pct(sales_kpi.cities_with_sales, CONFIG.TOTAL_CITIES_IRAN),
-    }
-
-    local dash_data = build_dash_data(states, cities, date_from_label)
     local generated_jdate = fy_jndate -- برچسب مرجع؛ برای «امروز» دقیق کافی نیست، صرفاً نمایشی است
 
-    local state_options = {}
-    for _, s in ipairs(states) do table.insert(state_options, s.state_name) end
-    local user_type_options = { 3, 4 }
+    -- رفع باگ v04.1 (گزارش زندهٔ کاربر، بعد از دیپلوی: کلیک روی تب باز هم «ارور JSON» می‌داد): نسخهٔ اول
+    -- Preload هر ۴ تب را در یک درخواست واحد محاسبه می‌کرد (۴× حجم Query، شامل ۴ بار اجرای Subquery سنگین
+    -- بدون فیلتر تاریخ INVOICE_AMOUNT_JOIN که خودش قبلاً به‌عنوان ریسک Performance مستند شده بود) — این به
+    -- محدودیت max_execute_time سرور Teamyar می‌خورد و پلتفرم به‌جای پاسخ Lua یک صفحهٔ خطای HTML برمی‌گرداند؛
+    -- write_dashboard_error این نوع خطای سطح پلتفرم (نه خطای Lua) را اصلاً نمی‌بیند، پس نمی‌توانست کمکی کند.
+    -- رفع شد: هر درخواست فقط تب فعال را (مثل قبل از v04) محاسبه می‌کند — سریع، هم‌سنگین قبل. Preload سه تب
+    -- دیگر اکنون سمت کلاینت و در پس‌زمینه (fetchChannelView/prefetchOtherChannels در REPORT_JS، هرکدام یک
+    -- درخواست جدا بعد از رندر تب فعال) انجام می‌شود — نه در همان درخواست اول، هم Timeout حل شد هم «سوییچ تب
+    -- بدون Round-trip» (بعد از این‌که پیش‌بارگذاری پس‌زمینه تمام شد) حفظ ماند.
+    local active_channel_key = filters.channel or ""
+    local base_filters = {}
+    for k, v in pairs(filters) do
+        if k ~= "channel" then base_filters[k] = v end
+    end
+    local active_view, verr = build_channel_view(date_from_key, date_to_key, date_from_label, date_to_label,
+        generated_jdate, date_warning, base_filters, active_channel_key)
+    if active_view == nil then
+        write_dashboard_error(input, verr)
+        return
+    end
 
-    local kpi_cards_html = render_kpi_cards(crm_kpi, sales_kpi, coverage)
-    local data_quality_html = render_data_quality_cards(crm_kpi, sales_kpi)
-    local minmax_html = render_minmax_cards(compute_minmax(states))
-    local state_rows_html = render_state_table_rows(states)
-    local top_city_rows_html = render_city_table_rows(cities, CONFIG.TOP_CITIES_ON_DASHBOARD)
-    local footer_text = "تولید شده — " .. fmt_num(#states) .. " استان و " .. fmt_num(#cities) .. " شهر دارای مشتری" ..
-        (date_warning and (" — هشدار: " .. date_warning) or "")
+    local state_options = active_view.state_options
+    local user_type_options = { 3, 4 }
 
     if input["format"] == "json" then
         teamyar.write_result(json.encode({
             ok = true,
-            dash_data = dash_data,
-            kpi_cards_html = kpi_cards_html,
-            data_quality_html = data_quality_html,
-            minmax_html = minmax_html,
-            state_rows_html = state_rows_html,
-            top_city_rows_html = top_city_rows_html,
-            footer_text = footer_text,
-            header_sub_text = "بازه: از " .. tostring(date_from_label) .. " تا امروز — دسته: " ..
-                (CONFIG.CHANNEL_LABELS[filters.channel] or "همه") .. " — تولید در " .. tostring(generated_jdate),
+            active_channel = active_channel_key,
+            view = active_view,
         }))
         return
     end
 
-    local filter_bar_html = render_filter_bar(filters, date_from_label, state_options, user_type_options)
+    local filter_bar_html = render_filter_bar(filters, date_from_label, date_to_label, state_options, user_type_options)
 
     local html = render_html({
-        dash_data = dash_data,
+        active_channel = active_channel_key,
+        active_view = active_view,
         date_from_label = date_from_label,
-        channel_label = CONFIG.CHANNEL_LABELS[filters.channel] or "همه",
+        date_to_label = date_to_label,
+        channel_label = active_view.channel_label,
         generated_jdate = generated_jdate,
         filter_bar_html = filter_bar_html,
-        kpi_cards_html = kpi_cards_html,
-        data_quality_html = data_quality_html,
-        minmax_html = minmax_html,
-        state_rows_html = state_rows_html,
-        top_city_rows_html = top_city_rows_html,
-        footer_text = footer_text,
+        kpi_cards_html = active_view.kpi_cards_html,
+        data_quality_html = active_view.data_quality_html,
+        new_customers_html = active_view.new_customers_html,
+        top_customers_html = active_view.top_customers_html,
+        center_rows_html = active_view.center_rows_html,
+        show_center_comparison = active_view.show_center_comparison,
+        minmax_html = active_view.minmax_html,
+        state_rows_html = active_view.state_rows_html,
+        top_city_rows_html = active_view.top_city_rows_html,
+        footer_text = active_view.footer_text,
     })
     teamyar.write_result(html)
 end
 
 local ok, err = pcall(main)
 if not ok then
-    teamyar.write_result(render_error_html(tostring(err)))
+    -- طبق همان اصل write_dashboard_error: اگر خطای پیش‌بینی‌نشده (Runtime، نه یکی از چک‌های صریح بالا) هنگام
+    -- یک درخواست format=json رخ دهد، باز هم باید JSON قابل‌Parse برگردد، نه یک صفحهٔ HTML که «Unexpected
+    -- token '<'» ایجاد می‌کند. چون در این نقطه دیگر داخل main() نیستیم و به متغیر input آن دسترسی نداریم،
+    -- ورودی را مجدداً (با pcall، چون get_input هم می‌تواند خودش خطا بدهد) می‌خوانیم.
+    local ok2, input_for_error = pcall(teamyar.get_input)
+    if ok2 and input_for_error ~= nil and input_for_error["format"] == "json" then
+        teamyar.write_result(json.encode({ ok = false, error = tostring(err) }))
+    else
+        teamyar.write_result(render_error_html(tostring(err)))
+    end
 end
 
