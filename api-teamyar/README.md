@@ -32,4 +32,6 @@
 
 ## پروفایل
 
-هنوز API ای ثبت نشده است.
+| API | آدرس | توضیح |
+|-----|------|-------|
+| [profile/getInfo](پروفایل/profile_getInfo.md) | `/api/profile/getInfo` | دریافت پروفایل‌ها |
