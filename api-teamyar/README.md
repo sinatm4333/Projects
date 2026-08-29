@@ -47,6 +47,7 @@
 | [deleteDocumentWithCheck](اسناد/deleteDocumentWithCheck.md) | `/api/deleteDocumentWithCheck` | حذف سند به همراه چک |
 | [document/deleteAdditionalVersions](اسناد/document_deleteAdditionalVersions.md) | `/api/document/deleteAdditionalVersions` | حذف ورژن‌های فایل |
 | [document/list](اسناد/document_list.md) | `/api/document/list` | فهرست اسناد |
+| [document/getByMetadata](اسناد/document_getByMetadata.md) | `/api/document/getByMetadata` | گرفتن سند از طریق متادیتا |
 | [document/attach](اسناد/document_attach.md) | `/api/document/attach` | منگنه کردن فایل |
 | [document/detach](اسناد/document_detach.md) | `/api/document/detach` | بازکردن منگنه |
 | [client/getRootId](اسناد/client_getRootId.md) | `/api/client/getRootId` | گرفتن پوشه‌ی مشتریان |
