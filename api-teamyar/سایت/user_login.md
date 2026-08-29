@@ -58,8 +58,3 @@
 | `error.status` | number | کد خطا |
 | `error.message` | string | پیام خطا |
 | `success` | number | نتیجه اجرا |
-
-## نکته امنیتی
-
-`login`، `password` و `token` اطلاعات حساس هستند — هرگز در لاگ، URL یا
-پارامترهای query ثبت نشوند و در کد به‌صورت hard-code نگه داشته نشوند.
