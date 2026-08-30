@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/08 14:30
+-- Last Edit = 1405/06/08 17:10
 
 -- Bot: Sales Revenue Center Dashboard
 -- botName = sales_revenue_center_dashboard
@@ -859,6 +859,21 @@ local REPORT_JS = [[
 <script>
 'use strict';
 
+/* هدرهای استاندارد AJAX — برخی سرورها (از جمله لایه‌های پروکسی/روتینگ) بدون این هدرها یک درخواست fetch
+   خام رو «ناوبری صفحهٔ کامل» تشخیص می‌دهند و به‌جای پاسخ بات، Shell/صفحهٔ کامل پرتال را برمی‌گردانند —
+   دقیقاً همان الگویی که با jQuery $.ajax (که این هدر را خودکار می‌فرستد) دیده نمی‌شود. */
+var AJAX_HEADERS = { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' };
+/* اگر پاسخ همچنان JSON معتبر نبود (مثلاً یک لایهٔ دیگر HTML برگردانده)، به‌جای شکستن خاموش با
+   «Unexpected token» یک پیام خطای تشخیصی (شامل HTTP status و ۳۰۰ کاراکتر اول پاسخ) نشان می‌دهیم. */
+function parseJsonResponse(res){
+  return res.text().then(function(text){
+    try { return JSON.parse(text); }
+    catch (e) {
+      throw new Error('پاسخ سرور JSON معتبر نبود (HTTP ' + res.status + '): ' + text.slice(0, 300));
+    }
+  });
+}
+
 function fmtNum(v){
   var n = Math.round(Number(v) || 0);
   var sign = n < 0 ? '-' : ''; n = Math.abs(n);
@@ -903,8 +918,8 @@ function submitFilterForm(){
   if (btn) { btn.disabled = true; btn.textContent = 'در حال بارگذاری...'; }
   var formData = new FormData(filterFormEl);
   formData.set('format', 'json');
-  fetch(window.location.href, { method: 'POST', body: formData })
-    .then(function(res){ if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+  fetch(window.location.href, { method: 'POST', body: formData, headers: AJAX_HEADERS })
+    .then(parseJsonResponse)
     .then(function(payload){ if (!payload.ok) throw new Error(payload.error || 'خطای ناشناخته سمت سرور'); applyDashboardUpdate(payload); })
     .catch(function(err){ alert('خطا در اعمال فیلتر: ' + err.message); })
     .finally(function(){ filterRequestInFlight = false; if (btn) { btn.disabled = false; btn.textContent = originalText; } });
@@ -1151,8 +1166,8 @@ function openProductInvoices(productCode, productName){
   fd.append('date_to', getActiveDateTo());
   fd.append('channel', getActiveChannel());
   fd.append('center', getActiveCenter());
-  fetch(window.location.href, { method: 'POST', body: fd })
-    .then(function(res){ return res.json(); })
+  fetch(window.location.href, { method: 'POST', body: fd, headers: AJAX_HEADERS })
+    .then(parseJsonResponse)
     .then(function(payload){
       if (!payload.ok) throw new Error(payload.error || 'خطای ناشناخته');
       var rows = payload.rows || [];
@@ -1183,8 +1198,8 @@ function openCustomerInvoices(crmId, customerName){
   fd.append('date_to', getActiveDateTo());
   fd.append('channel', getActiveChannel());
   fd.append('center', getActiveCenter());
-  fetch(window.location.href, { method: 'POST', body: fd })
-    .then(function(res){ return res.json(); })
+  fetch(window.location.href, { method: 'POST', body: fd, headers: AJAX_HEADERS })
+    .then(parseJsonResponse)
     .then(function(payload){
       if (!payload.ok) throw new Error(payload.error || 'خطای ناشناخته');
       var rows = payload.rows || [];
