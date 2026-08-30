@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/26 23:25
+-- Last Edit = 1405/06/08 14:30
 
 -- Bot: Sales Revenue Center Dashboard
 -- botName = sales_revenue_center_dashboard
@@ -887,8 +887,27 @@ function getActiveCenter(){
   var el = document.getElementById('centerFilterInput');
   return el ? el.value : '';
 }
+var filterFormEl = document.getElementById('filterForm');
+var filterRequestInFlight = false;
+/* رفع باگ تأییدشدهٔ زنده (ر.ک. crm_geo_sales_dashboard_bot.lua): filterFormEl.requestSubmit()/
+   dispatchEvent(new Event('submit')) در محیط Embedded پنل Teamyar گاهی یک Submit بومی GET هم به همان
+   آدرس شلیک می‌کرد؛ چون <form> نه method دارد نه action صریح، آن GET به‌جای JSON کل صفحهٔ HTML را
+   برمی‌گرداند و fetch().then(res=>res.json()) با خطای «Unexpected token '<', "<!DOCTYPE"» می‌شکست.
+   راه‌حل: منطق اعمال فیلتر مستقیم اینجا اجرا می‌شود — نه از طریق Submit بومی/شبیه‌سازی‌شدهٔ Form. */
 function submitFilterForm(){
-  if (filterFormEl) { filterFormEl.requestSubmit ? filterFormEl.requestSubmit() : filterFormEl.dispatchEvent(new Event('submit', {cancelable:true})); }
+  if (!filterFormEl) return;
+  if (filterRequestInFlight) return;
+  filterRequestInFlight = true;
+  var btn = document.getElementById('filterSubmitBtn');
+  var originalText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'در حال بارگذاری...'; }
+  var formData = new FormData(filterFormEl);
+  formData.set('format', 'json');
+  fetch(window.location.href, { method: 'POST', body: formData })
+    .then(function(res){ if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+    .then(function(payload){ if (!payload.ok) throw new Error(payload.error || 'خطای ناشناخته سمت سرور'); applyDashboardUpdate(payload); })
+    .catch(function(err){ alert('خطا در اعمال فیلتر: ' + err.message); })
+    .finally(function(){ filterRequestInFlight = false; if (btn) { btn.disabled = false; btn.textContent = originalText; } });
 }
 function setActiveChannel(btn){
   var el = document.getElementById('channelInput');
@@ -1077,8 +1096,14 @@ function initSortableTables(root){
 /* ---------------- Toolbar: fullscreen / excel / help ---------------- */
 function toggleFullScreen(){
   var root = document.getElementById('reportRoot');
-  root.classList.toggle('pseudo-fullscreen');
+  var isFull = root.classList.toggle('pseudo-fullscreen');
+  var btn = document.getElementById('fullscreenBtn');
+  if (btn) btn.textContent = isFull ? 'خروج از تمام صفحه' : 'تمام صفحه';
   window.scrollTo(0, 0);
+}
+function exitFullScreenIfActive(){
+  var root = document.getElementById('reportRoot');
+  if (root && root.classList.contains('pseudo-fullscreen')) toggleFullScreen();
 }
 function openHelp(){ document.getElementById('helpModal').classList.add('active'); }
 function closeHelp(){ document.getElementById('helpModal').classList.remove('active'); }
@@ -1087,7 +1112,7 @@ window.addEventListener('click', function(e){
   if (e.target === document.getElementById('helpModal')) closeHelp();
   if (e.target === document.getElementById('invoiceModal')) closeInvoiceModal();
 });
-document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { closeHelp(); closeInvoiceModal(); } });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { closeHelp(); closeInvoiceModal(); exitFullScreenIfActive(); } });
 
 function csvCell(t){ t = (t == null ? '' : String(t)).replace(/\s+/g,' ').trim(); if (t.indexOf(',') !== -1 || t.indexOf('"') !== -1) t = '"' + t.replace(/"/g,'""') + '"'; return t; }
 function downloadCsv(lines, fileName){
@@ -1177,23 +1202,10 @@ function openCustomerInvoices(crmId, customerName){
 /* ---------------- فیلتر: fetch با format=json + جایگزینی درجای بخش‌های داشبورد ----------------
    طبق تجربهٔ ثبت‌شدهٔ سایر بات‌های این پروژه: document.write کل صفحه یا iframe تودرتو هر دو داخل شِل/Iframe
    واقعی Teamyar شکست می‌خورند؛ روش سالم fetch همین آدرس + جایگزینی innerHTML بخش‌هاست. */
-var filterFormEl = document.getElementById('filterForm');
-var filterRequestInFlight = false;
 if (filterFormEl) {
   filterFormEl.addEventListener('submit', function(e){
     e.preventDefault();
-    if (filterRequestInFlight) return;
-    filterRequestInFlight = true;
-    var btn = document.getElementById('filterSubmitBtn');
-    var originalText = btn ? btn.textContent : '';
-    if (btn) { btn.disabled = true; btn.textContent = 'در حال بارگذاری...'; }
-    var formData = new FormData(filterFormEl);
-    formData.set('format', 'json');
-    fetch(window.location.href, { method: 'POST', body: formData })
-      .then(function(res){ if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-      .then(function(payload){ if (!payload.ok) throw new Error(payload.error || 'خطای ناشناخته سمت سرور'); applyDashboardUpdate(payload); })
-      .catch(function(err){ alert('خطا در اعمال فیلتر: ' + err.message); })
-      .finally(function(){ filterRequestInFlight = false; if (btn) { btn.disabled = false; btn.textContent = originalText; } });
+    submitFilterForm();
   });
 }
 function resetFilters(){
@@ -1246,7 +1258,7 @@ local function render_html(args)
     table.insert(html, '</head>\n<body>\n<div id="reportRoot">\n')
 
     table.insert(html, '<div class="toolbar">' ..
-        '<button type="button" class="btn-toolbar" onclick="toggleFullScreen()">تمام صفحه</button>' ..
+        '<button type="button" id="fullscreenBtn" class="btn-toolbar" onclick="toggleFullScreen()">تمام صفحه</button>' ..
         '<button type="button" class="btn-toolbar" onclick="exportToExcel()">خروجی Excel</button>' ..
         '<button type="button" class="btn-toolbar secondary" onclick="openHelp()">راهنما</button></div>\n')
 
@@ -1347,51 +1359,80 @@ end
 -- MAIN
 -- ============================================================
 
+-- آخرین input دریافتی — تنها برای تصمیم‌گیری «HTML یا JSON» در fallback خطای غیرمنتظرهٔ pcall(main)
+-- در انتهای فایل (ر.ک. پایین فایل)؛ منطق کسب‌وکار هرگز از این متغیر نمی‌خواند.
+local LAST_REQUEST_INPUT = nil
+
+-- کالر ممکن است صفحهٔ کامل (اولین بار) یا فقط داده (فیلتر/Lazy AJAX، format=json) درخواست کرده باشد.
+-- پاسخ خطا باید همیشه با نوع درخواست هماهنگ باشد — وگرنه fetch().then(res=>res.json()) سمت مرورگر با
+-- خطای «Unexpected token '<', "<!DOCTYPE"» می‌شکند (دقیقاً همان خطایی که این تابع رفع می‌کند).
+local function write_dashboard_error(input, message)
+    if input["format"] == "json" then
+        teamyar.write_result(json.encode({ ok = false, error = message }))
+    else
+        teamyar.write_result(render_error_html(message))
+    end
+end
+
 local function main()
     local input = teamyar.get_input() or {}
+    LAST_REQUEST_INPUT = input
 
     -- ------------- Drill-down: فاکتورهای یک کالای خاص (Lazy) -------------
+    -- تمام مسیر این Action در pcall خودش قرار دارد تا هر خطای غیرمنتظرهٔ Lua هم به‌جای افتادن به
+    -- render_error_html بیرونی (که HTML برمی‌گرداند و fetch().json() سمت مرورگر را با خطای
+    -- «Unexpected token '<', "<!DOCTYPE"» می‌شکند) به‌صورت JSON معتبر پاسخ داده شود.
     if input["action"] == "product_invoices" then
-        local product_code = input["product_code"]
-        if product_code == nil or product_code == "" then
-            teamyar.write_result(json.encode({ ok = false, error = "کد کالا مشخص نشده است" }))
-            return
+        local ok, err = pcall(function()
+            local product_code = input["product_code"]
+            if product_code == nil or product_code == "" then
+                teamyar.write_result(json.encode({ ok = false, error = "کد کالا مشخص نشده است" }))
+                return
+            end
+            local date_range = resolve_active_date_range(input)
+            if date_range.from_key == nil or date_range.to_key == nil then
+                teamyar.write_result(json.encode({ ok = false, error = "تعیین بازهٔ زمانی گزارش ممکن نشد" }))
+                return
+            end
+            local filters = parse_filters(input)
+            local rows, fetch_err = fetch_product_invoices(product_code, date_range, filters)
+            if rows == nil then
+                teamyar.write_result(json.encode({ ok = false, error = "خطا در دریافت فاکتورها: " .. tostring(fetch_err) }))
+                return
+            end
+            teamyar.write_result(json.encode({ ok = true, rows = rows }))
+        end)
+        if not ok then
+            teamyar.write_result(json.encode({ ok = false, error = "خطای غیرمنتظره: " .. tostring(err) }))
         end
-        local date_range = resolve_active_date_range(input)
-        if date_range.from_key == nil or date_range.to_key == nil then
-            teamyar.write_result(json.encode({ ok = false, error = "تعیین بازهٔ زمانی گزارش ممکن نشد" }))
-            return
-        end
-        local filters = parse_filters(input)
-        local rows, err = fetch_product_invoices(product_code, date_range, filters)
-        if rows == nil then
-            teamyar.write_result(json.encode({ ok = false, error = "خطا در دریافت فاکتورها: " .. tostring(err) }))
-            return
-        end
-        teamyar.write_result(json.encode({ ok = true, rows = rows }))
         return
     end
 
     -- ------------- Drill-down: فاکتورهای یک مشتری (Lazy) -------------
     if input["action"] == "customer_invoices" then
-        local crm_id = tonumber(input["crm_id"])
-        if crm_id == nil then
-            teamyar.write_result(json.encode({ ok = false, error = "شناسه مشتری نامعتبر است" }))
-            return
+        local ok, err = pcall(function()
+            local crm_id = tonumber(input["crm_id"])
+            if crm_id == nil then
+                teamyar.write_result(json.encode({ ok = false, error = "شناسه مشتری نامعتبر است" }))
+                return
+            end
+            local date_range = resolve_active_date_range(input)
+            if date_range.from_key == nil or date_range.to_key == nil then
+                teamyar.write_result(json.encode({ ok = false, error = "تعیین بازهٔ زمانی گزارش ممکن نشد" }))
+                return
+            end
+            local filters = parse_filters(input)
+            local customer = fetch_customer_header(crm_id)
+            local rows, fetch_err = fetch_customer_invoices(crm_id, date_range, filters)
+            if rows == nil then
+                teamyar.write_result(json.encode({ ok = false, error = "خطا در دریافت فاکتورها: " .. tostring(fetch_err) }))
+                return
+            end
+            teamyar.write_result(json.encode({ ok = true, rows = rows, customer = customer }))
+        end)
+        if not ok then
+            teamyar.write_result(json.encode({ ok = false, error = "خطای غیرمنتظره: " .. tostring(err) }))
         end
-        local date_range = resolve_active_date_range(input)
-        if date_range.from_key == nil or date_range.to_key == nil then
-            teamyar.write_result(json.encode({ ok = false, error = "تعیین بازهٔ زمانی گزارش ممکن نشد" }))
-            return
-        end
-        local filters = parse_filters(input)
-        local customer = fetch_customer_header(crm_id)
-        local rows, err = fetch_customer_invoices(crm_id, date_range, filters)
-        if rows == nil then
-            teamyar.write_result(json.encode({ ok = false, error = "خطا در دریافت فاکتورها: " .. tostring(err) }))
-            return
-        end
-        teamyar.write_result(json.encode({ ok = true, rows = rows, customer = customer }))
         return
     end
 
@@ -1399,19 +1440,19 @@ local function main()
     local filters = parse_filters(input)
     local date_range = resolve_active_date_range(input)
     if date_range.from_key == nil or date_range.to_key == nil then
-        teamyar.write_result(render_error_html("امکان تعیین بازهٔ زمانی گزارش وجود ندارد (خطا در report_dimdate)"))
+        write_dashboard_error(input, "امکان تعیین بازهٔ زمانی گزارش وجود ندارد (خطا در report_dimdate)")
         return
     end
 
     local sales_kpi, sales_err = fetch_sales_kpi(date_range, filters)
     if sales_kpi == nil then
-        teamyar.write_result(render_error_html("خطا در محاسبهٔ KPI فروش: " .. tostring(sales_err)))
+        write_dashboard_error(input, "خطا در محاسبهٔ KPI فروش: " .. tostring(sales_err))
         return
     end
 
     local centers, centers_err = fetch_center_aggregation(date_range, filters)
     if centers == nil then
-        teamyar.write_result(render_error_html("خطا در تجمیع مراکز درآمد: " .. tostring(centers_err)))
+        write_dashboard_error(input, "خطا در تجمیع مراکز درآمد: " .. tostring(centers_err))
         return
     end
     enrich_center_list(centers, sales_kpi.total_sales_amount)
@@ -1419,23 +1460,23 @@ local function main()
 
     local top_products, top_err = fetch_product_aggregation(date_range, filters, "DESC", false, CONFIG.TOP_PRODUCTS_COUNT)
     if top_products == nil then
-        teamyar.write_result(render_error_html("خطا در دریافت پرفروش‌ترین کالاها: " .. tostring(top_err)))
+        write_dashboard_error(input, "خطا در دریافت پرفروش‌ترین کالاها: " .. tostring(top_err))
         return
     end
     local bottom_products, bottom_err = fetch_product_aggregation(date_range, filters, "ASC", true, CONFIG.BOTTOM_PRODUCTS_COUNT)
     if bottom_products == nil then
-        teamyar.write_result(render_error_html("خطا در دریافت کم‌فروش‌ترین کالاها: " .. tostring(bottom_err)))
+        write_dashboard_error(input, "خطا در دریافت کم‌فروش‌ترین کالاها: " .. tostring(bottom_err))
         return
     end
 
     local top_customers_b2b, b2b_err = fetch_top_customers(date_range, filters, "b2b", CONFIG.TOP_CUSTOMERS_COUNT)
     if top_customers_b2b == nil then
-        teamyar.write_result(render_error_html("خطا در دریافت مشتریان برتر B2B: " .. tostring(b2b_err)))
+        write_dashboard_error(input, "خطا در دریافت مشتریان برتر B2B: " .. tostring(b2b_err))
         return
     end
     local top_customers_b2c, b2c_err = fetch_top_customers(date_range, filters, "b2c", CONFIG.TOP_CUSTOMERS_COUNT)
     if top_customers_b2c == nil then
-        teamyar.write_result(render_error_html("خطا در دریافت مشتریان برتر B2C: " .. tostring(b2c_err)))
+        write_dashboard_error(input, "خطا در دریافت مشتریان برتر B2C: " .. tostring(b2c_err))
         return
     end
 
@@ -1495,5 +1536,12 @@ end
 
 local ok, err = pcall(main)
 if not ok then
-    teamyar.write_result(render_error_html(tostring(err)))
+    -- اگر خطا پیش از رسیدن به هندلرهای JSON-اختصاصی رخ داده باشد (مثلاً در خودِ teamyar.get_input())،
+    -- همچنان باید بر اساس نوع درخواست پاسخ داد — یک Action/format=json هرگز نباید HTML دریافت کند.
+    local req = LAST_REQUEST_INPUT or {}
+    if req["action"] == "product_invoices" or req["action"] == "customer_invoices" or req["format"] == "json" then
+        teamyar.write_result(json.encode({ ok = false, error = "خطای غیرمنتظره: " .. tostring(err) }))
+    else
+        teamyar.write_result(render_error_html(tostring(err)))
+    end
 end
