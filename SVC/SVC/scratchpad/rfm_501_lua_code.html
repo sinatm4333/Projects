@@ -228,9 +228,9 @@
     <div class="eyebrow">crm_rfm_bot.lua — بات ۵۰۱</div>
     <h1>کد کامل بات ۵۰۱ برای کپی مستقیم</h1>
     <div class="meta-row">
-      <span class="chip">757 خط</span>
-      <span class="chip">36,510 کاراکتر</span>
-      <span class="chip">نسخهٔ ۱۴۰۵/۰۶/۰۸ — دور هشتم (رفع compile error: حذف BOM)</span>
+      <span class="chip">780 خط</span>
+      <span class="chip">38,562 کاراکتر</span>
+      <span class="chip">نسخهٔ ۱۴۰۵/۰۶/۰۸ — دور نهم (لاگ تشخیصی + رفع UI فیلترها)</span>
     </div>
     <p class="desc">
       همین متن را مستقیم در فیلد command بات ۵۰۱ در پنل Teamyar جایگزین کنید.
@@ -251,12 +251,12 @@
       <table class="code-table">
         <tbody>
 <tr><td class="ln">1</td><td class="code-line">-- تحلیل و ایجاد توسط سینا مقدم 09121011778</td></tr>
-<tr><td class="ln">2</td><td class="code-line">-- Last Edit = 1405/06/08 11:55</td></tr>
+<tr><td class="ln">2</td><td class="code-line">-- Last Edit = 1405/06/08 13:02</td></tr>
 <tr><td class="ln">3</td><td class="code-line">&nbsp;</td></tr>
 <tr><td class="ln">4</td><td class="code-line">-- botName = Sum Workdays And Sales Params</td></tr>
 <tr><td class="ln">5</td><td class="code-line">-- creator = zmo</td></tr>
 <tr><td class="ln">6</td><td class="code-line">-- date = 02/25/2025</td></tr>
-<tr><td class="ln">7</td><td class="code-line">-- version= 1.9 (رفع compile error: حذف UTF-8 BOM ابتدای فایل که Teamyar تحمل نمی‌کرد)</td></tr>
+<tr><td class="ln">7</td><td class="code-line">-- version= 2.0 (لاگ تشخیصی page_search_first + رفع "null"/"0" در ویجت‌های فیلتر جدید)</td></tr>
 <tr><td class="ln">8</td><td class="code-line">--</td></tr>
 <tr><td class="ln">9</td><td class="code-line">-- تغییرات این نسخه (طبق درخواست کاربر، فقط ۳ باگ زیر؛ بقیهٔ کد عیناً بات ۵۰۱ باقی مانده):</td></tr>
 <tr><td class="ln">10</td><td class="code-line">--   ۱و۳) ستون‌های R/F/M و فرمول سگمنت: f_nummber/m_nummber هر دو به‌اشتباه از cdata.rnumber</td></tr>
@@ -366,647 +366,670 @@
 <tr><td class="ln">114</td><td class="code-line">--       این BOM را نادیده نمی‌گیرد و آن را نماد نامعتبر می‌بیند. این بار اول بود که این فایل واقعاً</td></tr>
 <tr><td class="ln">115</td><td class="code-line">--       Save می‌شد (دورهای قبل فقط به‌صورت فایل/لینک تحویل داده شده بودند)، برای همین این خطا تا</td></tr>
 <tr><td class="ln">116</td><td class="code-line">--       الان دیده نشده بود. حذف شد؛ بقیهٔ فایل (محتوا، انکودینگ UTF-8 بدون BOM) دست‌نخورده ماند.</td></tr>
-<tr><td class="ln">117</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">118</td><td class="code-line">--</td></tr>
-<tr><td class="ln">119</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">120</td><td class="code-line">--- CONFIG DATA</td></tr>
-<tr><td class="ln">121</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">122</td><td class="code-line">local day = time.get_day(time.current());</td></tr>
-<tr><td class="ln">123</td><td class="code-line">local month = time.get_month(time.current());</td></tr>
-<tr><td class="ln">124</td><td class="code-line">local year = time.get_year(time.current());</td></tr>
-<tr><td class="ln">125</td><td class="code-line">local hour = time.get_hour(time.current());</td></tr>
-<tr><td class="ln">126</td><td class="code-line">local min = time.get_minute (time.current());</td></tr>
-<tr><td class="ln">127</td><td class="code-line">local sec = time.get_second(time.current());</td></tr>
-<tr><td class="ln">128</td><td class="code-line">local currentdate_time = time.get_filetime([[{"year":]]..year..[[,"month":]]..month..[[,"day":]]..day..[[,"hour":]]..hour..[[,"minute":]]..min..[[,"second":]]..sec..[[}]])</td></tr>
-<tr><td class="ln">129</td><td class="code-line">local temp_time = time.get_filetime([[{"year":]]..year..[[,"month":]]..month..[[,"day":]]..day..[[,"hour":0,"minute":0,"second":0}]])</td></tr>
-<tr><td class="ln">130</td><td class="code-line">local currentdate = string.format("%18.0f" ,temp_time);</td></tr>
-<tr><td class="ln">131</td><td class="code-line">-- باگ اصلاح‌شده («بات خروجی نمی‌دهد»): وقتی datef/datet خالی بودند هر دو به همین یک متغیر</td></tr>
-<tr><td class="ln">132</td><td class="code-line">-- (currentdate = نیمه‌شب امروز) پیش‌فرض می‌گرفتند -&gt; "between X and X" یعنی بازهٔ با پهنای صفر،</td></tr>
-<tr><td class="ln">133</td><td class="code-line">-- که عملاً هیچ فاکتوری را برنمی‌گرداند (نه فقط داده‌های امروز، هیچ‌چیز) — دقیقاً همان چیزی که با</td></tr>
-<tr><td class="ln">134</td><td class="code-line">-- «بات خروجی نمی‌دهد» و «انتخاب سازمان فرقی نمی‌کند» گزارش شد (چون نتیجهٔ پایه از قبل خالی بود،</td></tr>
-<tr><td class="ln">135</td><td class="code-line">-- هیچ فیلتری روی آن اثر نداشت). با currentdate_time (لحظهٔ واقعی الان، نه نیمه‌شب) به‌عنوان پیش‌فرض</td></tr>
-<tr><td class="ln">136</td><td class="code-line">-- datet، بازهٔ پیش‌فرض حالا «از نیمه‌شب امروز تا همین الان» است — یک بازهٔ واقعی با پهنای غیرصفر.</td></tr>
-<tr><td class="ln">137</td><td class="code-line">local currentdate_time_str = string.format("%18.0f" ,currentdate_time);</td></tr>
-<tr><td class="ln">138</td><td class="code-line">----------------------------</td></tr>
-<tr><td class="ln">139</td><td class="code-line">local _PAR_PAGE = 25</td></tr>
-<tr><td class="ln">140</td><td class="code-line">local _QUERY_TYPE = {</td></tr>
-<tr><td class="ln">141</td><td class="code-line">  _TYPE_TOTAL_SUM = 1 ,</td></tr>
-<tr><td class="ln">142</td><td class="code-line">  _TYPE_TOTAL_COUNT = 2 ,</td></tr>
-<tr><td class="ln">143</td><td class="code-line">  _TYPE_PAGE_REPORT = 3 ,</td></tr>
-<tr><td class="ln">144</td><td class="code-line">  _TYPE_PAGE_EXCEL = 4 ,</td></tr>
-<tr><td class="ln">145</td><td class="code-line">  _TYPE_PAGE_PRINT = 5 ,</td></tr>
-<tr><td class="ln">146</td><td class="code-line">}</td></tr>
-<tr><td class="ln">147</td><td class="code-line">-- مرتب‌سازی کل دیتاست (نه فقط صفحهٔ نمایش‌داده‌شده): چون ORDER BY داخل خودِ کوئری SQL اعمال</td></tr>
-<tr><td class="ln">148</td><td class="code-line">-- می‌شود (قبل از LIMIT/OFFSET صفحه‌بندی)، خروجی صفحه/اکسل/پرینت هر سه روی کل نتایج فیلترشده</td></tr>
-<tr><td class="ln">149</td><td class="code-line">-- مرتب می‌شوند. کلید ورودی sort_key فقط باید یکی از کلیدهای زیر باشد (whitelist — هرگز مستقیم</td></tr>
-<tr><td class="ln">150</td><td class="code-line">-- داخل SQL قرار نمی‌گیرد)؛ برای Customer از ستون خام (بدون تگ &lt;a&gt;) مرتب می‌شود چون ستون نمایشی</td></tr>
-<tr><td class="ln">151</td><td class="code-line">-- Customer با لینک HTML پیچیده شده و مرتب‌سازی متنی روی آن اشتباه بود. "segment" چون از rfm</td></tr>
-<tr><td class="ln">152</td><td class="code-line">-- مشتق می‌شود، بر اساس همان rfm مرتب می‌شود (هم‌ترازِ منطقی سگمنت‌ها).</td></tr>
-<tr><td class="ln">153</td><td class="code-line">local _SORT_COLUMNS = {</td></tr>
-<tr><td class="ln">154</td><td class="code-line">  Customer   = "CustomerSort",</td></tr>
-<tr><td class="ln">155</td><td class="code-line">  Days       = "Days",</td></tr>
-<tr><td class="ln">156</td><td class="code-line">  LastRunDate= "LastRunDate",</td></tr>
-<tr><td class="ln">157</td><td class="code-line">  Frequency  = "Frequency",</td></tr>
-<tr><td class="ln">158</td><td class="code-line">  Monetary   = "Monetary",</td></tr>
-<tr><td class="ln">159</td><td class="code-line">  rd         = "rd",</td></tr>
-<tr><td class="ln">160</td><td class="code-line">  fd         = "fd",</td></tr>
-<tr><td class="ln">161</td><td class="code-line">  md         = "md",</td></tr>
-<tr><td class="ln">162</td><td class="code-line">  rfm        = "rfm",</td></tr>
-<tr><td class="ln">163</td><td class="code-line">  segment    = "rfm",</td></tr>
-<tr><td class="ln">164</td><td class="code-line">}</td></tr>
-<tr><td class="ln">165</td><td class="code-line">-------------------------------------------</td></tr>
-<tr><td class="ln">166</td><td class="code-line">--- install [RES]</td></tr>
-<tr><td class="ln">167</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">168</td><td class="code-line">local _BAT_RES_PATH = "2/res_v2";</td></tr>
-<tr><td class="ln">169</td><td class="code-line">function readyCodes()</td></tr>
-<tr><td class="ln">170</td><td class="code-line">  local data = teamyar.get_input();</td></tr>
-<tr><td class="ln">171</td><td class="code-line">  data["res_type"] = "codes"</td></tr>
-<tr><td class="ln">172</td><td class="code-line">  data["config"] = json.decode(teamyar.get_attachment("data.txt"))</td></tr>
-<tr><td class="ln">173</td><td class="code-line">  local responseRes = teamyar.run_command(_BAT_RES_PATH , data);</td></tr>
-<tr><td class="ln">174</td><td class="code-line">  if responseRes ~= nil then</td></tr>
-<tr><td class="ln">175</td><td class="code-line">    responseRes = json.decode(responseRes)</td></tr>
-<tr><td class="ln">176</td><td class="code-line">    for i = 1 , #responseRes, 1 do</td></tr>
-<tr><td class="ln">177</td><td class="code-line">      local loadedFunction, errorMessage = load(responseRes[i])</td></tr>
-<tr><td class="ln">178</td><td class="code-line">      if loadedFunction then</td></tr>
-<tr><td class="ln">179</td><td class="code-line">        loadedFunction();</td></tr>
-<tr><td class="ln">180</td><td class="code-line">      else</td></tr>
-<tr><td class="ln">181</td><td class="code-line">        teamyar.write_log("Error: " .. errorMessage);</td></tr>
-<tr><td class="ln">182</td><td class="code-line">      end</td></tr>
-<tr><td class="ln">183</td><td class="code-line">    end</td></tr>
-<tr><td class="ln">184</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">185</td><td class="code-line">end</td></tr>
-<tr><td class="ln">186</td><td class="code-line">readyCodes();</td></tr>
-<tr><td class="ln">187</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">188</td><td class="code-line">--- data</td></tr>
-<tr><td class="ln">189</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">190</td><td class="code-line">function getData(queryType , pageFrom , perPage , pageTo )</td></tr>
-<tr><td class="ln">191</td><td class="code-line">  ---- init Query</td></tr>
-<tr><td class="ln">192</td><td class="code-line">  local dataQuery = {</td></tr>
-<tr><td class="ln">193</td><td class="code-line">    query = teamyar.get_attachment("query_list_invoice.txt") ,</td></tr>
-<tr><td class="ln">194</td><td class="code-line">    params = {}</td></tr>
-<tr><td class="ln">195</td><td class="code-line">  };</td></tr>
-<tr><td class="ln">196</td><td class="code-line">  ---- Select</td></tr>
-<tr><td class="ln">197</td><td class="code-line">  local config = teamyar.get_config()</td></tr>
-<tr><td class="ln">198</td><td class="code-line">  local cdata={}</td></tr>
-<tr><td class="ln">199</td><td class="code-line">  local r_nummber = 0</td></tr>
-<tr><td class="ln">200</td><td class="code-line">  local f_nummber = 0</td></tr>
-<tr><td class="ln">201</td><td class="code-line">  local m_nummber = 0</td></tr>
-<tr><td class="ln">202</td><td class="code-line">  local c_count_out = 0</td></tr>
-<tr><td class="ln">203</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">204</td><td class="code-line">  if config ~= nil then </td></tr>
-<tr><td class="ln">205</td><td class="code-line">    cdata = config.data</td></tr>
-<tr><td class="ln">206</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">207</td><td class="code-line">    -- باگ اصلاح‌شده: قبلاً f_nummber/m_nummber هم از cdata.rnumber می‌خواندند (کپی/پیست) —</td></tr>
-<tr><td class="ln">208</td><td class="code-line">    -- ستون‌های F/M و فرمول سگمنت واقعاً از اعداد ورودی F/M استفاده نمی‌کردند.</td></tr>
-<tr><td class="ln">209</td><td class="code-line">    r_nummber = cdata.rnumber</td></tr>
-<tr><td class="ln">210</td><td class="code-line">    f_nummber = cdata.fnumber</td></tr>
-<tr><td class="ln">211</td><td class="code-line">    m_nummber = cdata.mnumber</td></tr>
-<tr><td class="ln">212</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">213</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">214</td><td class="code-line"> -- teamyar.write_log(c_box_id.."uuuuu")</td></tr>
-<tr><td class="ln">215</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">216</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">217</td><td class="code-line">  local user_info = teamyar.get_user_info()</td></tr>
-<tr><td class="ln">218</td><td class="code-line">  local time_zone = user_info.timezone</td></tr>
-<tr><td class="ln">219</td><td class="code-line">  local ctype = getInput("ctype");</td></tr>
-<tr><td class="ln">220</td><td class="code-line">  local cat = getInput("cat");</td></tr>
-<tr><td class="ln">221</td><td class="code-line">  local crm = getInput("crm");</td></tr>
-<tr><td class="ln">222</td><td class="code-line">  local org = getInput("org");</td></tr>
-<tr><td class="ln">223</td><td class="code-line">  local center = getInput("center");</td></tr>
-<tr><td class="ln">224</td><td class="code-line">  local datef = getInput("datef");</td></tr>
-<tr><td class="ln">225</td><td class="code-line">  local datet = getInput("datet");</td></tr>
-<tr><td class="ln">226</td><td class="code-line">  local sort_key = getInput("sort_key");</td></tr>
-<tr><td class="ln">227</td><td class="code-line">  local sort_dir = getInput("sort_dir");</td></tr>
-<tr><td class="ln">228</td><td class="code-line">  local monetary_min = getInput("monetary_min");</td></tr>
-<tr><td class="ln">229</td><td class="code-line">  local monetary_max = getInput("monetary_max");</td></tr>
-<tr><td class="ln">230</td><td class="code-line">  local qs = getQuery_select(queryType)</td></tr>
-<tr><td class="ln">231</td><td class="code-line">  local inp = teamyar.get_input()</td></tr>
-<tr><td class="ln">232</td><td class="code-line">  ---- invoice Filter</td></tr>
-<tr><td class="ln">233</td><td class="code-line">  local where_str=" 1=1 "</td></tr>
-<tr><td class="ln">234</td><td class="code-line">  dataQuery.query , dataQuery.params  = queryTools.where:init({where_str})</td></tr>
-<tr><td class="ln">235</td><td class="code-line">  -- :addIn("ORG_ID", org)</td></tr>
-<tr><td class="ln">236</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">237</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">238</td><td class="code-line">  .run( dataQuery.query ,  dataQuery.params , "{{whereInvoice}}");</td></tr>
-<tr><td class="ln">239</td><td class="code-line">  local where_op_transfer = ""</td></tr>
-<tr><td class="ln">240</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">241</td><td class="code-line">  ---- page Number Query</td></tr>
-<tr><td class="ln">242</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{slicePageNumber}}", getQuery_page(queryType , pageFrom , perPage , pageTo));</td></tr>
-<tr><td class="ln">243</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{select}}",qs);</td></tr>
-<tr><td class="ln">244</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">245</td><td class="code-line">  local where_cat = ""</td></tr>
-<tr><td class="ln">246</td><td class="code-line">  local where_ctype= ""</td></tr>
-<tr><td class="ln">247</td><td class="code-line">  local where_crm= ""</td></tr>
-<tr><td class="ln">248</td><td class="code-line">  local where_org = ""</td></tr>
-<tr><td class="ln">249</td><td class="code-line">  local where_center = ""</td></tr>
-<tr><td class="ln">250</td><td class="code-line">  -- باگ اصلاح‌شده: فیلتر "cat" به alias نامعتبر c.id ارجاع می‌داد — در FROM پیوست SQL فقط</td></tr>
-<tr><td class="ln">251</td><td class="code-line">  -- alias «p» برای pa_client وجود دارد (c.id هیچ‌جا تعریف نشده، کد مرده/همیشه با خطا می‌شکست).</td></tr>
-<tr><td class="ln">252</td><td class="code-line">  -- + مقدار id قبل از concat با tonumber() اعتبارسنجی می‌شود (اگر عددی نبود، فیلتر نادیده گرفته</td></tr>
-<tr><td class="ln">253</td><td class="code-line">  -- می‌شود به‌جای اینکه کوئری با متن نامعتبر بشکند).</td></tr>
-<tr><td class="ln">254</td><td class="code-line">  if cat ~= nil and cat[1] ~= nil and tonumber(cat[1].id) ~= nil then</td></tr>
-<tr><td class="ln">255</td><td class="code-line">    where_cat = where_cat.. [[ and p.id in (select CLIENT_ID from crm_cross where REFERE_ID =]]..tonumber(cat[1].id)..[[ )]]</td></tr>
-<tr><td class="ln">256</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">257</td><td class="code-line">  -- فیلتر "ctype"/"crm" نیازمند LEFT JOIN profile_user_info ui ON ui.id = p.REFFERE_ID در پیوست</td></tr>
-<tr><td class="ln">258</td><td class="code-line">  -- query_list_invoice.txt است (کد مرده بدون آن) — این join به پیوست اضافه شد.</td></tr>
-<tr><td class="ln">259</td><td class="code-line">  if ctype ~= nil and ctype[1] ~= nil and tonumber(ctype[1].id) ~= nil then</td></tr>
-<tr><td class="ln">260</td><td class="code-line">    where_ctype = where_ctype.. [[ and ui.USER_TYPE=]]..tonumber(ctype[1].id)</td></tr>
-<tr><td class="ln">261</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">262</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">263</td><td class="code-line">  if crm ~= nil and crm[1] ~= nil and tonumber(crm[1].id) ~= nil then</td></tr>
-<tr><td class="ln">264</td><td class="code-line">    where_crm = where_crm.. [[ and ui.USER_TYPE=]]..tonumber(crm[1].id)</td></tr>
-<tr><td class="ln">265</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">266</td><td class="code-line">  if org ~= nil and org[1] ~= nil and tonumber(org[1].id) ~= nil then</td></tr>
-<tr><td class="ln">267</td><td class="code-line">    -- باگ اصلاح‌شده (فیلتر سازمان): data.js فیلد را با name="org" می‌فرستد ولی data.txt فقط</td></tr>
-<tr><td class="ln">268</td><td class="code-line">    -- "org_id" را declare کرده بود -&gt; getInput("org") همیشه خالی برمی‌گشت. کلید data.txt به</td></tr>
-<tr><td class="ln">269</td><td class="code-line">    -- "org" تغییر کرد (پیوست جدا). کد Lua از قبل روی "org" درست بود، دست‌نخورده ماند.</td></tr>
-<tr><td class="ln">270</td><td class="code-line">    where_org = where_org.. [[ and s.org_id=]]..tonumber(org[1].id)..[[ and p.org_id=]]..tonumber(org[1].id)</td></tr>
-<tr><td class="ln">271</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">272</td><td class="code-line">  ---- فیلتر «مرکز درآمد» (sales_invoice.SALES_CENTER -&gt; pa_center، همان چیزی که در بات‌های دیگر</td></tr>
-<tr><td class="ln">273</td><td class="code-line">  ---- این پروژه «مرکز فروش» نامیده می‌شود، مثلاً sales_settlement_group_auto). برای جدا کردن</td></tr>
-<tr><td class="ln">274</td><td class="code-line">  ---- فاکتورهای مشتریان «همکار» از «مصرف‌کننده» بر اساس مرکز درآمدی که روی فاکتور ثبت شده. ستون</td></tr>
-<tr><td class="ln">275</td><td class="code-line">  ---- خام سطح فاکتور است (نه تجمیعی)، پس WHERE ساده در سطح crm_factor کافی است (نه HAVING).</td></tr>
-<tr><td class="ln">276</td><td class="code-line">  if center ~= nil and center[1] ~= nil and tonumber(center[1].id) ~= nil then</td></tr>
-<tr><td class="ln">277</td><td class="code-line">    where_center = where_center.. [[ and s.SALES_CENTER=]]..tonumber(center[1].id)</td></tr>
-<tr><td class="ln">278</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">279</td><td class="code-line">  ---- فیلتر «بازهٔ درآمد» (Monetary min/max): چون Monetary یک sum() تجمیعی به‌ازای هر مشتری است</td></tr>
-<tr><td class="ln">280</td><td class="code-line">  ---- (نه ستون خام هر فاکتور)، فیلترش باید با HAVING روی همان CTE crm_factor باشد نه WHERE — در</td></tr>
-<tr><td class="ln">281</td><td class="code-line">  ---- HAVING، برخلاف WHERE، ارجاع به alias ستون‌های SELECT (اینجا Monetary) در MySQL مجاز است.</td></tr>
-<tr><td class="ln">282</td><td class="code-line">  ---- با HAVING به‌جای فیلتر روی نتیجهٔ نهایی: جمعیت مشتریان قبل از محاسبهٔ ntile (رتبهٔ R/F/M)</td></tr>
-<tr><td class="ln">283</td><td class="code-line">  ---- محدود می‌شود، یعنی رتبه‌ها هم‌مثل فیلترهای سازمان/رده فقط نسبت به همین زیرمجموعه حساب می‌شوند</td></tr>
-<tr><td class="ln">284</td><td class="code-line">  ---- (سازگار با رفتار بقیهٔ فیلترها). مقادیر با tonumber() اعتبارسنجی می‌شوند.</td></tr>
-<tr><td class="ln">285</td><td class="code-line">  local where_monetary = ""</td></tr>
-<tr><td class="ln">286</td><td class="code-line">  if tonumber(monetary_min) ~= nil then</td></tr>
-<tr><td class="ln">287</td><td class="code-line">    where_monetary = where_monetary.. [[ and Monetary &gt;= ]]..tonumber(monetary_min)</td></tr>
-<tr><td class="ln">288</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">289</td><td class="code-line">  if tonumber(monetary_max) ~= nil then</td></tr>
-<tr><td class="ln">290</td><td class="code-line">    where_monetary = where_monetary.. [[ and Monetary &lt;= ]]..tonumber(monetary_max)</td></tr>
-<tr><td class="ln">291</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">292</td><td class="code-line">  -- باگ اصلاح‌شده: data.txt نوع datef/datet را "number" declare کرده، پس مقدار نامعتبر/خالی را</td></tr>
-<tr><td class="ln">293</td><td class="code-line">  -- خود فریم‌ورک بی‌صدا به 0 تبدیل می‌کند نه nil — چک تنها "== nil" هرگز true نمی‌شد، در نتیجه</td></tr>
-<tr><td class="ln">294</td><td class="code-line">  -- "between 0 and {{datet}}" عملاً کل تاریخچهٔ فاکتورها را برمی‌گرداند (نه فقط بازهٔ انتخابی).</td></tr>
-<tr><td class="ln">295</td><td class="code-line">  -- با "&lt;= 0" هم مقدار nil‌شده و هم صفرشده گرفته می‌شود.</td></tr>
-<tr><td class="ln">296</td><td class="code-line">  -- باگ دیگر که همین‌جا پیدا و اصلاح شد («بات خروجی نمی‌دهد»): قبلاً هر دو (datef و datet) به</td></tr>
-<tr><td class="ln">297</td><td class="code-line">  -- همان یک مقدار currentdate (نیمه‌شب امروز) پیش‌فرض می‌گرفتند -&gt; "between X and X" یعنی بازهٔ</td></tr>
-<tr><td class="ln">298</td><td class="code-line">  -- با پهنای صفر که هیچ فاکتوری را برنمی‌گرداند، نه فقط دادهٔ امروز را. حالا datet به</td></tr>
-<tr><td class="ln">299</td><td class="code-line">  -- currentdate_time_str (لحظهٔ واقعی الان) پیش‌فرض می‌گیرد، پس بازهٔ پیش‌فرض «از نیمه‌شب امروز تا الان» است.</td></tr>
-<tr><td class="ln">300</td><td class="code-line">  if tonumber(datet) == nil or tonumber(datet) &lt;= 0 then</td></tr>
-<tr><td class="ln">301</td><td class="code-line">    datet = currentdate_time_str</td></tr>
-<tr><td class="ln">302</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">303</td><td class="code-line">  if tonumber(datef) == nil or tonumber(datef) &lt;= 0 then</td></tr>
-<tr><td class="ln">304</td><td class="code-line">    datef = currentdate</td></tr>
-<tr><td class="ln">305</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">306</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{datet}}",datet);</td></tr>
-<tr><td class="ln">307</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{datef}}",datef);</td></tr>
-<tr><td class="ln">308</td><td class="code-line">  -- طبق تأیید کاربر: مبنای Recency/Days باید «انتهای بازهٔ فیلترشده» (datet) باشد، نه امروز واقعی —</td></tr>
-<tr><td class="ln">309</td><td class="code-line">  -- وقتی فیلتر خالی است datet خودش پیش‌فرض «امروز» گرفته (فیکس بالا)، پس رفتار بدون فیلتر عوض نمی‌شود؛</td></tr>
-<tr><td class="ln">310</td><td class="code-line">  -- وقتی بازهٔ گذشته فیلتر شود (مثلاً کل سال ۱۴۰۴)، Days نسبت به پایان همان بازه حساب می‌شود نه امروز.</td></tr>
-<tr><td class="ln">311</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{current_date}}",datet);</td></tr>
-<tr><td class="ln">312</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_cat}}",where_cat);</td></tr>
-<tr><td class="ln">313</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_crm}}",where_crm);</td></tr>
-<tr><td class="ln">314</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_ctype}}",where_ctype);</td></tr>
-<tr><td class="ln">315</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_org}}",where_org);</td></tr>
-<tr><td class="ln">316</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_center}}",where_center);</td></tr>
-<tr><td class="ln">317</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_monetary}}",where_monetary);</td></tr>
-<tr><td class="ln">318</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{r_number}}",r_nummber);</td></tr>
-<tr><td class="ln">319</td><td class="code-line">    dataQuery.query = string.gsub(dataQuery.query,"{{f_number}}",f_nummber);</td></tr>
-<tr><td class="ln">320</td><td class="code-line"> dataQuery.query = string.gsub(dataQuery.query,"{{m_number}}",m_nummber);</td></tr>
-<tr><td class="ln">321</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">322</td><td class="code-line">  ---- مرتب‌سازی کل دیتاست: sort_key/sort_dir همیشه از whitelist بالا عبور می‌کنند، هرگز مستقیم</td></tr>
-<tr><td class="ln">323</td><td class="code-line">  ---- (raw) داخل SQL نمی‌روند — اگر ورودی نامعتبر/خالی باشد به همان رفتار پیش‌فرض قبلی</td></tr>
-<tr><td class="ln">324</td><td class="code-line">  ---- (order by rfm desc) برمی‌گردد.</td></tr>
-<tr><td class="ln">325</td><td class="code-line">  local sort_col = _SORT_COLUMNS[sort_key] or "rfm"</td></tr>
-<tr><td class="ln">326</td><td class="code-line">  local sort_direction = "desc"</td></tr>
-<tr><td class="ln">327</td><td class="code-line">  if sort_dir ~= nil and string.lower(tostring(sort_dir)) == "asc" then</td></tr>
-<tr><td class="ln">328</td><td class="code-line">    sort_direction = "asc"</td></tr>
-<tr><td class="ln">329</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">330</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{sort_col}}",sort_col);</td></tr>
-<tr><td class="ln">331</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{sort_dir}}",sort_direction);</td></tr>
-<tr><td class="ln">332</td><td class="code-line">  ---- Execute Query</td></tr>
-<tr><td class="ln">333</td><td class="code-line">  teamyar.write_log(dataQuery.query)</td></tr>
-<tr><td class="ln">334</td><td class="code-line">  return getQuery_result(queryType , dataQuery);</td></tr>
-<tr><td class="ln">335</td><td class="code-line">end</td></tr>
-<tr><td class="ln">336</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">337</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">338</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">339</td><td class="code-line">function getQuery_select(queryType)</td></tr>
-<tr><td class="ln">340</td><td class="code-line">  if queryType == _QUERY_TYPE._TYPE_TOTAL_SUM then</td></tr>
-<tr><td class="ln">341</td><td class="code-line">    return getTableConfig_sum()</td></tr>
-<tr><td class="ln">342</td><td class="code-line">  elseif queryType == _QUERY_TYPE._TYPE_TOTAL_COUNT then</td></tr>
-<tr><td class="ln">343</td><td class="code-line">    return getTableConfig_count()</td></tr>
-<tr><td class="ln">344</td><td class="code-line">  else</td></tr>
-<tr><td class="ln">345</td><td class="code-line">    return getTableConfig_select();</td></tr>
-<tr><td class="ln">346</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">347</td><td class="code-line">end</td></tr>
-<tr><td class="ln">348</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">349</td><td class="code-line">function getQuery_page(queryType , pageFrom , perPage , pageTo)</td></tr>
-<tr><td class="ln">350</td><td class="code-line">  local slicePageNumber = "";</td></tr>
-<tr><td class="ln">351</td><td class="code-line">  if queryType == _QUERY_TYPE._TYPE_PAGE_REPORT then</td></tr>
-<tr><td class="ln">352</td><td class="code-line">    local limit = tonumber(perPage);</td></tr>
-<tr><td class="ln">353</td><td class="code-line">    local offset = tonumber(pageFrom) ;</td></tr>
-<tr><td class="ln">354</td><td class="code-line">    slicePageNumber = "LIMIT "..limit .. " OFFSET "..offset;</td></tr>
-<tr><td class="ln">355</td><td class="code-line">  elseif queryType == _QUERY_TYPE._TYPE_PAGE_EXCEL then</td></tr>
-<tr><td class="ln">356</td><td class="code-line">    local limit = tonumber(perPage)*(tonumber(pageTo)  - tonumber(pageFrom) + 1) ;</td></tr>
-<tr><td class="ln">357</td><td class="code-line">    local offset = tonumber(perPage) *(tonumber(pageFrom) - 1);</td></tr>
-<tr><td class="ln">358</td><td class="code-line">    slicePageNumber = "LIMIT "..limit.." OFFSET "..offset;</td></tr>
-<tr><td class="ln">359</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">360</td><td class="code-line">  return slicePageNumber;</td></tr>
-<tr><td class="ln">361</td><td class="code-line">end</td></tr>
-<tr><td class="ln">362</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">363</td><td class="code-line">function getQuery_result(queryType , dataQuery)</td></tr>
-<tr><td class="ln">364</td><td class="code-line">  local resultExp = nil;</td></tr>
-<tr><td class="ln">365</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">366</td><td class="code-line">  db.query(dataQuery)</td></tr>
-<tr><td class="ln">367</td><td class="code-line">  local record={};</td></tr>
-<tr><td class="ln">368</td><td class="code-line">  if queryType == _QUERY_TYPE._TYPE_TOTAL_COUNT then</td></tr>
-<tr><td class="ln">369</td><td class="code-line">    record = db.query_fetch();</td></tr>
-<tr><td class="ln">370</td><td class="code-line">    resultExp = record[1];</td></tr>
-<tr><td class="ln">371</td><td class="code-line">  elseif queryType == _QUERY_TYPE._TYPE_TOTAL_SUM then</td></tr>
-<tr><td class="ln">372</td><td class="code-line">    local columnsSelected = {};</td></tr>
-<tr><td class="ln">373</td><td class="code-line">    local columns = getTableConfig();</td></tr>
-<tr><td class="ln">374</td><td class="code-line">    for i = 1, #columns , 1 do</td></tr>
-<tr><td class="ln">375</td><td class="code-line">      local itemColumns = columns[i];</td></tr>
-<tr><td class="ln">376</td><td class="code-line">      if itemColumns.key ~= nil and itemColumns.sum ~= nil and itemColumns.sum == true then</td></tr>
-<tr><td class="ln">377</td><td class="code-line">        table.insert(columnsSelected , itemColumns.key)</td></tr>
-<tr><td class="ln">378</td><td class="code-line">      end</td></tr>
-<tr><td class="ln">379</td><td class="code-line">    end</td></tr>
-<tr><td class="ln">380</td><td class="code-line">    if #columns &gt; 0 then</td></tr>
-<tr><td class="ln">381</td><td class="code-line">      resultExp = {};</td></tr>
-<tr><td class="ln">382</td><td class="code-line">      record = db.query_fetch();</td></tr>
-<tr><td class="ln">383</td><td class="code-line">      for i = 1, #columnsSelected , 1 do</td></tr>
-<tr><td class="ln">384</td><td class="code-line">        resultExp[columnsSelected[i]] = record[i];</td></tr>
-<tr><td class="ln">385</td><td class="code-line">      end</td></tr>
-<tr><td class="ln">386</td><td class="code-line">    end</td></tr>
-<tr><td class="ln">387</td><td class="code-line">  else</td></tr>
-<tr><td class="ln">388</td><td class="code-line">    resultExp = {};</td></tr>
-<tr><td class="ln">389</td><td class="code-line">    while db.query_fetch(record) do</td></tr>
-<tr><td class="ln">390</td><td class="code-line">      local itemRow = {};</td></tr>
-<tr><td class="ln">391</td><td class="code-line">      local columns = getTableConfig();</td></tr>
-<tr><td class="ln">392</td><td class="code-line">      for i = 1, #columns , 1 do</td></tr>
-<tr><td class="ln">393</td><td class="code-line">        local itemColumns = columns[i];</td></tr>
-<tr><td class="ln">394</td><td class="code-line">        if itemColumns.key ~= nil then</td></tr>
-<tr><td class="ln">395</td><td class="code-line">          itemRow[itemColumns.key] = record[i];</td></tr>
-<tr><td class="ln">396</td><td class="code-line">        end</td></tr>
+<tr><td class="ln">117</td><td class="code-line">--</td></tr>
+<tr><td class="ln">118</td><td class="code-line">-- تغییرات این نسخه (۱۴۰۵/۰۶/۰۸ — دور نهم: «لود سریع شد» تأیید شد، ولی دو گزارش جدید):</td></tr>
+<tr><td class="ln">119</td><td class="code-line">--   ۱۵) UI ویجت‌های فیلتر جدید (sort_key/sort_dir/monetary_min/monetary_max): بدون || "" در</td></tr>
+<tr><td class="ln">120</td><td class="code-line">--       data.js، وقتی چیزی cache نشده بود getCash() مقدار null/0 برمی‌گرداند و ویجت آن را عیناً</td></tr>
+<tr><td class="ln">121</td><td class="code-line">--       به‌صورت متن "null"/"۰" داخل کادر نشان می‌داد (نه کادر خالی) — گمراه‌کننده، انگار واقعاً</td></tr>
+<tr><td class="ln">122</td><td class="code-line">--       فیلتری زده شده. اصلاح شد در data.js (پیوست جدا). عنوان چندخطی «مرتب‌سازی بر اساس</td></tr>
+<tr><td class="ln">123</td><td class="code-line">--       (Customer, Days, ...)» هم کوتاه شد به یک خط («مرتب‌سازی بر اساس»)، توضیح مقادیر مجاز به</td></tr>
+<tr><td class="ln">124</td><td class="code-line">--       یک &lt;div&gt; راهنمای جدا زیر همان کادر منتقل شد (متن SORT_KEY_HINT در data.txt).</td></tr>
+<tr><td class="ln">125</td><td class="code-line">--   ۱۶) گزارش کاربر: بعد از انتخاب فیلتر و زدن «اجرا کردن»، جدول نتایج خالی می‌ماند. چون فیکس دور</td></tr>
+<tr><td class="ln">126</td><td class="code-line">--       قبل (isAutoFirstLoad/page_search_first) دقیقاً روی همین مسیر (getTableSectionOne) اثر</td></tr>
+<tr><td class="ln">127</td><td class="code-line">--       گذاشته، احتمال واقعی این است که page_search_first حتی روی کلیک واقعی «اجرا کردن» هم true</td></tr>
+<tr><td class="ln">128</td><td class="code-line">--       باشد (برخلاف مستندسازی قبلی که فقط از خواندن سورس res_v2 در یک نشست قبلی نتیجه‌گیری شده</td></tr>
+<tr><td class="ln">129</td><td class="code-line">--       بود، نه تأییدشده زنده روی این مسیر خاص) — یعنی ممکن است این فیکس، کوئری واقعی را همیشه رد</td></tr>
+<tr><td class="ln">130</td><td class="code-line">--       کند نه فقط لود خودکار اول. یک احتمال دیگر: فیلترهای انتخاب‌شده (سازمان + بازهٔ تاریخ کوتاه)</td></tr>
+<tr><td class="ln">131</td><td class="code-line">--       واقعاً هیچ فاکتوری مطابقشان نبوده. بدون دیتابیس زنده نمی‌شود مطمئن شد کدام است — همین‌جا</td></tr>
+<tr><td class="ln">132</td><td class="code-line">--       یک لاگ تشخیصی اضافه شد: هر بار getTableSectionOne صدا زده می‌شود، مقدار page_search_first</td></tr>
+<tr><td class="ln">133</td><td class="code-line">--       در لاگ اجرای بات ثبت می‌شود، تا از تب Log مشخص شود آیا روی کلیک واقعی «اجرا کردن» این</td></tr>
+<tr><td class="ln">134</td><td class="code-line">--       مقدار false بوده (و کوئری واقعی اجرا شده، فقط صفر ردیف داشته) یا true مانده (یعنی فیکس دور</td></tr>
+<tr><td class="ln">135</td><td class="code-line">--       قبل باگ‌دار است و باید برگردد).</td></tr>
+<tr><td class="ln">136</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">137</td><td class="code-line">--</td></tr>
+<tr><td class="ln">138</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">139</td><td class="code-line">--- CONFIG DATA</td></tr>
+<tr><td class="ln">140</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">141</td><td class="code-line">local day = time.get_day(time.current());</td></tr>
+<tr><td class="ln">142</td><td class="code-line">local month = time.get_month(time.current());</td></tr>
+<tr><td class="ln">143</td><td class="code-line">local year = time.get_year(time.current());</td></tr>
+<tr><td class="ln">144</td><td class="code-line">local hour = time.get_hour(time.current());</td></tr>
+<tr><td class="ln">145</td><td class="code-line">local min = time.get_minute (time.current());</td></tr>
+<tr><td class="ln">146</td><td class="code-line">local sec = time.get_second(time.current());</td></tr>
+<tr><td class="ln">147</td><td class="code-line">local currentdate_time = time.get_filetime([[{"year":]]..year..[[,"month":]]..month..[[,"day":]]..day..[[,"hour":]]..hour..[[,"minute":]]..min..[[,"second":]]..sec..[[}]])</td></tr>
+<tr><td class="ln">148</td><td class="code-line">local temp_time = time.get_filetime([[{"year":]]..year..[[,"month":]]..month..[[,"day":]]..day..[[,"hour":0,"minute":0,"second":0}]])</td></tr>
+<tr><td class="ln">149</td><td class="code-line">local currentdate = string.format("%18.0f" ,temp_time);</td></tr>
+<tr><td class="ln">150</td><td class="code-line">-- باگ اصلاح‌شده («بات خروجی نمی‌دهد»): وقتی datef/datet خالی بودند هر دو به همین یک متغیر</td></tr>
+<tr><td class="ln">151</td><td class="code-line">-- (currentdate = نیمه‌شب امروز) پیش‌فرض می‌گرفتند -&gt; "between X and X" یعنی بازهٔ با پهنای صفر،</td></tr>
+<tr><td class="ln">152</td><td class="code-line">-- که عملاً هیچ فاکتوری را برنمی‌گرداند (نه فقط داده‌های امروز، هیچ‌چیز) — دقیقاً همان چیزی که با</td></tr>
+<tr><td class="ln">153</td><td class="code-line">-- «بات خروجی نمی‌دهد» و «انتخاب سازمان فرقی نمی‌کند» گزارش شد (چون نتیجهٔ پایه از قبل خالی بود،</td></tr>
+<tr><td class="ln">154</td><td class="code-line">-- هیچ فیلتری روی آن اثر نداشت). با currentdate_time (لحظهٔ واقعی الان، نه نیمه‌شب) به‌عنوان پیش‌فرض</td></tr>
+<tr><td class="ln">155</td><td class="code-line">-- datet، بازهٔ پیش‌فرض حالا «از نیمه‌شب امروز تا همین الان» است — یک بازهٔ واقعی با پهنای غیرصفر.</td></tr>
+<tr><td class="ln">156</td><td class="code-line">local currentdate_time_str = string.format("%18.0f" ,currentdate_time);</td></tr>
+<tr><td class="ln">157</td><td class="code-line">----------------------------</td></tr>
+<tr><td class="ln">158</td><td class="code-line">local _PAR_PAGE = 25</td></tr>
+<tr><td class="ln">159</td><td class="code-line">local _QUERY_TYPE = {</td></tr>
+<tr><td class="ln">160</td><td class="code-line">  _TYPE_TOTAL_SUM = 1 ,</td></tr>
+<tr><td class="ln">161</td><td class="code-line">  _TYPE_TOTAL_COUNT = 2 ,</td></tr>
+<tr><td class="ln">162</td><td class="code-line">  _TYPE_PAGE_REPORT = 3 ,</td></tr>
+<tr><td class="ln">163</td><td class="code-line">  _TYPE_PAGE_EXCEL = 4 ,</td></tr>
+<tr><td class="ln">164</td><td class="code-line">  _TYPE_PAGE_PRINT = 5 ,</td></tr>
+<tr><td class="ln">165</td><td class="code-line">}</td></tr>
+<tr><td class="ln">166</td><td class="code-line">-- مرتب‌سازی کل دیتاست (نه فقط صفحهٔ نمایش‌داده‌شده): چون ORDER BY داخل خودِ کوئری SQL اعمال</td></tr>
+<tr><td class="ln">167</td><td class="code-line">-- می‌شود (قبل از LIMIT/OFFSET صفحه‌بندی)، خروجی صفحه/اکسل/پرینت هر سه روی کل نتایج فیلترشده</td></tr>
+<tr><td class="ln">168</td><td class="code-line">-- مرتب می‌شوند. کلید ورودی sort_key فقط باید یکی از کلیدهای زیر باشد (whitelist — هرگز مستقیم</td></tr>
+<tr><td class="ln">169</td><td class="code-line">-- داخل SQL قرار نمی‌گیرد)؛ برای Customer از ستون خام (بدون تگ &lt;a&gt;) مرتب می‌شود چون ستون نمایشی</td></tr>
+<tr><td class="ln">170</td><td class="code-line">-- Customer با لینک HTML پیچیده شده و مرتب‌سازی متنی روی آن اشتباه بود. "segment" چون از rfm</td></tr>
+<tr><td class="ln">171</td><td class="code-line">-- مشتق می‌شود، بر اساس همان rfm مرتب می‌شود (هم‌ترازِ منطقی سگمنت‌ها).</td></tr>
+<tr><td class="ln">172</td><td class="code-line">local _SORT_COLUMNS = {</td></tr>
+<tr><td class="ln">173</td><td class="code-line">  Customer   = "CustomerSort",</td></tr>
+<tr><td class="ln">174</td><td class="code-line">  Days       = "Days",</td></tr>
+<tr><td class="ln">175</td><td class="code-line">  LastRunDate= "LastRunDate",</td></tr>
+<tr><td class="ln">176</td><td class="code-line">  Frequency  = "Frequency",</td></tr>
+<tr><td class="ln">177</td><td class="code-line">  Monetary   = "Monetary",</td></tr>
+<tr><td class="ln">178</td><td class="code-line">  rd         = "rd",</td></tr>
+<tr><td class="ln">179</td><td class="code-line">  fd         = "fd",</td></tr>
+<tr><td class="ln">180</td><td class="code-line">  md         = "md",</td></tr>
+<tr><td class="ln">181</td><td class="code-line">  rfm        = "rfm",</td></tr>
+<tr><td class="ln">182</td><td class="code-line">  segment    = "rfm",</td></tr>
+<tr><td class="ln">183</td><td class="code-line">}</td></tr>
+<tr><td class="ln">184</td><td class="code-line">-------------------------------------------</td></tr>
+<tr><td class="ln">185</td><td class="code-line">--- install [RES]</td></tr>
+<tr><td class="ln">186</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">187</td><td class="code-line">local _BAT_RES_PATH = "2/res_v2";</td></tr>
+<tr><td class="ln">188</td><td class="code-line">function readyCodes()</td></tr>
+<tr><td class="ln">189</td><td class="code-line">  local data = teamyar.get_input();</td></tr>
+<tr><td class="ln">190</td><td class="code-line">  data["res_type"] = "codes"</td></tr>
+<tr><td class="ln">191</td><td class="code-line">  data["config"] = json.decode(teamyar.get_attachment("data.txt"))</td></tr>
+<tr><td class="ln">192</td><td class="code-line">  local responseRes = teamyar.run_command(_BAT_RES_PATH , data);</td></tr>
+<tr><td class="ln">193</td><td class="code-line">  if responseRes ~= nil then</td></tr>
+<tr><td class="ln">194</td><td class="code-line">    responseRes = json.decode(responseRes)</td></tr>
+<tr><td class="ln">195</td><td class="code-line">    for i = 1 , #responseRes, 1 do</td></tr>
+<tr><td class="ln">196</td><td class="code-line">      local loadedFunction, errorMessage = load(responseRes[i])</td></tr>
+<tr><td class="ln">197</td><td class="code-line">      if loadedFunction then</td></tr>
+<tr><td class="ln">198</td><td class="code-line">        loadedFunction();</td></tr>
+<tr><td class="ln">199</td><td class="code-line">      else</td></tr>
+<tr><td class="ln">200</td><td class="code-line">        teamyar.write_log("Error: " .. errorMessage);</td></tr>
+<tr><td class="ln">201</td><td class="code-line">      end</td></tr>
+<tr><td class="ln">202</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">203</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">204</td><td class="code-line">end</td></tr>
+<tr><td class="ln">205</td><td class="code-line">readyCodes();</td></tr>
+<tr><td class="ln">206</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">207</td><td class="code-line">--- data</td></tr>
+<tr><td class="ln">208</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">209</td><td class="code-line">function getData(queryType , pageFrom , perPage , pageTo )</td></tr>
+<tr><td class="ln">210</td><td class="code-line">  ---- init Query</td></tr>
+<tr><td class="ln">211</td><td class="code-line">  local dataQuery = {</td></tr>
+<tr><td class="ln">212</td><td class="code-line">    query = teamyar.get_attachment("query_list_invoice.txt") ,</td></tr>
+<tr><td class="ln">213</td><td class="code-line">    params = {}</td></tr>
+<tr><td class="ln">214</td><td class="code-line">  };</td></tr>
+<tr><td class="ln">215</td><td class="code-line">  ---- Select</td></tr>
+<tr><td class="ln">216</td><td class="code-line">  local config = teamyar.get_config()</td></tr>
+<tr><td class="ln">217</td><td class="code-line">  local cdata={}</td></tr>
+<tr><td class="ln">218</td><td class="code-line">  local r_nummber = 0</td></tr>
+<tr><td class="ln">219</td><td class="code-line">  local f_nummber = 0</td></tr>
+<tr><td class="ln">220</td><td class="code-line">  local m_nummber = 0</td></tr>
+<tr><td class="ln">221</td><td class="code-line">  local c_count_out = 0</td></tr>
+<tr><td class="ln">222</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">223</td><td class="code-line">  if config ~= nil then </td></tr>
+<tr><td class="ln">224</td><td class="code-line">    cdata = config.data</td></tr>
+<tr><td class="ln">225</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">226</td><td class="code-line">    -- باگ اصلاح‌شده: قبلاً f_nummber/m_nummber هم از cdata.rnumber می‌خواندند (کپی/پیست) —</td></tr>
+<tr><td class="ln">227</td><td class="code-line">    -- ستون‌های F/M و فرمول سگمنت واقعاً از اعداد ورودی F/M استفاده نمی‌کردند.</td></tr>
+<tr><td class="ln">228</td><td class="code-line">    r_nummber = cdata.rnumber</td></tr>
+<tr><td class="ln">229</td><td class="code-line">    f_nummber = cdata.fnumber</td></tr>
+<tr><td class="ln">230</td><td class="code-line">    m_nummber = cdata.mnumber</td></tr>
+<tr><td class="ln">231</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">232</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">233</td><td class="code-line"> -- teamyar.write_log(c_box_id.."uuuuu")</td></tr>
+<tr><td class="ln">234</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">235</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">236</td><td class="code-line">  local user_info = teamyar.get_user_info()</td></tr>
+<tr><td class="ln">237</td><td class="code-line">  local time_zone = user_info.timezone</td></tr>
+<tr><td class="ln">238</td><td class="code-line">  local ctype = getInput("ctype");</td></tr>
+<tr><td class="ln">239</td><td class="code-line">  local cat = getInput("cat");</td></tr>
+<tr><td class="ln">240</td><td class="code-line">  local crm = getInput("crm");</td></tr>
+<tr><td class="ln">241</td><td class="code-line">  local org = getInput("org");</td></tr>
+<tr><td class="ln">242</td><td class="code-line">  local center = getInput("center");</td></tr>
+<tr><td class="ln">243</td><td class="code-line">  local datef = getInput("datef");</td></tr>
+<tr><td class="ln">244</td><td class="code-line">  local datet = getInput("datet");</td></tr>
+<tr><td class="ln">245</td><td class="code-line">  local sort_key = getInput("sort_key");</td></tr>
+<tr><td class="ln">246</td><td class="code-line">  local sort_dir = getInput("sort_dir");</td></tr>
+<tr><td class="ln">247</td><td class="code-line">  local monetary_min = getInput("monetary_min");</td></tr>
+<tr><td class="ln">248</td><td class="code-line">  local monetary_max = getInput("monetary_max");</td></tr>
+<tr><td class="ln">249</td><td class="code-line">  local qs = getQuery_select(queryType)</td></tr>
+<tr><td class="ln">250</td><td class="code-line">  local inp = teamyar.get_input()</td></tr>
+<tr><td class="ln">251</td><td class="code-line">  ---- invoice Filter</td></tr>
+<tr><td class="ln">252</td><td class="code-line">  local where_str=" 1=1 "</td></tr>
+<tr><td class="ln">253</td><td class="code-line">  dataQuery.query , dataQuery.params  = queryTools.where:init({where_str})</td></tr>
+<tr><td class="ln">254</td><td class="code-line">  -- :addIn("ORG_ID", org)</td></tr>
+<tr><td class="ln">255</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">256</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">257</td><td class="code-line">  .run( dataQuery.query ,  dataQuery.params , "{{whereInvoice}}");</td></tr>
+<tr><td class="ln">258</td><td class="code-line">  local where_op_transfer = ""</td></tr>
+<tr><td class="ln">259</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">260</td><td class="code-line">  ---- page Number Query</td></tr>
+<tr><td class="ln">261</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{slicePageNumber}}", getQuery_page(queryType , pageFrom , perPage , pageTo));</td></tr>
+<tr><td class="ln">262</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{select}}",qs);</td></tr>
+<tr><td class="ln">263</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">264</td><td class="code-line">  local where_cat = ""</td></tr>
+<tr><td class="ln">265</td><td class="code-line">  local where_ctype= ""</td></tr>
+<tr><td class="ln">266</td><td class="code-line">  local where_crm= ""</td></tr>
+<tr><td class="ln">267</td><td class="code-line">  local where_org = ""</td></tr>
+<tr><td class="ln">268</td><td class="code-line">  local where_center = ""</td></tr>
+<tr><td class="ln">269</td><td class="code-line">  -- باگ اصلاح‌شده: فیلتر "cat" به alias نامعتبر c.id ارجاع می‌داد — در FROM پیوست SQL فقط</td></tr>
+<tr><td class="ln">270</td><td class="code-line">  -- alias «p» برای pa_client وجود دارد (c.id هیچ‌جا تعریف نشده، کد مرده/همیشه با خطا می‌شکست).</td></tr>
+<tr><td class="ln">271</td><td class="code-line">  -- + مقدار id قبل از concat با tonumber() اعتبارسنجی می‌شود (اگر عددی نبود، فیلتر نادیده گرفته</td></tr>
+<tr><td class="ln">272</td><td class="code-line">  -- می‌شود به‌جای اینکه کوئری با متن نامعتبر بشکند).</td></tr>
+<tr><td class="ln">273</td><td class="code-line">  if cat ~= nil and cat[1] ~= nil and tonumber(cat[1].id) ~= nil then</td></tr>
+<tr><td class="ln">274</td><td class="code-line">    where_cat = where_cat.. [[ and p.id in (select CLIENT_ID from crm_cross where REFERE_ID =]]..tonumber(cat[1].id)..[[ )]]</td></tr>
+<tr><td class="ln">275</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">276</td><td class="code-line">  -- فیلتر "ctype"/"crm" نیازمند LEFT JOIN profile_user_info ui ON ui.id = p.REFFERE_ID در پیوست</td></tr>
+<tr><td class="ln">277</td><td class="code-line">  -- query_list_invoice.txt است (کد مرده بدون آن) — این join به پیوست اضافه شد.</td></tr>
+<tr><td class="ln">278</td><td class="code-line">  if ctype ~= nil and ctype[1] ~= nil and tonumber(ctype[1].id) ~= nil then</td></tr>
+<tr><td class="ln">279</td><td class="code-line">    where_ctype = where_ctype.. [[ and ui.USER_TYPE=]]..tonumber(ctype[1].id)</td></tr>
+<tr><td class="ln">280</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">281</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">282</td><td class="code-line">  if crm ~= nil and crm[1] ~= nil and tonumber(crm[1].id) ~= nil then</td></tr>
+<tr><td class="ln">283</td><td class="code-line">    where_crm = where_crm.. [[ and ui.USER_TYPE=]]..tonumber(crm[1].id)</td></tr>
+<tr><td class="ln">284</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">285</td><td class="code-line">  if org ~= nil and org[1] ~= nil and tonumber(org[1].id) ~= nil then</td></tr>
+<tr><td class="ln">286</td><td class="code-line">    -- باگ اصلاح‌شده (فیلتر سازمان): data.js فیلد را با name="org" می‌فرستد ولی data.txt فقط</td></tr>
+<tr><td class="ln">287</td><td class="code-line">    -- "org_id" را declare کرده بود -&gt; getInput("org") همیشه خالی برمی‌گشت. کلید data.txt به</td></tr>
+<tr><td class="ln">288</td><td class="code-line">    -- "org" تغییر کرد (پیوست جدا). کد Lua از قبل روی "org" درست بود، دست‌نخورده ماند.</td></tr>
+<tr><td class="ln">289</td><td class="code-line">    where_org = where_org.. [[ and s.org_id=]]..tonumber(org[1].id)..[[ and p.org_id=]]..tonumber(org[1].id)</td></tr>
+<tr><td class="ln">290</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">291</td><td class="code-line">  ---- فیلتر «مرکز درآمد» (sales_invoice.SALES_CENTER -&gt; pa_center، همان چیزی که در بات‌های دیگر</td></tr>
+<tr><td class="ln">292</td><td class="code-line">  ---- این پروژه «مرکز فروش» نامیده می‌شود، مثلاً sales_settlement_group_auto). برای جدا کردن</td></tr>
+<tr><td class="ln">293</td><td class="code-line">  ---- فاکتورهای مشتریان «همکار» از «مصرف‌کننده» بر اساس مرکز درآمدی که روی فاکتور ثبت شده. ستون</td></tr>
+<tr><td class="ln">294</td><td class="code-line">  ---- خام سطح فاکتور است (نه تجمیعی)، پس WHERE ساده در سطح crm_factor کافی است (نه HAVING).</td></tr>
+<tr><td class="ln">295</td><td class="code-line">  if center ~= nil and center[1] ~= nil and tonumber(center[1].id) ~= nil then</td></tr>
+<tr><td class="ln">296</td><td class="code-line">    where_center = where_center.. [[ and s.SALES_CENTER=]]..tonumber(center[1].id)</td></tr>
+<tr><td class="ln">297</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">298</td><td class="code-line">  ---- فیلتر «بازهٔ درآمد» (Monetary min/max): چون Monetary یک sum() تجمیعی به‌ازای هر مشتری است</td></tr>
+<tr><td class="ln">299</td><td class="code-line">  ---- (نه ستون خام هر فاکتور)، فیلترش باید با HAVING روی همان CTE crm_factor باشد نه WHERE — در</td></tr>
+<tr><td class="ln">300</td><td class="code-line">  ---- HAVING، برخلاف WHERE، ارجاع به alias ستون‌های SELECT (اینجا Monetary) در MySQL مجاز است.</td></tr>
+<tr><td class="ln">301</td><td class="code-line">  ---- با HAVING به‌جای فیلتر روی نتیجهٔ نهایی: جمعیت مشتریان قبل از محاسبهٔ ntile (رتبهٔ R/F/M)</td></tr>
+<tr><td class="ln">302</td><td class="code-line">  ---- محدود می‌شود، یعنی رتبه‌ها هم‌مثل فیلترهای سازمان/رده فقط نسبت به همین زیرمجموعه حساب می‌شوند</td></tr>
+<tr><td class="ln">303</td><td class="code-line">  ---- (سازگار با رفتار بقیهٔ فیلترها). مقادیر با tonumber() اعتبارسنجی می‌شوند.</td></tr>
+<tr><td class="ln">304</td><td class="code-line">  local where_monetary = ""</td></tr>
+<tr><td class="ln">305</td><td class="code-line">  if tonumber(monetary_min) ~= nil then</td></tr>
+<tr><td class="ln">306</td><td class="code-line">    where_monetary = where_monetary.. [[ and Monetary &gt;= ]]..tonumber(monetary_min)</td></tr>
+<tr><td class="ln">307</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">308</td><td class="code-line">  if tonumber(monetary_max) ~= nil then</td></tr>
+<tr><td class="ln">309</td><td class="code-line">    where_monetary = where_monetary.. [[ and Monetary &lt;= ]]..tonumber(monetary_max)</td></tr>
+<tr><td class="ln">310</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">311</td><td class="code-line">  -- باگ اصلاح‌شده: data.txt نوع datef/datet را "number" declare کرده، پس مقدار نامعتبر/خالی را</td></tr>
+<tr><td class="ln">312</td><td class="code-line">  -- خود فریم‌ورک بی‌صدا به 0 تبدیل می‌کند نه nil — چک تنها "== nil" هرگز true نمی‌شد، در نتیجه</td></tr>
+<tr><td class="ln">313</td><td class="code-line">  -- "between 0 and {{datet}}" عملاً کل تاریخچهٔ فاکتورها را برمی‌گرداند (نه فقط بازهٔ انتخابی).</td></tr>
+<tr><td class="ln">314</td><td class="code-line">  -- با "&lt;= 0" هم مقدار nil‌شده و هم صفرشده گرفته می‌شود.</td></tr>
+<tr><td class="ln">315</td><td class="code-line">  -- باگ دیگر که همین‌جا پیدا و اصلاح شد («بات خروجی نمی‌دهد»): قبلاً هر دو (datef و datet) به</td></tr>
+<tr><td class="ln">316</td><td class="code-line">  -- همان یک مقدار currentdate (نیمه‌شب امروز) پیش‌فرض می‌گرفتند -&gt; "between X and X" یعنی بازهٔ</td></tr>
+<tr><td class="ln">317</td><td class="code-line">  -- با پهنای صفر که هیچ فاکتوری را برنمی‌گرداند، نه فقط دادهٔ امروز را. حالا datet به</td></tr>
+<tr><td class="ln">318</td><td class="code-line">  -- currentdate_time_str (لحظهٔ واقعی الان) پیش‌فرض می‌گیرد، پس بازهٔ پیش‌فرض «از نیمه‌شب امروز تا الان» است.</td></tr>
+<tr><td class="ln">319</td><td class="code-line">  if tonumber(datet) == nil or tonumber(datet) &lt;= 0 then</td></tr>
+<tr><td class="ln">320</td><td class="code-line">    datet = currentdate_time_str</td></tr>
+<tr><td class="ln">321</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">322</td><td class="code-line">  if tonumber(datef) == nil or tonumber(datef) &lt;= 0 then</td></tr>
+<tr><td class="ln">323</td><td class="code-line">    datef = currentdate</td></tr>
+<tr><td class="ln">324</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">325</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{datet}}",datet);</td></tr>
+<tr><td class="ln">326</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{datef}}",datef);</td></tr>
+<tr><td class="ln">327</td><td class="code-line">  -- طبق تأیید کاربر: مبنای Recency/Days باید «انتهای بازهٔ فیلترشده» (datet) باشد، نه امروز واقعی —</td></tr>
+<tr><td class="ln">328</td><td class="code-line">  -- وقتی فیلتر خالی است datet خودش پیش‌فرض «امروز» گرفته (فیکس بالا)، پس رفتار بدون فیلتر عوض نمی‌شود؛</td></tr>
+<tr><td class="ln">329</td><td class="code-line">  -- وقتی بازهٔ گذشته فیلتر شود (مثلاً کل سال ۱۴۰۴)، Days نسبت به پایان همان بازه حساب می‌شود نه امروز.</td></tr>
+<tr><td class="ln">330</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{current_date}}",datet);</td></tr>
+<tr><td class="ln">331</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_cat}}",where_cat);</td></tr>
+<tr><td class="ln">332</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_crm}}",where_crm);</td></tr>
+<tr><td class="ln">333</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_ctype}}",where_ctype);</td></tr>
+<tr><td class="ln">334</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_org}}",where_org);</td></tr>
+<tr><td class="ln">335</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_center}}",where_center);</td></tr>
+<tr><td class="ln">336</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{where_monetary}}",where_monetary);</td></tr>
+<tr><td class="ln">337</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{r_number}}",r_nummber);</td></tr>
+<tr><td class="ln">338</td><td class="code-line">    dataQuery.query = string.gsub(dataQuery.query,"{{f_number}}",f_nummber);</td></tr>
+<tr><td class="ln">339</td><td class="code-line"> dataQuery.query = string.gsub(dataQuery.query,"{{m_number}}",m_nummber);</td></tr>
+<tr><td class="ln">340</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">341</td><td class="code-line">  ---- مرتب‌سازی کل دیتاست: sort_key/sort_dir همیشه از whitelist بالا عبور می‌کنند، هرگز مستقیم</td></tr>
+<tr><td class="ln">342</td><td class="code-line">  ---- (raw) داخل SQL نمی‌روند — اگر ورودی نامعتبر/خالی باشد به همان رفتار پیش‌فرض قبلی</td></tr>
+<tr><td class="ln">343</td><td class="code-line">  ---- (order by rfm desc) برمی‌گردد.</td></tr>
+<tr><td class="ln">344</td><td class="code-line">  local sort_col = _SORT_COLUMNS[sort_key] or "rfm"</td></tr>
+<tr><td class="ln">345</td><td class="code-line">  local sort_direction = "desc"</td></tr>
+<tr><td class="ln">346</td><td class="code-line">  if sort_dir ~= nil and string.lower(tostring(sort_dir)) == "asc" then</td></tr>
+<tr><td class="ln">347</td><td class="code-line">    sort_direction = "asc"</td></tr>
+<tr><td class="ln">348</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">349</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{sort_col}}",sort_col);</td></tr>
+<tr><td class="ln">350</td><td class="code-line">  dataQuery.query = string.gsub(dataQuery.query,"{{sort_dir}}",sort_direction);</td></tr>
+<tr><td class="ln">351</td><td class="code-line">  ---- Execute Query</td></tr>
+<tr><td class="ln">352</td><td class="code-line">  teamyar.write_log(dataQuery.query)</td></tr>
+<tr><td class="ln">353</td><td class="code-line">  return getQuery_result(queryType , dataQuery);</td></tr>
+<tr><td class="ln">354</td><td class="code-line">end</td></tr>
+<tr><td class="ln">355</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">356</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">357</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">358</td><td class="code-line">function getQuery_select(queryType)</td></tr>
+<tr><td class="ln">359</td><td class="code-line">  if queryType == _QUERY_TYPE._TYPE_TOTAL_SUM then</td></tr>
+<tr><td class="ln">360</td><td class="code-line">    return getTableConfig_sum()</td></tr>
+<tr><td class="ln">361</td><td class="code-line">  elseif queryType == _QUERY_TYPE._TYPE_TOTAL_COUNT then</td></tr>
+<tr><td class="ln">362</td><td class="code-line">    return getTableConfig_count()</td></tr>
+<tr><td class="ln">363</td><td class="code-line">  else</td></tr>
+<tr><td class="ln">364</td><td class="code-line">    return getTableConfig_select();</td></tr>
+<tr><td class="ln">365</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">366</td><td class="code-line">end</td></tr>
+<tr><td class="ln">367</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">368</td><td class="code-line">function getQuery_page(queryType , pageFrom , perPage , pageTo)</td></tr>
+<tr><td class="ln">369</td><td class="code-line">  local slicePageNumber = "";</td></tr>
+<tr><td class="ln">370</td><td class="code-line">  if queryType == _QUERY_TYPE._TYPE_PAGE_REPORT then</td></tr>
+<tr><td class="ln">371</td><td class="code-line">    local limit = tonumber(perPage);</td></tr>
+<tr><td class="ln">372</td><td class="code-line">    local offset = tonumber(pageFrom) ;</td></tr>
+<tr><td class="ln">373</td><td class="code-line">    slicePageNumber = "LIMIT "..limit .. " OFFSET "..offset;</td></tr>
+<tr><td class="ln">374</td><td class="code-line">  elseif queryType == _QUERY_TYPE._TYPE_PAGE_EXCEL then</td></tr>
+<tr><td class="ln">375</td><td class="code-line">    local limit = tonumber(perPage)*(tonumber(pageTo)  - tonumber(pageFrom) + 1) ;</td></tr>
+<tr><td class="ln">376</td><td class="code-line">    local offset = tonumber(perPage) *(tonumber(pageFrom) - 1);</td></tr>
+<tr><td class="ln">377</td><td class="code-line">    slicePageNumber = "LIMIT "..limit.." OFFSET "..offset;</td></tr>
+<tr><td class="ln">378</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">379</td><td class="code-line">  return slicePageNumber;</td></tr>
+<tr><td class="ln">380</td><td class="code-line">end</td></tr>
+<tr><td class="ln">381</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">382</td><td class="code-line">function getQuery_result(queryType , dataQuery)</td></tr>
+<tr><td class="ln">383</td><td class="code-line">  local resultExp = nil;</td></tr>
+<tr><td class="ln">384</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">385</td><td class="code-line">  db.query(dataQuery)</td></tr>
+<tr><td class="ln">386</td><td class="code-line">  local record={};</td></tr>
+<tr><td class="ln">387</td><td class="code-line">  if queryType == _QUERY_TYPE._TYPE_TOTAL_COUNT then</td></tr>
+<tr><td class="ln">388</td><td class="code-line">    record = db.query_fetch();</td></tr>
+<tr><td class="ln">389</td><td class="code-line">    resultExp = record[1];</td></tr>
+<tr><td class="ln">390</td><td class="code-line">  elseif queryType == _QUERY_TYPE._TYPE_TOTAL_SUM then</td></tr>
+<tr><td class="ln">391</td><td class="code-line">    local columnsSelected = {};</td></tr>
+<tr><td class="ln">392</td><td class="code-line">    local columns = getTableConfig();</td></tr>
+<tr><td class="ln">393</td><td class="code-line">    for i = 1, #columns , 1 do</td></tr>
+<tr><td class="ln">394</td><td class="code-line">      local itemColumns = columns[i];</td></tr>
+<tr><td class="ln">395</td><td class="code-line">      if itemColumns.key ~= nil and itemColumns.sum ~= nil and itemColumns.sum == true then</td></tr>
+<tr><td class="ln">396</td><td class="code-line">        table.insert(columnsSelected , itemColumns.key)</td></tr>
 <tr><td class="ln">397</td><td class="code-line">      end</td></tr>
-<tr><td class="ln">398</td><td class="code-line">      table.insert(resultExp, itemRow)</td></tr>
-<tr><td class="ln">399</td><td class="code-line">    end</td></tr>
-<tr><td class="ln">400</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">401</td><td class="code-line">  db.query_free();</td></tr>
-<tr><td class="ln">402</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">403</td><td class="code-line">  return resultExp;</td></tr>
-<tr><td class="ln">404</td><td class="code-line">end</td></tr>
-<tr><td class="ln">405</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">406</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">407</td><td class="code-line">function getTableConfig()</td></tr>
-<tr><td class="ln">408</td><td class="code-line">  local cols = {</td></tr>
-<tr><td class="ln">409</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">410</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">411</td><td class="code-line">    {show = true ,    key = "Customer"           , value= "Customer" } ,</td></tr>
-<tr><td class="ln">412</td><td class="code-line">    {show = true ,    key = "mobile"           , value= "mobile" } ,</td></tr>
-<tr><td class="ln">413</td><td class="code-line">    {show = true ,    key = "factor_link"           , value= "factor_link" } ,</td></tr>
-<tr><td class="ln">414</td><td class="code-line">    {show = true ,    key = "Days"           , value= "Days" ,type="price"} ,</td></tr>
-<tr><td class="ln">415</td><td class="code-line">    {show = true ,    key = "LastRunDate"           , value= "LastRunDate",type="date" } ,</td></tr>
-<tr><td class="ln">416</td><td class="code-line">    {show = true ,   key = "Frequency"                  		 , value = "Frequency" } ,</td></tr>
-<tr><td class="ln">417</td><td class="code-line">    {show = true ,   key = "Monetary"                  		 , value = "Monetary" ,type="price" } ,</td></tr>
-<tr><td class="ln">418</td><td class="code-line">    {show = true ,   key = "rd"                  		 , value = "R" } ,</td></tr>
-<tr><td class="ln">419</td><td class="code-line">    {show = true ,   key = "fd"                  		 , value = "F" } ,</td></tr>
-<tr><td class="ln">420</td><td class="code-line">    {show = true ,   key = "md"                  		 , value = "M" } ,</td></tr>
-<tr><td class="ln">421</td><td class="code-line">    {show = true ,   key = "rfm"                  		 , value = "RFM" } ,</td></tr>
-<tr><td class="ln">422</td><td class="code-line">    {show = true ,   key = "segment"                  		 , value = "Segment" } ,</td></tr>
-<tr><td class="ln">423</td><td class="code-line">    {show = true ,   key = [[concat("&lt;input type='checkbox' id='ch_save_",crm_id,"' name='ch_save' oninput='ty__main.onChangeCheckInput(",crm_id,")' &gt;")]]  , value ="" } ,</td></tr>
-<tr><td class="ln">424</td><td class="code-line">    {show = true ,   key =  [[concat ( "&lt;button type='button' id='mdp_print_btn' style='float:left;'</td></tr>
-<tr><td class="ln">425</td><td class="code-line">      class='btn ty-btn-default core_btn btnforsubmit core_btn_submit_Form core_btn_revers_change ty-btn-ok' </td></tr>
-<tr><td class="ln">426</td><td class="code-line">      onclick='ty__main.send_sms(",crm_id,")'&gt;Send SMS&lt;/button&gt;")]]                		 , value = "" } ,</td></tr>
-<tr><td class="ln">427</td><td class="code-line">  };</td></tr>
-<tr><td class="ln">428</td><td class="code-line">  --   teamyar.write_log("ffcols6"..json.encode(cols))</td></tr>
-<tr><td class="ln">429</td><td class="code-line">  return cols</td></tr>
-<tr><td class="ln">430</td><td class="code-line">end</td></tr>
-<tr><td class="ln">431</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">432</td><td class="code-line">function getTableConfig_sum()</td></tr>
-<tr><td class="ln">433</td><td class="code-line">  teamyar.write_log("summ --")</td></tr>
-<tr><td class="ln">434</td><td class="code-line">  local columnsSelected = {};</td></tr>
-<tr><td class="ln">435</td><td class="code-line">  local select = "";</td></tr>
-<tr><td class="ln">436</td><td class="code-line">  local columns = getTableConfig();</td></tr>
-<tr><td class="ln">437</td><td class="code-line">  for i = 1, #columns , 1 do</td></tr>
-<tr><td class="ln">438</td><td class="code-line">    local itemColumns = columns[i];</td></tr>
-<tr><td class="ln">439</td><td class="code-line">    if itemColumns.key ~= nil and itemColumns.sum ~= nil and itemColumns.sum == true then</td></tr>
-<tr><td class="ln">440</td><td class="code-line">      table.insert(columnsSelected , itemColumns.key)</td></tr>
-<tr><td class="ln">441</td><td class="code-line">    end</td></tr>
-<tr><td class="ln">442</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">443</td><td class="code-line">  for i = 1, #columnsSelected , 1 do</td></tr>
-<tr><td class="ln">444</td><td class="code-line">    local itemColumnsSelected = columnsSelected[i];</td></tr>
-<tr><td class="ln">445</td><td class="code-line">    select = select .."sum("..itemColumnsSelected..")"</td></tr>
-<tr><td class="ln">446</td><td class="code-line">    if i &lt; #columnsSelected   then</td></tr>
-<tr><td class="ln">447</td><td class="code-line">      select = select..",";</td></tr>
-<tr><td class="ln">448</td><td class="code-line">    end</td></tr>
-<tr><td class="ln">449</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">450</td><td class="code-line">  return select;</td></tr>
-<tr><td class="ln">451</td><td class="code-line">end</td></tr>
-<tr><td class="ln">452</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">453</td><td class="code-line">function getTableConfig_select()</td></tr>
-<tr><td class="ln">454</td><td class="code-line">  local columnsSelected = {};</td></tr>
-<tr><td class="ln">455</td><td class="code-line">  local select = "";</td></tr>
-<tr><td class="ln">456</td><td class="code-line">  local columns = getTableConfig();</td></tr>
-<tr><td class="ln">457</td><td class="code-line">  for i = 1, #columns , 1 do</td></tr>
-<tr><td class="ln">458</td><td class="code-line">    local itemColumns = columns[i];</td></tr>
-<tr><td class="ln">459</td><td class="code-line">    if itemColumns.key ~= nil then</td></tr>
-<tr><td class="ln">460</td><td class="code-line">      table.insert(columnsSelected , itemColumns.key)</td></tr>
-<tr><td class="ln">461</td><td class="code-line">    end</td></tr>
-<tr><td class="ln">462</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">463</td><td class="code-line">  for i = 1, #columnsSelected , 1 do</td></tr>
-<tr><td class="ln">464</td><td class="code-line">    local itemColumns = columnsSelected[i];</td></tr>
-<tr><td class="ln">465</td><td class="code-line">    select = select..itemColumns;</td></tr>
-<tr><td class="ln">466</td><td class="code-line">    if i &lt; #columns   then</td></tr>
-<tr><td class="ln">467</td><td class="code-line">      select = select.. ",";</td></tr>
-<tr><td class="ln">468</td><td class="code-line">    end</td></tr>
-<tr><td class="ln">469</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">470</td><td class="code-line">  return select;</td></tr>
-<tr><td class="ln">471</td><td class="code-line">end</td></tr>
-<tr><td class="ln">472</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">473</td><td class="code-line">function getTableConfig_count()</td></tr>
-<tr><td class="ln">474</td><td class="code-line">  return "count(*)";</td></tr>
-<tr><td class="ln">475</td><td class="code-line">end</td></tr>
-<tr><td class="ln">476</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">477</td><td class="code-line">function getTableConfig_header()</td></tr>
-<tr><td class="ln">478</td><td class="code-line">  local headers = {};</td></tr>
-<tr><td class="ln">479</td><td class="code-line">  local totalHeader = getTableConfig();</td></tr>
-<tr><td class="ln">480</td><td class="code-line">  for i = 1, #totalHeader , 1 do</td></tr>
-<tr><td class="ln">481</td><td class="code-line">    local itemHeader = totalHeader[i];</td></tr>
-<tr><td class="ln">482</td><td class="code-line">    if itemHeader.show ~= nil and itemHeader.show == true then</td></tr>
-<tr><td class="ln">483</td><td class="code-line">      table.insert(headers ,itemHeader );</td></tr>
-<tr><td class="ln">484</td><td class="code-line">    end</td></tr>
-<tr><td class="ln">485</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">486</td><td class="code-line">  return headers;</td></tr>
-<tr><td class="ln">487</td><td class="code-line">end</td></tr>
-<tr><td class="ln">488</td><td class="code-line">---------------------------------------------</td></tr>
-<tr><td class="ln">489</td><td class="code-line">function queryResultAcl(select_query,user_param)</td></tr>
-<tr><td class="ln">490</td><td class="code-line">  db.use_db("0000000")</td></tr>
-<tr><td class="ln">491</td><td class="code-line">  local params = {</td></tr>
-<tr><td class="ln">492</td><td class="code-line">    query = select_query,</td></tr>
-<tr><td class="ln">493</td><td class="code-line">    params = user_param</td></tr>
-<tr><td class="ln">494</td><td class="code-line">  }</td></tr>
-<tr><td class="ln">495</td><td class="code-line">  db.query(params);</td></tr>
-<tr><td class="ln">496</td><td class="code-line">  local res_text={};</td></tr>
-<tr><td class="ln">497</td><td class="code-line">  local record={};</td></tr>
-<tr><td class="ln">498</td><td class="code-line">  while db.query_fetch(record) do</td></tr>
-<tr><td class="ln">499</td><td class="code-line">    local tmp=record;</td></tr>
-<tr><td class="ln">500</td><td class="code-line">    table.insert(res_text, {id = record[1], name = record[2], type =1});</td></tr>
-<tr><td class="ln">501</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">502</td><td class="code-line">  db.query_free();</td></tr>
-<tr><td class="ln">503</td><td class="code-line">  return res_text;</td></tr>
-<tr><td class="ln">504</td><td class="code-line">end</td></tr>
-<tr><td class="ln">505</td><td class="code-line">----------------------</td></tr>
-<tr><td class="ln">506</td><td class="code-line">function catAcl(data)</td></tr>
-<tr><td class="ln">507</td><td class="code-line">  local section_id = data.section;</td></tr>
-<tr><td class="ln">508</td><td class="code-line">  local query_param = [[ select c.PROFILE_ID ,concat(s.SECTION_NAME,'/',c.name) from crm_classify_person c inner join crm_section s on s.id=c.section_id  ]]</td></tr>
-<tr><td class="ln">509</td><td class="code-line">  if data.search ~= nil and #data.search &gt; 0 then</td></tr>
-<tr><td class="ln">510</td><td class="code-line">    query_param = query_param..[[  and c.name like N'%]]..data.search..[[%'  or  s.SECTION_NAME like N'%]]..data.search..[[%'  ]]</td></tr>
-<tr><td class="ln">511</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">512</td><td class="code-line">  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   </td></tr>
-<tr><td class="ln">513</td><td class="code-line">  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));</td></tr>
-<tr><td class="ln">514</td><td class="code-line">end</td></tr>
-<tr><td class="ln">515</td><td class="code-line">----------------------</td></tr>
-<tr><td class="ln">516</td><td class="code-line">function crmAcl(data)</td></tr>
-<tr><td class="ln">517</td><td class="code-line">  local org_id = data.org_id;</td></tr>
-<tr><td class="ln">518</td><td class="code-line">  local query_param = [[ select id,name from pa_client where org_id=]]..org_id</td></tr>
-<tr><td class="ln">519</td><td class="code-line">  if data.search ~= nil and #data.search &gt; 0 then</td></tr>
-<tr><td class="ln">520</td><td class="code-line">    query_param = query_param..[[  and name like N'%]]..data.search..[[%'  or  id like N'%]]..data.search..[[%'  ]]</td></tr>
-<tr><td class="ln">521</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">522</td><td class="code-line">  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   </td></tr>
-<tr><td class="ln">523</td><td class="code-line">  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));</td></tr>
-<tr><td class="ln">524</td><td class="code-line">end</td></tr>
-<tr><td class="ln">525</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">526</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">527</td><td class="code-line">----------------------</td></tr>
-<tr><td class="ln">528</td><td class="code-line">function ctypeAcl(data)</td></tr>
-<tr><td class="ln">529</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">530</td><td class="code-line">  local table = {</td></tr>
-<tr><td class="ln">531</td><td class="code-line">    {id =3,name=translateWord("REAL")},</td></tr>
-<tr><td class="ln">532</td><td class="code-line">    {id =4,name=translateWord("LEGAL")},</td></tr>
-<tr><td class="ln">533</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">534</td><td class="code-line">  }</td></tr>
-<tr><td class="ln">535</td><td class="code-line">  teamyar.write_result(json.encode(table));</td></tr>
-<tr><td class="ln">536</td><td class="code-line">end</td></tr>
-<tr><td class="ln">537</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">538</td><td class="code-line">----------------------</td></tr>
-<tr><td class="ln">539</td><td class="code-line">-- فیلتر «مرکز درآمد»: جست‌وجوی ACL روی pa_center (همان جدولی که sales_invoice.SALES_CENTER به</td></tr>
-<tr><td class="ln">540</td><td class="code-line">-- آن ارجاع می‌دهد؛ در بات‌های دیگر این پروژه «مرکز فروش» نامیده می‌شود).</td></tr>
-<tr><td class="ln">541</td><td class="code-line">function centerAcl(data)</td></tr>
-<tr><td class="ln">542</td><td class="code-line">  -- باگ اصلاح‌شده: pa_center مثل pa_client یک جدول per-org است (شاهد کد: pa_center.ORG_ID در</td></tr>
-<tr><td class="ln">543</td><td class="code-line">  -- warranty_branch_expense_detail_report_bot.lua با ce.ORG_ID = vr.ORG_ID فیلتر می‌شود) — بدون</td></tr>
-<tr><td class="ln">544</td><td class="code-line">  -- فیلتر org_id ممکن است سطرهای سازمان‌های دیگر هم برگردد یا (بسته به داده) لیست گمراه‌کننده/خالی</td></tr>
-<tr><td class="ln">545</td><td class="code-line">  -- به‌نظر برسد. GetDataACL (مشترک بین همهٔ فیلترهای ACL در data.js) همیشه data.org_id را از مقدار</td></tr>
-<tr><td class="ln">546</td><td class="code-line">  -- فعلی ویجت «سازمان» می‌فرستد؛ اینجا هم مثل crmAcl همان را استفاده می‌کنیم، ولی چون سازمان یک</td></tr>
-<tr><td class="ln">547</td><td class="code-line">  -- فیلتر اختیاری این گزارش است (نه اجباری)، وقتی هنوز انتخاب نشده (org_id نامعتبر) فیلتر را نادیده</td></tr>
-<tr><td class="ln">548</td><td class="code-line">  -- می‌گیریم به‌جای اینکه با رشتهٔ خالی/نامعتبر کوئری را بشکنیم.</td></tr>
-<tr><td class="ln">549</td><td class="code-line">  local query_param = [[ select id,name from pa_center ]]</td></tr>
-<tr><td class="ln">550</td><td class="code-line">  local has_where = false</td></tr>
-<tr><td class="ln">551</td><td class="code-line">  if tonumber(data.org_id) ~= nil then</td></tr>
-<tr><td class="ln">552</td><td class="code-line">    query_param = query_param..[[ where org_id=]]..tonumber(data.org_id)..[[ ]]</td></tr>
-<tr><td class="ln">553</td><td class="code-line">    has_where = true</td></tr>
-<tr><td class="ln">554</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">555</td><td class="code-line">  if data.search ~= nil and #data.search &gt; 0 then</td></tr>
-<tr><td class="ln">556</td><td class="code-line">    query_param = query_param..(has_where and [[ and ]] or [[ where ]])..[[ (name like N'%]]..data.search..[[%'  or  id like N'%]]..data.search..[[%') ]]</td></tr>
-<tr><td class="ln">557</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">558</td><td class="code-line">  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);</td></tr>
-<tr><td class="ln">559</td><td class="code-line">  -- لاگ تشخیصی: اگر باز هم لیست خالی بود، از طریق پنل دیباگ بات (تب Log اجرای بات) متن این</td></tr>
-<tr><td class="ln">560</td><td class="code-line">  -- کوئری و هر خطای SQL آن قابل مشاهده است، بدون نیاز به دور دیگری از حدس‌وگمان.</td></tr>
-<tr><td class="ln">561</td><td class="code-line">  teamyar.write_log("centerAcl query: "..query_param)</td></tr>
-<tr><td class="ln">562</td><td class="code-line">  local ok, result = pcall(queryResultAcl, query_param, {})</td></tr>
-<tr><td class="ln">563</td><td class="code-line">  if ok then</td></tr>
-<tr><td class="ln">564</td><td class="code-line">    teamyar.write_result(json.encode(result));</td></tr>
-<tr><td class="ln">565</td><td class="code-line">  else</td></tr>
-<tr><td class="ln">566</td><td class="code-line">    teamyar.write_log("centerAcl ERROR: "..tostring(result))</td></tr>
-<tr><td class="ln">567</td><td class="code-line">    teamyar.write_result(json.encode({}));</td></tr>
-<tr><td class="ln">568</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">569</td><td class="code-line">end</td></tr>
-<tr><td class="ln">570</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">571</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">572</td><td class="code-line">--- Report</td></tr>
-<tr><td class="ln">573</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">574</td><td class="code-line">function report()</td></tr>
-<tr><td class="ln">575</td><td class="code-line">  local data= getTableSectionOne()</td></tr>
-<tr><td class="ln">576</td><td class="code-line">  local report = {</td></tr>
-<tr><td class="ln">577</td><td class="code-line">    {</td></tr>
-<tr><td class="ln">578</td><td class="code-line">      name = "table" ,</td></tr>
-<tr><td class="ln">579</td><td class="code-line">      title = "table" ,</td></tr>
-<tr><td class="ln">580</td><td class="code-line">      report = data</td></tr>
-<tr><td class="ln">581</td><td class="code-line">    }</td></tr>
-<tr><td class="ln">582</td><td class="code-line">  }</td></tr>
-<tr><td class="ln">583</td><td class="code-line">  return report;</td></tr>
-<tr><td class="ln">584</td><td class="code-line">end</td></tr>
-<tr><td class="ln">585</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">586</td><td class="code-line">function getTableSectionOne()</td></tr>
-<tr><td class="ln">587</td><td class="code-line">  local repId = getInput("rep_id");</td></tr>
-<tr><td class="ln">588</td><td class="code-line">  local headers = getTableConfig_header();</td></tr>
-<tr><td class="ln">589</td><td class="code-line">  local from = getInput("page");</td></tr>
-<tr><td class="ln">590</td><td class="code-line">  local values, total;</td></tr>
-<tr><td class="ln">591</td><td class="code-line">  -- رفع کندی/گیرکردن لود («همان لحظهٔ باز کردن صفحه»، طبق گزارش کاربر): RES هنگام باز شدن</td></tr>
-<tr><td class="ln">592</td><td class="code-line">  -- صفحه، قبل از این‌که کاربر فیلتری انتخاب کند، همیشه یک‌بار report()/getTableSectionOne() را</td></tr>
-<tr><td class="ln">593</td><td class="code-line">  -- خودکار صدا می‌زند و همین پارامتر (page_search_first=true) را می‌فرستد؛ کلیک واقعی «اجرا کردن»</td></tr>
-<tr><td class="ln">594</td><td class="code-line">  -- آن را false می‌فرستد. چون کوئری این بات (join دو جدول بزرگ sales_invoice/sales_invoice_product</td></tr>
-<tr><td class="ln">595</td><td class="code-line">  -- + سه window function برای R/F/M) سنگین است، اجرای آن روی این فراخوانی خودکار همان چیزی است</td></tr>
-<tr><td class="ln">596</td><td class="code-line">  -- که «لودینگ گیر می‌کند» را توضیح می‌دهد. با این پرچم، کوئری سنگین فقط بعد از کلیک واقعی «اجرا</td></tr>
-<tr><td class="ln">597</td><td class="code-line">  -- کردن» اجرا می‌شود؛ excel()/print() این پرچم را اصلاً دریافت نمی‌کنند، پس دست‌نخورده می‌مانند.</td></tr>
-<tr><td class="ln">598</td><td class="code-line">  -- هشدار: این دقیقاً همان فیکسی است که یک‌بار روی بات ۶۰۰ امتحان و به‌دلیل خراب‌شدن فرم فیلتر</td></tr>
-<tr><td class="ln">599</td><td class="code-line">  -- برگردانده شده بود (دلیل دقیقش وقتی مشخص نشد؛ ممکن است باگ دیگری هم‌زمان دخیل بوده باشد که</td></tr>
-<tr><td class="ln">600</td><td class="code-line">  -- از آن موقع در data.txt/data.js این بات اصلاح شده) — طبق تأیید صریح کاربر و با آگاهی از این</td></tr>
-<tr><td class="ln">601</td><td class="code-line">  -- ریسک دوباره امتحان می‌شود؛ اگر باز هم فرم فیلتر را خراب کرد، همین بلاک باید حذف شود.</td></tr>
-<tr><td class="ln">602</td><td class="code-line">  local isAutoFirstLoad = getInput("page_search_first")</td></tr>
-<tr><td class="ln">603</td><td class="code-line">  if isAutoFirstLoad == true then</td></tr>
-<tr><td class="ln">604</td><td class="code-line">    values = {}</td></tr>
-<tr><td class="ln">605</td><td class="code-line">    total = 0</td></tr>
-<tr><td class="ln">606</td><td class="code-line">  else</td></tr>
-<tr><td class="ln">607</td><td class="code-line">    values  = getData(_QUERY_TYPE._TYPE_PAGE_REPORT , from , _PAR_PAGE);</td></tr>
-<tr><td class="ln">608</td><td class="code-line">    total  = getData(_QUERY_TYPE._TYPE_TOTAL_COUNT);</td></tr>
-<tr><td class="ln">609</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">610</td><td class="code-line">  --local sums  = getData(_QUERY_TYPE._TYPE_TOTAL_SUM , from , _PAR_PAGE);</td></tr>
-<tr><td class="ln">611</td><td class="code-line">  return install_res.resTable(repId , headers , values  , total , _PAR_PAGE , from,sums );</td></tr>
-<tr><td class="ln">612</td><td class="code-line">end</td></tr>
-<tr><td class="ln">613</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">614</td><td class="code-line">--- excel</td></tr>
-<tr><td class="ln">615</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">616</td><td class="code-line">function excel()</td></tr>
-<tr><td class="ln">617</td><td class="code-line">  local excelFileName = getInput("excel_file_name");</td></tr>
-<tr><td class="ln">618</td><td class="code-line">  local excelFormPage = getInput("excel_from_page");</td></tr>
-<tr><td class="ln">619</td><td class="code-line">  local excelToPage = getInput("excel_to_page");</td></tr>
-<tr><td class="ln">620</td><td class="code-line">  local excelPerPage = getInput("excel_per_page");</td></tr>
-<tr><td class="ln">621</td><td class="code-line">  local headers = getTableConfig_header();</td></tr>
-<tr><td class="ln">622</td><td class="code-line">  local values = getData(_QUERY_TYPE._TYPE_PAGE_EXCEL ,  excelFormPage , excelPerPage , excelToPage)</td></tr>
-<tr><td class="ln">623</td><td class="code-line">  return install_res.resExcel( headers , values , excelFileName);</td></tr>
-<tr><td class="ln">624</td><td class="code-line">end</td></tr>
-<tr><td class="ln">625</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">626</td><td class="code-line">--- print</td></tr>
-<tr><td class="ln">627</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">628</td><td class="code-line">function print()</td></tr>
-<tr><td class="ln">629</td><td class="code-line">  local headers = getTableConfig_header();</td></tr>
-<tr><td class="ln">630</td><td class="code-line">  local values = getData(_QUERY_TYPE._TYPE_PAGE_PRINT)</td></tr>
-<tr><td class="ln">631</td><td class="code-line">  return install_res.resPrint( headers , values);</td></tr>
-<tr><td class="ln">632</td><td class="code-line">end</td></tr>
-<tr><td class="ln">633</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">634</td><td class="code-line">--- manager</td></tr>
-<tr><td class="ln">635</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">636</td><td class="code-line">function confirmTodo(tid)</td></tr>
-<tr><td class="ln">637</td><td class="code-line">  teamyar.write_log("tttttttt---"..tid)</td></tr>
-<tr><td class="ln">638</td><td class="code-line">  local js={confirm=1}</td></tr>
-<tr><td class="ln">639</td><td class="code-line">  local info =	{</td></tr>
-<tr><td class="ln">640</td><td class="code-line">    id= tid,</td></tr>
-<tr><td class="ln">641</td><td class="code-line">    type= 5,</td></tr>
-<tr><td class="ln">642</td><td class="code-line">    form_data=json.encode(js)</td></tr>
-<tr><td class="ln">643</td><td class="code-line">  }</td></tr>
-<tr><td class="ln">644</td><td class="code-line">  teamyar.write_log(json.encode(info))</td></tr>
-<tr><td class="ln">645</td><td class="code-line">  local   res = teamyar.call_api(8, '/api/todo/customform/update', info);</td></tr>
-<tr><td class="ln">646</td><td class="code-line">  teamyar.write_log(json.encode(res))</td></tr>
-<tr><td class="ln">647</td><td class="code-line">  return json.encode(res)</td></tr>
-<tr><td class="ln">648</td><td class="code-line">end</td></tr>
-<tr><td class="ln">649</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">650</td><td class="code-line">function getAclOrg(data)</td></tr>
-<tr><td class="ln">651</td><td class="code-line">  local query_param = [[  select id,name from org_info ]]</td></tr>
-<tr><td class="ln">652</td><td class="code-line">  if data.search ~= nil and #data.search &gt; 0 then</td></tr>
-<tr><td class="ln">653</td><td class="code-line">    query_param = query_param..[[  where name like N'%]]..data.search..[[%' ]]</td></tr>
-<tr><td class="ln">654</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">655</td><td class="code-line">  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   </td></tr>
-<tr><td class="ln">656</td><td class="code-line">  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));</td></tr>
-<tr><td class="ln">657</td><td class="code-line">end</td></tr>
-<tr><td class="ln">658</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">659</td><td class="code-line">-------------------------------------------</td></tr>
-<tr><td class="ln">660</td><td class="code-line">function queryResultcrm(select_query,user_param)</td></tr>
-<tr><td class="ln">661</td><td class="code-line">  db.use_db("0000000")</td></tr>
-<tr><td class="ln">662</td><td class="code-line">  local params = {</td></tr>
-<tr><td class="ln">663</td><td class="code-line">    query = select_query,</td></tr>
-<tr><td class="ln">664</td><td class="code-line">    params = user_param</td></tr>
-<tr><td class="ln">665</td><td class="code-line">  }</td></tr>
-<tr><td class="ln">666</td><td class="code-line">  db.query(params);</td></tr>
-<tr><td class="ln">667</td><td class="code-line">  local res_text = {};</td></tr>
-<tr><td class="ln">668</td><td class="code-line">  local record = {};</td></tr>
-<tr><td class="ln">669</td><td class="code-line">  while db.query_fetch(record) do</td></tr>
-<tr><td class="ln">670</td><td class="code-line">    table.insert(res_text, {name = record[1], farsidate = record[2], gender = record[3]});</td></tr>
-<tr><td class="ln">671</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">672</td><td class="code-line">  db.query_free();</td></tr>
-<tr><td class="ln">673</td><td class="code-line">  return res_text;</td></tr>
-<tr><td class="ln">674</td><td class="code-line">end</td></tr>
-<tr><td class="ln">675</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">676</td><td class="code-line">function sendSms(crm_id,segment,box_id,txt)</td></tr>
-<tr><td class="ln">677</td><td class="code-line">  local res_str=""</td></tr>
-<tr><td class="ln">678</td><td class="code-line">  local q = [[select p.fullname,(select jndate from report_dimdate where ]]..currentdate..[[ </td></tr>
-<tr><td class="ln">679</td><td class="code-line">  between datekey and datekey+(60*60*24*10000000)-(60*10000000)) dd,(case when uf.sex=2 then 'خانم' else 'آقا' end) gender </td></tr>
-<tr><td class="ln">680</td><td class="code-line">  from profile_main p inner join profile_user_info uf on uf.id=p.id where p.id=]]..crm_id</td></tr>
-<tr><td class="ln">681</td><td class="code-line">  teamyar.write_log(q)</td></tr>
-<tr><td class="ln">682</td><td class="code-line">  local data = queryResultcrm(q, {})</td></tr>
-<tr><td class="ln">683</td><td class="code-line">    teamyar.write_log(json.encode(data))</td></tr>
-<tr><td class="ln">684</td><td class="code-line">  txt = string.gsub(txt, "{{name}}", data[1].name);</td></tr>
-<tr><td class="ln">685</td><td class="code-line">  txt = string.gsub(txt, "{{date}}", data[1].farsidate);</td></tr>
-<tr><td class="ln">686</td><td class="code-line">  txt = string.gsub(txt, "{{gender}}", data[1].gender);</td></tr>
-<tr><td class="ln">687</td><td class="code-line">  local info =	{box_id = box_id,messages = {{content = txt, send_to = {profile_ids = {crm_id}}}}, module_id = 26}</td></tr>
-<tr><td class="ln">688</td><td class="code-line">  teamyar.write_log("info----"..json.encode(info))</td></tr>
-<tr><td class="ln">689</td><td class="code-line">  local   res = teamyar.call_api(16, '/api/sms/send', info);</td></tr>
-<tr><td class="ln">690</td><td class="code-line">  teamyar.write_log("res----"..json.encode(res))</td></tr>
-<tr><td class="ln">691</td><td class="code-line">  if res.success ==true then </td></tr>
-<tr><td class="ln">692</td><td class="code-line">    res_str="&lt;div style='color:green;'&gt;".."ارسال پیامک برای کاربر :  "..crm_id.." ،  شناسه پیامک :"..res.data.message_ids[1].."&lt;/div&gt;"</td></tr>
-<tr><td class="ln">693</td><td class="code-line">  else </td></tr>
-<tr><td class="ln">694</td><td class="code-line">    res_str="&lt;div style='color:red;'&gt;".."خطا در ارسال پیامک :  "..res.error.message.."&lt;div&gt;"</td></tr>
-<tr><td class="ln">695</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">696</td><td class="code-line">  end </td></tr>
-<tr><td class="ln">697</td><td class="code-line">  return res_str</td></tr>
-<tr><td class="ln">698</td><td class="code-line">end</td></tr>
-<tr><td class="ln">699</td><td class="code-line">------------</td></tr>
-<tr><td class="ln">700</td><td class="code-line">function split(str, delimiter)</td></tr>
-<tr><td class="ln">701</td><td class="code-line">  local result = {}</td></tr>
-<tr><td class="ln">702</td><td class="code-line">  local pattern = "(.-)" .. delimiter .. "()"</td></tr>
-<tr><td class="ln">703</td><td class="code-line">  local lastPos = 1</td></tr>
-<tr><td class="ln">704</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">705</td><td class="code-line">  for part, pos in string.gmatch(str .. delimiter, pattern) do</td></tr>
-<tr><td class="ln">706</td><td class="code-line">    table.insert(result, part)</td></tr>
-<tr><td class="ln">707</td><td class="code-line">    lastPos = pos</td></tr>
-<tr><td class="ln">708</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">709</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">710</td><td class="code-line">  return result</td></tr>
-<tr><td class="ln">711</td><td class="code-line">end</td></tr>
-<tr><td class="ln">712</td><td class="code-line">--------------------------------------------</td></tr>
-<tr><td class="ln">713</td><td class="code-line">local type = getInput("type");</td></tr>
-<tr><td class="ln">714</td><td class="code-line">if type ~= nil and type == 100 then</td></tr>
-<tr><td class="ln">715</td><td class="code-line">  local result = report()</td></tr>
-<tr><td class="ln">716</td><td class="code-line">  teamyar.write_result(json.encode(result));</td></tr>
-<tr><td class="ln">717</td><td class="code-line">&nbsp;</td></tr>
-<tr><td class="ln">718</td><td class="code-line">elseif type ~= nil and type == 9 then</td></tr>
-<tr><td class="ln">719</td><td class="code-line">  catAcl(teamyar.get_input().data)  </td></tr>
-<tr><td class="ln">720</td><td class="code-line">elseif type ~= nil and type == 8 then</td></tr>
-<tr><td class="ln">721</td><td class="code-line">  ctypeAcl(teamyar.get_input().data)</td></tr>
-<tr><td class="ln">722</td><td class="code-line">elseif type ~= nil and type == 7 then</td></tr>
-<tr><td class="ln">723</td><td class="code-line">  crmAcl(teamyar.get_input().data)</td></tr>
-<tr><td class="ln">724</td><td class="code-line">elseif type ~= nil and type == 6 then</td></tr>
-<tr><td class="ln">725</td><td class="code-line">  getAclOrg(teamyar.get_input().data)</td></tr>
-<tr><td class="ln">726</td><td class="code-line">elseif type ~= nil and type == 12 then</td></tr>
-<tr><td class="ln">727</td><td class="code-line">  centerAcl(teamyar.get_input().data)</td></tr>
-<tr><td class="ln">728</td><td class="code-line">elseif type ~= nil and type == 10 then</td></tr>
-<tr><td class="ln">729</td><td class="code-line">  local input = teamyar.get_input()</td></tr>
-<tr><td class="ln">730</td><td class="code-line">  local res_str = sendSms(input.data.crm_id,input.data.segment,input.data.box_id, input.data.txt)</td></tr>
-<tr><td class="ln">731</td><td class="code-line">  local res_data = {msg = res_str}</td></tr>
-<tr><td class="ln">732</td><td class="code-line">  teamyar.write_result(json.encode(res_data))</td></tr>
-<tr><td class="ln">733</td><td class="code-line">elseif type ~= nil and type == 11 then</td></tr>
-<tr><td class="ln">734</td><td class="code-line">  local input = teamyar.get_input()</td></tr>
-<tr><td class="ln">735</td><td class="code-line">  local data = input.data</td></tr>
-<tr><td class="ln">736</td><td class="code-line">  local crms = split(data.crms, ',')</td></tr>
-<tr><td class="ln">737</td><td class="code-line">  local res_str = ""</td></tr>
-<tr><td class="ln">738</td><td class="code-line">  local count_send = 0</td></tr>
-<tr><td class="ln">739</td><td class="code-line">  for i,v in ipairs (crms) do </td></tr>
-<tr><td class="ln">740</td><td class="code-line">    local crm_id_in = string.sub(v, 0, #v-3)</td></tr>
-<tr><td class="ln">741</td><td class="code-line">    local segment_in = string.sub(v, #v-3, #v)</td></tr>
-<tr><td class="ln">742</td><td class="code-line">    sendSms(crm_id_in, segment_in, data.box_id, data.txt)</td></tr>
-<tr><td class="ln">743</td><td class="code-line">    count_send = count_send+1</td></tr>
-<tr><td class="ln">744</td><td class="code-line">  end</td></tr>
-<tr><td class="ln">745</td><td class="code-line">  res_str = " تعداد  "..count_send.." پیامک ارسال شد ."</td></tr>
-<tr><td class="ln">746</td><td class="code-line">  local res_data={msg=res_str}</td></tr>
-<tr><td class="ln">747</td><td class="code-line">  teamyar.write_result(json.encode(res_data))</td></tr>
-<tr><td class="ln">748</td><td class="code-line">elseif type ~= nil and type == 101 then</td></tr>
-<tr><td class="ln">749</td><td class="code-line">  local result = excel()</td></tr>
-<tr><td class="ln">750</td><td class="code-line">  teamyar.write_result(json.encode(result));</td></tr>
-<tr><td class="ln">751</td><td class="code-line">elseif type ~= nil and type == 102 then</td></tr>
-<tr><td class="ln">752</td><td class="code-line">  local result = print()</td></tr>
-<tr><td class="ln">753</td><td class="code-line">  teamyar.write_result(json.encode(result));</td></tr>
-<tr><td class="ln">754</td><td class="code-line">else</td></tr>
-<tr><td class="ln">755</td><td class="code-line">  local responseResReport = install_res.resReport(getTableConfig());</td></tr>
-<tr><td class="ln">756</td><td class="code-line">  teamyar.write_result(responseResReport);</td></tr>
-<tr><td class="ln">757</td><td class="code-line">end</td></tr>
+<tr><td class="ln">398</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">399</td><td class="code-line">    if #columns &gt; 0 then</td></tr>
+<tr><td class="ln">400</td><td class="code-line">      resultExp = {};</td></tr>
+<tr><td class="ln">401</td><td class="code-line">      record = db.query_fetch();</td></tr>
+<tr><td class="ln">402</td><td class="code-line">      for i = 1, #columnsSelected , 1 do</td></tr>
+<tr><td class="ln">403</td><td class="code-line">        resultExp[columnsSelected[i]] = record[i];</td></tr>
+<tr><td class="ln">404</td><td class="code-line">      end</td></tr>
+<tr><td class="ln">405</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">406</td><td class="code-line">  else</td></tr>
+<tr><td class="ln">407</td><td class="code-line">    resultExp = {};</td></tr>
+<tr><td class="ln">408</td><td class="code-line">    while db.query_fetch(record) do</td></tr>
+<tr><td class="ln">409</td><td class="code-line">      local itemRow = {};</td></tr>
+<tr><td class="ln">410</td><td class="code-line">      local columns = getTableConfig();</td></tr>
+<tr><td class="ln">411</td><td class="code-line">      for i = 1, #columns , 1 do</td></tr>
+<tr><td class="ln">412</td><td class="code-line">        local itemColumns = columns[i];</td></tr>
+<tr><td class="ln">413</td><td class="code-line">        if itemColumns.key ~= nil then</td></tr>
+<tr><td class="ln">414</td><td class="code-line">          itemRow[itemColumns.key] = record[i];</td></tr>
+<tr><td class="ln">415</td><td class="code-line">        end</td></tr>
+<tr><td class="ln">416</td><td class="code-line">      end</td></tr>
+<tr><td class="ln">417</td><td class="code-line">      table.insert(resultExp, itemRow)</td></tr>
+<tr><td class="ln">418</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">419</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">420</td><td class="code-line">  db.query_free();</td></tr>
+<tr><td class="ln">421</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">422</td><td class="code-line">  return resultExp;</td></tr>
+<tr><td class="ln">423</td><td class="code-line">end</td></tr>
+<tr><td class="ln">424</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">425</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">426</td><td class="code-line">function getTableConfig()</td></tr>
+<tr><td class="ln">427</td><td class="code-line">  local cols = {</td></tr>
+<tr><td class="ln">428</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">429</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">430</td><td class="code-line">    {show = true ,    key = "Customer"           , value= "Customer" } ,</td></tr>
+<tr><td class="ln">431</td><td class="code-line">    {show = true ,    key = "mobile"           , value= "mobile" } ,</td></tr>
+<tr><td class="ln">432</td><td class="code-line">    {show = true ,    key = "factor_link"           , value= "factor_link" } ,</td></tr>
+<tr><td class="ln">433</td><td class="code-line">    {show = true ,    key = "Days"           , value= "Days" ,type="price"} ,</td></tr>
+<tr><td class="ln">434</td><td class="code-line">    {show = true ,    key = "LastRunDate"           , value= "LastRunDate",type="date" } ,</td></tr>
+<tr><td class="ln">435</td><td class="code-line">    {show = true ,   key = "Frequency"                  		 , value = "Frequency" } ,</td></tr>
+<tr><td class="ln">436</td><td class="code-line">    {show = true ,   key = "Monetary"                  		 , value = "Monetary" ,type="price" } ,</td></tr>
+<tr><td class="ln">437</td><td class="code-line">    {show = true ,   key = "rd"                  		 , value = "R" } ,</td></tr>
+<tr><td class="ln">438</td><td class="code-line">    {show = true ,   key = "fd"                  		 , value = "F" } ,</td></tr>
+<tr><td class="ln">439</td><td class="code-line">    {show = true ,   key = "md"                  		 , value = "M" } ,</td></tr>
+<tr><td class="ln">440</td><td class="code-line">    {show = true ,   key = "rfm"                  		 , value = "RFM" } ,</td></tr>
+<tr><td class="ln">441</td><td class="code-line">    {show = true ,   key = "segment"                  		 , value = "Segment" } ,</td></tr>
+<tr><td class="ln">442</td><td class="code-line">    {show = true ,   key = [[concat("&lt;input type='checkbox' id='ch_save_",crm_id,"' name='ch_save' oninput='ty__main.onChangeCheckInput(",crm_id,")' &gt;")]]  , value ="" } ,</td></tr>
+<tr><td class="ln">443</td><td class="code-line">    {show = true ,   key =  [[concat ( "&lt;button type='button' id='mdp_print_btn' style='float:left;'</td></tr>
+<tr><td class="ln">444</td><td class="code-line">      class='btn ty-btn-default core_btn btnforsubmit core_btn_submit_Form core_btn_revers_change ty-btn-ok' </td></tr>
+<tr><td class="ln">445</td><td class="code-line">      onclick='ty__main.send_sms(",crm_id,")'&gt;Send SMS&lt;/button&gt;")]]                		 , value = "" } ,</td></tr>
+<tr><td class="ln">446</td><td class="code-line">  };</td></tr>
+<tr><td class="ln">447</td><td class="code-line">  --   teamyar.write_log("ffcols6"..json.encode(cols))</td></tr>
+<tr><td class="ln">448</td><td class="code-line">  return cols</td></tr>
+<tr><td class="ln">449</td><td class="code-line">end</td></tr>
+<tr><td class="ln">450</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">451</td><td class="code-line">function getTableConfig_sum()</td></tr>
+<tr><td class="ln">452</td><td class="code-line">  teamyar.write_log("summ --")</td></tr>
+<tr><td class="ln">453</td><td class="code-line">  local columnsSelected = {};</td></tr>
+<tr><td class="ln">454</td><td class="code-line">  local select = "";</td></tr>
+<tr><td class="ln">455</td><td class="code-line">  local columns = getTableConfig();</td></tr>
+<tr><td class="ln">456</td><td class="code-line">  for i = 1, #columns , 1 do</td></tr>
+<tr><td class="ln">457</td><td class="code-line">    local itemColumns = columns[i];</td></tr>
+<tr><td class="ln">458</td><td class="code-line">    if itemColumns.key ~= nil and itemColumns.sum ~= nil and itemColumns.sum == true then</td></tr>
+<tr><td class="ln">459</td><td class="code-line">      table.insert(columnsSelected , itemColumns.key)</td></tr>
+<tr><td class="ln">460</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">461</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">462</td><td class="code-line">  for i = 1, #columnsSelected , 1 do</td></tr>
+<tr><td class="ln">463</td><td class="code-line">    local itemColumnsSelected = columnsSelected[i];</td></tr>
+<tr><td class="ln">464</td><td class="code-line">    select = select .."sum("..itemColumnsSelected..")"</td></tr>
+<tr><td class="ln">465</td><td class="code-line">    if i &lt; #columnsSelected   then</td></tr>
+<tr><td class="ln">466</td><td class="code-line">      select = select..",";</td></tr>
+<tr><td class="ln">467</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">468</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">469</td><td class="code-line">  return select;</td></tr>
+<tr><td class="ln">470</td><td class="code-line">end</td></tr>
+<tr><td class="ln">471</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">472</td><td class="code-line">function getTableConfig_select()</td></tr>
+<tr><td class="ln">473</td><td class="code-line">  local columnsSelected = {};</td></tr>
+<tr><td class="ln">474</td><td class="code-line">  local select = "";</td></tr>
+<tr><td class="ln">475</td><td class="code-line">  local columns = getTableConfig();</td></tr>
+<tr><td class="ln">476</td><td class="code-line">  for i = 1, #columns , 1 do</td></tr>
+<tr><td class="ln">477</td><td class="code-line">    local itemColumns = columns[i];</td></tr>
+<tr><td class="ln">478</td><td class="code-line">    if itemColumns.key ~= nil then</td></tr>
+<tr><td class="ln">479</td><td class="code-line">      table.insert(columnsSelected , itemColumns.key)</td></tr>
+<tr><td class="ln">480</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">481</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">482</td><td class="code-line">  for i = 1, #columnsSelected , 1 do</td></tr>
+<tr><td class="ln">483</td><td class="code-line">    local itemColumns = columnsSelected[i];</td></tr>
+<tr><td class="ln">484</td><td class="code-line">    select = select..itemColumns;</td></tr>
+<tr><td class="ln">485</td><td class="code-line">    if i &lt; #columns   then</td></tr>
+<tr><td class="ln">486</td><td class="code-line">      select = select.. ",";</td></tr>
+<tr><td class="ln">487</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">488</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">489</td><td class="code-line">  return select;</td></tr>
+<tr><td class="ln">490</td><td class="code-line">end</td></tr>
+<tr><td class="ln">491</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">492</td><td class="code-line">function getTableConfig_count()</td></tr>
+<tr><td class="ln">493</td><td class="code-line">  return "count(*)";</td></tr>
+<tr><td class="ln">494</td><td class="code-line">end</td></tr>
+<tr><td class="ln">495</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">496</td><td class="code-line">function getTableConfig_header()</td></tr>
+<tr><td class="ln">497</td><td class="code-line">  local headers = {};</td></tr>
+<tr><td class="ln">498</td><td class="code-line">  local totalHeader = getTableConfig();</td></tr>
+<tr><td class="ln">499</td><td class="code-line">  for i = 1, #totalHeader , 1 do</td></tr>
+<tr><td class="ln">500</td><td class="code-line">    local itemHeader = totalHeader[i];</td></tr>
+<tr><td class="ln">501</td><td class="code-line">    if itemHeader.show ~= nil and itemHeader.show == true then</td></tr>
+<tr><td class="ln">502</td><td class="code-line">      table.insert(headers ,itemHeader );</td></tr>
+<tr><td class="ln">503</td><td class="code-line">    end</td></tr>
+<tr><td class="ln">504</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">505</td><td class="code-line">  return headers;</td></tr>
+<tr><td class="ln">506</td><td class="code-line">end</td></tr>
+<tr><td class="ln">507</td><td class="code-line">---------------------------------------------</td></tr>
+<tr><td class="ln">508</td><td class="code-line">function queryResultAcl(select_query,user_param)</td></tr>
+<tr><td class="ln">509</td><td class="code-line">  db.use_db("0000000")</td></tr>
+<tr><td class="ln">510</td><td class="code-line">  local params = {</td></tr>
+<tr><td class="ln">511</td><td class="code-line">    query = select_query,</td></tr>
+<tr><td class="ln">512</td><td class="code-line">    params = user_param</td></tr>
+<tr><td class="ln">513</td><td class="code-line">  }</td></tr>
+<tr><td class="ln">514</td><td class="code-line">  db.query(params);</td></tr>
+<tr><td class="ln">515</td><td class="code-line">  local res_text={};</td></tr>
+<tr><td class="ln">516</td><td class="code-line">  local record={};</td></tr>
+<tr><td class="ln">517</td><td class="code-line">  while db.query_fetch(record) do</td></tr>
+<tr><td class="ln">518</td><td class="code-line">    local tmp=record;</td></tr>
+<tr><td class="ln">519</td><td class="code-line">    table.insert(res_text, {id = record[1], name = record[2], type =1});</td></tr>
+<tr><td class="ln">520</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">521</td><td class="code-line">  db.query_free();</td></tr>
+<tr><td class="ln">522</td><td class="code-line">  return res_text;</td></tr>
+<tr><td class="ln">523</td><td class="code-line">end</td></tr>
+<tr><td class="ln">524</td><td class="code-line">----------------------</td></tr>
+<tr><td class="ln">525</td><td class="code-line">function catAcl(data)</td></tr>
+<tr><td class="ln">526</td><td class="code-line">  local section_id = data.section;</td></tr>
+<tr><td class="ln">527</td><td class="code-line">  local query_param = [[ select c.PROFILE_ID ,concat(s.SECTION_NAME,'/',c.name) from crm_classify_person c inner join crm_section s on s.id=c.section_id  ]]</td></tr>
+<tr><td class="ln">528</td><td class="code-line">  if data.search ~= nil and #data.search &gt; 0 then</td></tr>
+<tr><td class="ln">529</td><td class="code-line">    query_param = query_param..[[  and c.name like N'%]]..data.search..[[%'  or  s.SECTION_NAME like N'%]]..data.search..[[%'  ]]</td></tr>
+<tr><td class="ln">530</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">531</td><td class="code-line">  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   </td></tr>
+<tr><td class="ln">532</td><td class="code-line">  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));</td></tr>
+<tr><td class="ln">533</td><td class="code-line">end</td></tr>
+<tr><td class="ln">534</td><td class="code-line">----------------------</td></tr>
+<tr><td class="ln">535</td><td class="code-line">function crmAcl(data)</td></tr>
+<tr><td class="ln">536</td><td class="code-line">  local org_id = data.org_id;</td></tr>
+<tr><td class="ln">537</td><td class="code-line">  local query_param = [[ select id,name from pa_client where org_id=]]..org_id</td></tr>
+<tr><td class="ln">538</td><td class="code-line">  if data.search ~= nil and #data.search &gt; 0 then</td></tr>
+<tr><td class="ln">539</td><td class="code-line">    query_param = query_param..[[  and name like N'%]]..data.search..[[%'  or  id like N'%]]..data.search..[[%'  ]]</td></tr>
+<tr><td class="ln">540</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">541</td><td class="code-line">  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   </td></tr>
+<tr><td class="ln">542</td><td class="code-line">  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));</td></tr>
+<tr><td class="ln">543</td><td class="code-line">end</td></tr>
+<tr><td class="ln">544</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">545</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">546</td><td class="code-line">----------------------</td></tr>
+<tr><td class="ln">547</td><td class="code-line">function ctypeAcl(data)</td></tr>
+<tr><td class="ln">548</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">549</td><td class="code-line">  local table = {</td></tr>
+<tr><td class="ln">550</td><td class="code-line">    {id =3,name=translateWord("REAL")},</td></tr>
+<tr><td class="ln">551</td><td class="code-line">    {id =4,name=translateWord("LEGAL")},</td></tr>
+<tr><td class="ln">552</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">553</td><td class="code-line">  }</td></tr>
+<tr><td class="ln">554</td><td class="code-line">  teamyar.write_result(json.encode(table));</td></tr>
+<tr><td class="ln">555</td><td class="code-line">end</td></tr>
+<tr><td class="ln">556</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">557</td><td class="code-line">----------------------</td></tr>
+<tr><td class="ln">558</td><td class="code-line">-- فیلتر «مرکز درآمد»: جست‌وجوی ACL روی pa_center (همان جدولی که sales_invoice.SALES_CENTER به</td></tr>
+<tr><td class="ln">559</td><td class="code-line">-- آن ارجاع می‌دهد؛ در بات‌های دیگر این پروژه «مرکز فروش» نامیده می‌شود).</td></tr>
+<tr><td class="ln">560</td><td class="code-line">function centerAcl(data)</td></tr>
+<tr><td class="ln">561</td><td class="code-line">  -- باگ اصلاح‌شده: pa_center مثل pa_client یک جدول per-org است (شاهد کد: pa_center.ORG_ID در</td></tr>
+<tr><td class="ln">562</td><td class="code-line">  -- warranty_branch_expense_detail_report_bot.lua با ce.ORG_ID = vr.ORG_ID فیلتر می‌شود) — بدون</td></tr>
+<tr><td class="ln">563</td><td class="code-line">  -- فیلتر org_id ممکن است سطرهای سازمان‌های دیگر هم برگردد یا (بسته به داده) لیست گمراه‌کننده/خالی</td></tr>
+<tr><td class="ln">564</td><td class="code-line">  -- به‌نظر برسد. GetDataACL (مشترک بین همهٔ فیلترهای ACL در data.js) همیشه data.org_id را از مقدار</td></tr>
+<tr><td class="ln">565</td><td class="code-line">  -- فعلی ویجت «سازمان» می‌فرستد؛ اینجا هم مثل crmAcl همان را استفاده می‌کنیم، ولی چون سازمان یک</td></tr>
+<tr><td class="ln">566</td><td class="code-line">  -- فیلتر اختیاری این گزارش است (نه اجباری)، وقتی هنوز انتخاب نشده (org_id نامعتبر) فیلتر را نادیده</td></tr>
+<tr><td class="ln">567</td><td class="code-line">  -- می‌گیریم به‌جای اینکه با رشتهٔ خالی/نامعتبر کوئری را بشکنیم.</td></tr>
+<tr><td class="ln">568</td><td class="code-line">  local query_param = [[ select id,name from pa_center ]]</td></tr>
+<tr><td class="ln">569</td><td class="code-line">  local has_where = false</td></tr>
+<tr><td class="ln">570</td><td class="code-line">  if tonumber(data.org_id) ~= nil then</td></tr>
+<tr><td class="ln">571</td><td class="code-line">    query_param = query_param..[[ where org_id=]]..tonumber(data.org_id)..[[ ]]</td></tr>
+<tr><td class="ln">572</td><td class="code-line">    has_where = true</td></tr>
+<tr><td class="ln">573</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">574</td><td class="code-line">  if data.search ~= nil and #data.search &gt; 0 then</td></tr>
+<tr><td class="ln">575</td><td class="code-line">    query_param = query_param..(has_where and [[ and ]] or [[ where ]])..[[ (name like N'%]]..data.search..[[%'  or  id like N'%]]..data.search..[[%') ]]</td></tr>
+<tr><td class="ln">576</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">577</td><td class="code-line">  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);</td></tr>
+<tr><td class="ln">578</td><td class="code-line">  -- لاگ تشخیصی: اگر باز هم لیست خالی بود، از طریق پنل دیباگ بات (تب Log اجرای بات) متن این</td></tr>
+<tr><td class="ln">579</td><td class="code-line">  -- کوئری و هر خطای SQL آن قابل مشاهده است، بدون نیاز به دور دیگری از حدس‌وگمان.</td></tr>
+<tr><td class="ln">580</td><td class="code-line">  teamyar.write_log("centerAcl query: "..query_param)</td></tr>
+<tr><td class="ln">581</td><td class="code-line">  local ok, result = pcall(queryResultAcl, query_param, {})</td></tr>
+<tr><td class="ln">582</td><td class="code-line">  if ok then</td></tr>
+<tr><td class="ln">583</td><td class="code-line">    teamyar.write_result(json.encode(result));</td></tr>
+<tr><td class="ln">584</td><td class="code-line">  else</td></tr>
+<tr><td class="ln">585</td><td class="code-line">    teamyar.write_log("centerAcl ERROR: "..tostring(result))</td></tr>
+<tr><td class="ln">586</td><td class="code-line">    teamyar.write_result(json.encode({}));</td></tr>
+<tr><td class="ln">587</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">588</td><td class="code-line">end</td></tr>
+<tr><td class="ln">589</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">590</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">591</td><td class="code-line">--- Report</td></tr>
+<tr><td class="ln">592</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">593</td><td class="code-line">function report()</td></tr>
+<tr><td class="ln">594</td><td class="code-line">  local data= getTableSectionOne()</td></tr>
+<tr><td class="ln">595</td><td class="code-line">  local report = {</td></tr>
+<tr><td class="ln">596</td><td class="code-line">    {</td></tr>
+<tr><td class="ln">597</td><td class="code-line">      name = "table" ,</td></tr>
+<tr><td class="ln">598</td><td class="code-line">      title = "table" ,</td></tr>
+<tr><td class="ln">599</td><td class="code-line">      report = data</td></tr>
+<tr><td class="ln">600</td><td class="code-line">    }</td></tr>
+<tr><td class="ln">601</td><td class="code-line">  }</td></tr>
+<tr><td class="ln">602</td><td class="code-line">  return report;</td></tr>
+<tr><td class="ln">603</td><td class="code-line">end</td></tr>
+<tr><td class="ln">604</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">605</td><td class="code-line">function getTableSectionOne()</td></tr>
+<tr><td class="ln">606</td><td class="code-line">  local repId = getInput("rep_id");</td></tr>
+<tr><td class="ln">607</td><td class="code-line">  local headers = getTableConfig_header();</td></tr>
+<tr><td class="ln">608</td><td class="code-line">  local from = getInput("page");</td></tr>
+<tr><td class="ln">609</td><td class="code-line">  local values, total;</td></tr>
+<tr><td class="ln">610</td><td class="code-line">  -- رفع کندی/گیرکردن لود («همان لحظهٔ باز کردن صفحه»، طبق گزارش کاربر): RES هنگام باز شدن</td></tr>
+<tr><td class="ln">611</td><td class="code-line">  -- صفحه، قبل از این‌که کاربر فیلتری انتخاب کند، همیشه یک‌بار report()/getTableSectionOne() را</td></tr>
+<tr><td class="ln">612</td><td class="code-line">  -- خودکار صدا می‌زند و همین پارامتر (page_search_first=true) را می‌فرستد؛ کلیک واقعی «اجرا کردن»</td></tr>
+<tr><td class="ln">613</td><td class="code-line">  -- آن را false می‌فرستد. چون کوئری این بات (join دو جدول بزرگ sales_invoice/sales_invoice_product</td></tr>
+<tr><td class="ln">614</td><td class="code-line">  -- + سه window function برای R/F/M) سنگین است، اجرای آن روی این فراخوانی خودکار همان چیزی است</td></tr>
+<tr><td class="ln">615</td><td class="code-line">  -- که «لودینگ گیر می‌کند» را توضیح می‌دهد. با این پرچم، کوئری سنگین فقط بعد از کلیک واقعی «اجرا</td></tr>
+<tr><td class="ln">616</td><td class="code-line">  -- کردن» اجرا می‌شود؛ excel()/print() این پرچم را اصلاً دریافت نمی‌کنند، پس دست‌نخورده می‌مانند.</td></tr>
+<tr><td class="ln">617</td><td class="code-line">  -- هشدار: این دقیقاً همان فیکسی است که یک‌بار روی بات ۶۰۰ امتحان و به‌دلیل خراب‌شدن فرم فیلتر</td></tr>
+<tr><td class="ln">618</td><td class="code-line">  -- برگردانده شده بود (دلیل دقیقش وقتی مشخص نشد؛ ممکن است باگ دیگری هم‌زمان دخیل بوده باشد که</td></tr>
+<tr><td class="ln">619</td><td class="code-line">  -- از آن موقع در data.txt/data.js این بات اصلاح شده) — طبق تأیید صریح کاربر و با آگاهی از این</td></tr>
+<tr><td class="ln">620</td><td class="code-line">  -- ریسک دوباره امتحان می‌شود؛ اگر باز هم فرم فیلتر را خراب کرد، همین بلاک باید حذف شود.</td></tr>
+<tr><td class="ln">621</td><td class="code-line">  local isAutoFirstLoad = getInput("page_search_first")</td></tr>
+<tr><td class="ln">622</td><td class="code-line">  -- لاگ تشخیصی: اگر بعد از زدن واقعی «اجرا کردن» هم نتیجه خالی برگردد، این خط در لاگ اجرای بات</td></tr>
+<tr><td class="ln">623</td><td class="code-line">  -- مشخص می‌کند که آیا page_search_first واقعاً false بوده (و getData واقعی صدا زده شده) یا نه —</td></tr>
+<tr><td class="ln">624</td><td class="code-line">  -- بدون این، نمی‌شود فرق گذاشت بین «کوئری واقعی صفر ردیف برگردانده» و «کوئری اصلاً اجرا نشده».</td></tr>
+<tr><td class="ln">625</td><td class="code-line">  teamyar.write_log("getTableSectionOne: page_search_first="..tostring(isAutoFirstLoad))</td></tr>
+<tr><td class="ln">626</td><td class="code-line">  if isAutoFirstLoad == true then</td></tr>
+<tr><td class="ln">627</td><td class="code-line">    values = {}</td></tr>
+<tr><td class="ln">628</td><td class="code-line">    total = 0</td></tr>
+<tr><td class="ln">629</td><td class="code-line">  else</td></tr>
+<tr><td class="ln">630</td><td class="code-line">    values  = getData(_QUERY_TYPE._TYPE_PAGE_REPORT , from , _PAR_PAGE);</td></tr>
+<tr><td class="ln">631</td><td class="code-line">    total  = getData(_QUERY_TYPE._TYPE_TOTAL_COUNT);</td></tr>
+<tr><td class="ln">632</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">633</td><td class="code-line">  --local sums  = getData(_QUERY_TYPE._TYPE_TOTAL_SUM , from , _PAR_PAGE);</td></tr>
+<tr><td class="ln">634</td><td class="code-line">  return install_res.resTable(repId , headers , values  , total , _PAR_PAGE , from,sums );</td></tr>
+<tr><td class="ln">635</td><td class="code-line">end</td></tr>
+<tr><td class="ln">636</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">637</td><td class="code-line">--- excel</td></tr>
+<tr><td class="ln">638</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">639</td><td class="code-line">function excel()</td></tr>
+<tr><td class="ln">640</td><td class="code-line">  local excelFileName = getInput("excel_file_name");</td></tr>
+<tr><td class="ln">641</td><td class="code-line">  local excelFormPage = getInput("excel_from_page");</td></tr>
+<tr><td class="ln">642</td><td class="code-line">  local excelToPage = getInput("excel_to_page");</td></tr>
+<tr><td class="ln">643</td><td class="code-line">  local excelPerPage = getInput("excel_per_page");</td></tr>
+<tr><td class="ln">644</td><td class="code-line">  local headers = getTableConfig_header();</td></tr>
+<tr><td class="ln">645</td><td class="code-line">  local values = getData(_QUERY_TYPE._TYPE_PAGE_EXCEL ,  excelFormPage , excelPerPage , excelToPage)</td></tr>
+<tr><td class="ln">646</td><td class="code-line">  return install_res.resExcel( headers , values , excelFileName);</td></tr>
+<tr><td class="ln">647</td><td class="code-line">end</td></tr>
+<tr><td class="ln">648</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">649</td><td class="code-line">--- print</td></tr>
+<tr><td class="ln">650</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">651</td><td class="code-line">function print()</td></tr>
+<tr><td class="ln">652</td><td class="code-line">  local headers = getTableConfig_header();</td></tr>
+<tr><td class="ln">653</td><td class="code-line">  local values = getData(_QUERY_TYPE._TYPE_PAGE_PRINT)</td></tr>
+<tr><td class="ln">654</td><td class="code-line">  return install_res.resPrint( headers , values);</td></tr>
+<tr><td class="ln">655</td><td class="code-line">end</td></tr>
+<tr><td class="ln">656</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">657</td><td class="code-line">--- manager</td></tr>
+<tr><td class="ln">658</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">659</td><td class="code-line">function confirmTodo(tid)</td></tr>
+<tr><td class="ln">660</td><td class="code-line">  teamyar.write_log("tttttttt---"..tid)</td></tr>
+<tr><td class="ln">661</td><td class="code-line">  local js={confirm=1}</td></tr>
+<tr><td class="ln">662</td><td class="code-line">  local info =	{</td></tr>
+<tr><td class="ln">663</td><td class="code-line">    id= tid,</td></tr>
+<tr><td class="ln">664</td><td class="code-line">    type= 5,</td></tr>
+<tr><td class="ln">665</td><td class="code-line">    form_data=json.encode(js)</td></tr>
+<tr><td class="ln">666</td><td class="code-line">  }</td></tr>
+<tr><td class="ln">667</td><td class="code-line">  teamyar.write_log(json.encode(info))</td></tr>
+<tr><td class="ln">668</td><td class="code-line">  local   res = teamyar.call_api(8, '/api/todo/customform/update', info);</td></tr>
+<tr><td class="ln">669</td><td class="code-line">  teamyar.write_log(json.encode(res))</td></tr>
+<tr><td class="ln">670</td><td class="code-line">  return json.encode(res)</td></tr>
+<tr><td class="ln">671</td><td class="code-line">end</td></tr>
+<tr><td class="ln">672</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">673</td><td class="code-line">function getAclOrg(data)</td></tr>
+<tr><td class="ln">674</td><td class="code-line">  local query_param = [[  select id,name from org_info ]]</td></tr>
+<tr><td class="ln">675</td><td class="code-line">  if data.search ~= nil and #data.search &gt; 0 then</td></tr>
+<tr><td class="ln">676</td><td class="code-line">    query_param = query_param..[[  where name like N'%]]..data.search..[[%' ]]</td></tr>
+<tr><td class="ln">677</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">678</td><td class="code-line">  query_param = query_param .. string.format(" limit %d,%d ", data.from, data.count);   </td></tr>
+<tr><td class="ln">679</td><td class="code-line">  teamyar.write_result(json.encode(queryResultAcl(query_param, {})));</td></tr>
+<tr><td class="ln">680</td><td class="code-line">end</td></tr>
+<tr><td class="ln">681</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">682</td><td class="code-line">-------------------------------------------</td></tr>
+<tr><td class="ln">683</td><td class="code-line">function queryResultcrm(select_query,user_param)</td></tr>
+<tr><td class="ln">684</td><td class="code-line">  db.use_db("0000000")</td></tr>
+<tr><td class="ln">685</td><td class="code-line">  local params = {</td></tr>
+<tr><td class="ln">686</td><td class="code-line">    query = select_query,</td></tr>
+<tr><td class="ln">687</td><td class="code-line">    params = user_param</td></tr>
+<tr><td class="ln">688</td><td class="code-line">  }</td></tr>
+<tr><td class="ln">689</td><td class="code-line">  db.query(params);</td></tr>
+<tr><td class="ln">690</td><td class="code-line">  local res_text = {};</td></tr>
+<tr><td class="ln">691</td><td class="code-line">  local record = {};</td></tr>
+<tr><td class="ln">692</td><td class="code-line">  while db.query_fetch(record) do</td></tr>
+<tr><td class="ln">693</td><td class="code-line">    table.insert(res_text, {name = record[1], farsidate = record[2], gender = record[3]});</td></tr>
+<tr><td class="ln">694</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">695</td><td class="code-line">  db.query_free();</td></tr>
+<tr><td class="ln">696</td><td class="code-line">  return res_text;</td></tr>
+<tr><td class="ln">697</td><td class="code-line">end</td></tr>
+<tr><td class="ln">698</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">699</td><td class="code-line">function sendSms(crm_id,segment,box_id,txt)</td></tr>
+<tr><td class="ln">700</td><td class="code-line">  local res_str=""</td></tr>
+<tr><td class="ln">701</td><td class="code-line">  local q = [[select p.fullname,(select jndate from report_dimdate where ]]..currentdate..[[ </td></tr>
+<tr><td class="ln">702</td><td class="code-line">  between datekey and datekey+(60*60*24*10000000)-(60*10000000)) dd,(case when uf.sex=2 then 'خانم' else 'آقا' end) gender </td></tr>
+<tr><td class="ln">703</td><td class="code-line">  from profile_main p inner join profile_user_info uf on uf.id=p.id where p.id=]]..crm_id</td></tr>
+<tr><td class="ln">704</td><td class="code-line">  teamyar.write_log(q)</td></tr>
+<tr><td class="ln">705</td><td class="code-line">  local data = queryResultcrm(q, {})</td></tr>
+<tr><td class="ln">706</td><td class="code-line">    teamyar.write_log(json.encode(data))</td></tr>
+<tr><td class="ln">707</td><td class="code-line">  txt = string.gsub(txt, "{{name}}", data[1].name);</td></tr>
+<tr><td class="ln">708</td><td class="code-line">  txt = string.gsub(txt, "{{date}}", data[1].farsidate);</td></tr>
+<tr><td class="ln">709</td><td class="code-line">  txt = string.gsub(txt, "{{gender}}", data[1].gender);</td></tr>
+<tr><td class="ln">710</td><td class="code-line">  local info =	{box_id = box_id,messages = {{content = txt, send_to = {profile_ids = {crm_id}}}}, module_id = 26}</td></tr>
+<tr><td class="ln">711</td><td class="code-line">  teamyar.write_log("info----"..json.encode(info))</td></tr>
+<tr><td class="ln">712</td><td class="code-line">  local   res = teamyar.call_api(16, '/api/sms/send', info);</td></tr>
+<tr><td class="ln">713</td><td class="code-line">  teamyar.write_log("res----"..json.encode(res))</td></tr>
+<tr><td class="ln">714</td><td class="code-line">  if res.success ==true then </td></tr>
+<tr><td class="ln">715</td><td class="code-line">    res_str="&lt;div style='color:green;'&gt;".."ارسال پیامک برای کاربر :  "..crm_id.." ،  شناسه پیامک :"..res.data.message_ids[1].."&lt;/div&gt;"</td></tr>
+<tr><td class="ln">716</td><td class="code-line">  else </td></tr>
+<tr><td class="ln">717</td><td class="code-line">    res_str="&lt;div style='color:red;'&gt;".."خطا در ارسال پیامک :  "..res.error.message.."&lt;div&gt;"</td></tr>
+<tr><td class="ln">718</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">719</td><td class="code-line">  end </td></tr>
+<tr><td class="ln">720</td><td class="code-line">  return res_str</td></tr>
+<tr><td class="ln">721</td><td class="code-line">end</td></tr>
+<tr><td class="ln">722</td><td class="code-line">------------</td></tr>
+<tr><td class="ln">723</td><td class="code-line">function split(str, delimiter)</td></tr>
+<tr><td class="ln">724</td><td class="code-line">  local result = {}</td></tr>
+<tr><td class="ln">725</td><td class="code-line">  local pattern = "(.-)" .. delimiter .. "()"</td></tr>
+<tr><td class="ln">726</td><td class="code-line">  local lastPos = 1</td></tr>
+<tr><td class="ln">727</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">728</td><td class="code-line">  for part, pos in string.gmatch(str .. delimiter, pattern) do</td></tr>
+<tr><td class="ln">729</td><td class="code-line">    table.insert(result, part)</td></tr>
+<tr><td class="ln">730</td><td class="code-line">    lastPos = pos</td></tr>
+<tr><td class="ln">731</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">732</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">733</td><td class="code-line">  return result</td></tr>
+<tr><td class="ln">734</td><td class="code-line">end</td></tr>
+<tr><td class="ln">735</td><td class="code-line">--------------------------------------------</td></tr>
+<tr><td class="ln">736</td><td class="code-line">local type = getInput("type");</td></tr>
+<tr><td class="ln">737</td><td class="code-line">if type ~= nil and type == 100 then</td></tr>
+<tr><td class="ln">738</td><td class="code-line">  local result = report()</td></tr>
+<tr><td class="ln">739</td><td class="code-line">  teamyar.write_result(json.encode(result));</td></tr>
+<tr><td class="ln">740</td><td class="code-line">&nbsp;</td></tr>
+<tr><td class="ln">741</td><td class="code-line">elseif type ~= nil and type == 9 then</td></tr>
+<tr><td class="ln">742</td><td class="code-line">  catAcl(teamyar.get_input().data)  </td></tr>
+<tr><td class="ln">743</td><td class="code-line">elseif type ~= nil and type == 8 then</td></tr>
+<tr><td class="ln">744</td><td class="code-line">  ctypeAcl(teamyar.get_input().data)</td></tr>
+<tr><td class="ln">745</td><td class="code-line">elseif type ~= nil and type == 7 then</td></tr>
+<tr><td class="ln">746</td><td class="code-line">  crmAcl(teamyar.get_input().data)</td></tr>
+<tr><td class="ln">747</td><td class="code-line">elseif type ~= nil and type == 6 then</td></tr>
+<tr><td class="ln">748</td><td class="code-line">  getAclOrg(teamyar.get_input().data)</td></tr>
+<tr><td class="ln">749</td><td class="code-line">elseif type ~= nil and type == 12 then</td></tr>
+<tr><td class="ln">750</td><td class="code-line">  centerAcl(teamyar.get_input().data)</td></tr>
+<tr><td class="ln">751</td><td class="code-line">elseif type ~= nil and type == 10 then</td></tr>
+<tr><td class="ln">752</td><td class="code-line">  local input = teamyar.get_input()</td></tr>
+<tr><td class="ln">753</td><td class="code-line">  local res_str = sendSms(input.data.crm_id,input.data.segment,input.data.box_id, input.data.txt)</td></tr>
+<tr><td class="ln">754</td><td class="code-line">  local res_data = {msg = res_str}</td></tr>
+<tr><td class="ln">755</td><td class="code-line">  teamyar.write_result(json.encode(res_data))</td></tr>
+<tr><td class="ln">756</td><td class="code-line">elseif type ~= nil and type == 11 then</td></tr>
+<tr><td class="ln">757</td><td class="code-line">  local input = teamyar.get_input()</td></tr>
+<tr><td class="ln">758</td><td class="code-line">  local data = input.data</td></tr>
+<tr><td class="ln">759</td><td class="code-line">  local crms = split(data.crms, ',')</td></tr>
+<tr><td class="ln">760</td><td class="code-line">  local res_str = ""</td></tr>
+<tr><td class="ln">761</td><td class="code-line">  local count_send = 0</td></tr>
+<tr><td class="ln">762</td><td class="code-line">  for i,v in ipairs (crms) do </td></tr>
+<tr><td class="ln">763</td><td class="code-line">    local crm_id_in = string.sub(v, 0, #v-3)</td></tr>
+<tr><td class="ln">764</td><td class="code-line">    local segment_in = string.sub(v, #v-3, #v)</td></tr>
+<tr><td class="ln">765</td><td class="code-line">    sendSms(crm_id_in, segment_in, data.box_id, data.txt)</td></tr>
+<tr><td class="ln">766</td><td class="code-line">    count_send = count_send+1</td></tr>
+<tr><td class="ln">767</td><td class="code-line">  end</td></tr>
+<tr><td class="ln">768</td><td class="code-line">  res_str = " تعداد  "..count_send.." پیامک ارسال شد ."</td></tr>
+<tr><td class="ln">769</td><td class="code-line">  local res_data={msg=res_str}</td></tr>
+<tr><td class="ln">770</td><td class="code-line">  teamyar.write_result(json.encode(res_data))</td></tr>
+<tr><td class="ln">771</td><td class="code-line">elseif type ~= nil and type == 101 then</td></tr>
+<tr><td class="ln">772</td><td class="code-line">  local result = excel()</td></tr>
+<tr><td class="ln">773</td><td class="code-line">  teamyar.write_result(json.encode(result));</td></tr>
+<tr><td class="ln">774</td><td class="code-line">elseif type ~= nil and type == 102 then</td></tr>
+<tr><td class="ln">775</td><td class="code-line">  local result = print()</td></tr>
+<tr><td class="ln">776</td><td class="code-line">  teamyar.write_result(json.encode(result));</td></tr>
+<tr><td class="ln">777</td><td class="code-line">else</td></tr>
+<tr><td class="ln">778</td><td class="code-line">  local responseResReport = install_res.resReport(getTableConfig());</td></tr>
+<tr><td class="ln">779</td><td class="code-line">  teamyar.write_result(responseResReport);</td></tr>
+<tr><td class="ln">780</td><td class="code-line">end</td></tr>
         </tbody>
       </table>
     </div>
@@ -1018,12 +1041,12 @@
 </div>
 
 <textarea id="raw-source" readonly>-- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/08 11:55
+-- Last Edit = 1405/06/08 13:02
 
 -- botName = Sum Workdays And Sales Params
 -- creator = zmo
 -- date = 02/25/2025
--- version= 1.9 (رفع compile error: حذف UTF-8 BOM ابتدای فایل که Teamyar تحمل نمی‌کرد)
+-- version= 2.0 (لاگ تشخیصی page_search_first + رفع "null"/"0" در ویجت‌های فیلتر جدید)
 --
 -- تغییرات این نسخه (طبق درخواست کاربر، فقط ۳ باگ زیر؛ بقیهٔ کد عیناً بات ۵۰۱ باقی مانده):
 --   ۱و۳) ستون‌های R/F/M و فرمول سگمنت: f_nummber/m_nummber هر دو به‌اشتباه از cdata.rnumber
@@ -1133,6 +1156,25 @@
 --       این BOM را نادیده نمی‌گیرد و آن را نماد نامعتبر می‌بیند. این بار اول بود که این فایل واقعاً
 --       Save می‌شد (دورهای قبل فقط به‌صورت فایل/لینک تحویل داده شده بودند)، برای همین این خطا تا
 --       الان دیده نشده بود. حذف شد؛ بقیهٔ فایل (محتوا، انکودینگ UTF-8 بدون BOM) دست‌نخورده ماند.
+--
+-- تغییرات این نسخه (۱۴۰۵/۰۶/۰۸ — دور نهم: «لود سریع شد» تأیید شد، ولی دو گزارش جدید):
+--   ۱۵) UI ویجت‌های فیلتر جدید (sort_key/sort_dir/monetary_min/monetary_max): بدون || "" در
+--       data.js، وقتی چیزی cache نشده بود getCash() مقدار null/0 برمی‌گرداند و ویجت آن را عیناً
+--       به‌صورت متن "null"/"۰" داخل کادر نشان می‌داد (نه کادر خالی) — گمراه‌کننده، انگار واقعاً
+--       فیلتری زده شده. اصلاح شد در data.js (پیوست جدا). عنوان چندخطی «مرتب‌سازی بر اساس
+--       (Customer, Days, ...)» هم کوتاه شد به یک خط («مرتب‌سازی بر اساس»)، توضیح مقادیر مجاز به
+--       یک &lt;div&gt; راهنمای جدا زیر همان کادر منتقل شد (متن SORT_KEY_HINT در data.txt).
+--   ۱۶) گزارش کاربر: بعد از انتخاب فیلتر و زدن «اجرا کردن»، جدول نتایج خالی می‌ماند. چون فیکس دور
+--       قبل (isAutoFirstLoad/page_search_first) دقیقاً روی همین مسیر (getTableSectionOne) اثر
+--       گذاشته، احتمال واقعی این است که page_search_first حتی روی کلیک واقعی «اجرا کردن» هم true
+--       باشد (برخلاف مستندسازی قبلی که فقط از خواندن سورس res_v2 در یک نشست قبلی نتیجه‌گیری شده
+--       بود، نه تأییدشده زنده روی این مسیر خاص) — یعنی ممکن است این فیکس، کوئری واقعی را همیشه رد
+--       کند نه فقط لود خودکار اول. یک احتمال دیگر: فیلترهای انتخاب‌شده (سازمان + بازهٔ تاریخ کوتاه)
+--       واقعاً هیچ فاکتوری مطابقشان نبوده. بدون دیتابیس زنده نمی‌شود مطمئن شد کدام است — همین‌جا
+--       یک لاگ تشخیصی اضافه شد: هر بار getTableSectionOne صدا زده می‌شود، مقدار page_search_first
+--       در لاگ اجرای بات ثبت می‌شود، تا از تب Log مشخص شود آیا روی کلیک واقعی «اجرا کردن» این
+--       مقدار false بوده (و کوئری واقعی اجرا شده، فقط صفر ردیف داشته) یا true مانده (یعنی فیکس دور
+--       قبل باگ‌دار است و باید برگردد).
 
 --
 --------------------------------------------
@@ -1619,6 +1661,10 @@ function getTableSectionOne()
   -- از آن موقع در data.txt/data.js این بات اصلاح شده) — طبق تأیید صریح کاربر و با آگاهی از این
   -- ریسک دوباره امتحان می‌شود؛ اگر باز هم فرم فیلتر را خراب کرد، همین بلاک باید حذف شود.
   local isAutoFirstLoad = getInput("page_search_first")
+  -- لاگ تشخیصی: اگر بعد از زدن واقعی «اجرا کردن» هم نتیجه خالی برگردد، این خط در لاگ اجرای بات
+  -- مشخص می‌کند که آیا page_search_first واقعاً false بوده (و getData واقعی صدا زده شده) یا نه —
+  -- بدون این، نمی‌شود فرق گذاشت بین «کوئری واقعی صفر ردیف برگردانده» و «کوئری اصلاً اجرا نشده».
+  teamyar.write_log("getTableSectionOne: page_search_first="..tostring(isAutoFirstLoad))
   if isAutoFirstLoad == true then
     values = {}
     total = 0

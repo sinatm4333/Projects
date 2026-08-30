@@ -92,15 +92,18 @@ report[reportPath].getFilters = function () {
     $.Teamyar.input.text({
       id: "sort_key",
       name: "sort_key",
-      value: report[reportPath].getCash("sort_key"),
+      // باگ رفع‌شده: بدون || ""، وقتی چیزی cache نشده getCash() مقدار null/undefined برمی‌گرداند
+      // و ویجت آن را عیناً به‌صورت متن "null" داخل کادر نشان می‌دهد (نه کادر خالی).
+      value: report[reportPath].getCash("sort_key") || "",
       title: report[reportPath].translateWord("SORT_KEY"),
       format: "input",
       type: "text",
     }),
+    "<div style='font-size:12px;color:#666;margin:-10px 0 10px;'>"+report[reportPath].translateWord("SORT_KEY_HINT")+"</div>",
     $.Teamyar.input.text({
       id: "sort_dir",
       name: "sort_dir",
-      value: report[reportPath].getCash("sort_dir"),
+      value: report[reportPath].getCash("sort_dir") || "",
       title: report[reportPath].translateWord("SORT_DIR"),
       format: "input",
       type: "text",
@@ -108,7 +111,10 @@ report[reportPath].getFilters = function () {
     $.Teamyar.input.text({
       id: "monetary_min",
       name: "monetary_min",
-      value: report[reportPath].getCash("monetary_min"),
+      // باگ رفع‌شده: چون monetary_min در data.txt نوع "number" است، بدون || ""، مقدار پیش‌فرض
+      // خودِ فریم‌ورک (0) به‌صورت "۰" داخل کادر نشان داده می‌شد — گمراه‌کننده (انگار واقعاً فیلتر
+      // شده)، حالا کادر واقعاً خالی می‌ماند تا خودِ کاربر عدد بزند.
+      value: report[reportPath].getCash("monetary_min") || "",
       title: report[reportPath].translateWord("MONETARY_MIN"),
       format: "input",
       type: "number",
@@ -116,7 +122,7 @@ report[reportPath].getFilters = function () {
     $.Teamyar.input.text({
       id: "monetary_max",
       name: "monetary_max",
-      value: report[reportPath].getCash("monetary_max"),
+      value: report[reportPath].getCash("monetary_max") || "",
       title: report[reportPath].translateWord("MONETARY_MAX"),
       format: "input",
       type: "number",

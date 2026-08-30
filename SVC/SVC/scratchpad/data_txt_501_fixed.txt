@@ -93,8 +93,9 @@
           "LEGAL":"حقوقی",
           "REAL":"حقیقی",
           "ORG_ID":"شعبه",
-          "SORT_KEY":"مرتب‌سازی بر اساس (Customer, Days, LastRunDate, Frequency, Monetary, rd, fd, md, rfm, segment)",
-          "SORT_DIR":"جهت مرتب‌سازی (asc یا desc - پیش‌فرض desc)",
+          "SORT_KEY":"مرتب‌سازی بر اساس",
+          "SORT_KEY_HINT":"یکی از: Customer, Days, LastRunDate, Frequency, Monetary, rd, fd, md, rfm, segment",
+          "SORT_DIR":"جهت مرتب‌سازی (desc یا asc - پیش‌فرض desc)",
           "MONETARY_MIN":"حداقل درآمد",
           "MONETARY_MAX":"حداکثر درآمد",
           "CENTER":"مرکز درآمد"
