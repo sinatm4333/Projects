@@ -379,6 +379,15 @@ Do not index or read `docs/context/DatabaseSchema.md`.
   Also note: saving a bot's `command` in Teamyar has, in practice, sometimes dropped/mangled a literal
   `/` or `\` character and thrown a string error — if a save fails with a string error, suspect slash/backslash
   content first.
+- **UTF-8 BOM at the start of a `src/*_bot.lua` file breaks Teamyar's Lua compiler.** Confirmed live
+  (1405/06/08, `crm_rfm_bot.lua`/bot 501): a leading BOM (bytes `EF BB BF`) — which several older bots in
+  this repo already carry, silently, likely inherited from whatever editor/export produced them — makes
+  Teamyar's save fail with `compile error: ... unexpected symbol near '<\239>'` on line 1. This can sit
+  undetected for a long time: a file only fails when its `command` is actually *saved* through Teamyar's
+  panel — editing/reading/diffing it locally never triggers the error. Before handing over (or saving) any
+  bot file, check with `od -An -tx1 -N3 src/whatever_bot.lua` — if the first three bytes are `ef bb bf`,
+  strip them (e.g. `python3 -c "d=open(p,'rb').read(); open(p,'wb').write(d[3:] if d[:3]==b'\xef\xbb\xbf' else d)"`)
+  before delivering.
 - Never embed raw user/database content into HTML without escaping.
 - Never bypass authorization checks.
 - Do not log sensitive information.
