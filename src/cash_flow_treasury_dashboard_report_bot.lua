@@ -1,5 +1,22 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/05 11:30
+-- Last Edit = 1405/06/07 10:15
+-- بهینه‌سازی کارایی (طبق درخواست کاربر) — تعداد رفت‌وبرگشت به دیتابیس از ۱۵ به ۷ کاهش یافت
+-- (اندازه‌گیری‌شده با شمارش واقعی db.query در Dry-run، نه تخمین):
+--   ۱) دو Query کاملاً بلااستفاده حذف شد (window_dates/trend_dates — نتیجه‌شان هیچ‌جا مصرف نمی‌شد).
+--   ۲) موجودی بانک + صندوق با UNION ALL یک Query شدند (قبلاً ۲ Query جدا).
+--   ۳) Aggregate چک (KPI صادره/دریافتی/سررسید/معوق) و نمودار «به تفکیک واحد» دیگر Query جدا ندارند —
+--      چون داده‌شان را برای جدول Drill-down به هر حال کامل می‌خواندیم، حالا از همان یک واکشی سطحی
+--      (که با issued/received قبلی هم ادغام شد) در Lua محاسبه می‌شوند؛ همان جدول را ۳ بار جدا اسکن
+--      نمی‌کنیم. جمعیت این داده (چک‌های STATUS=1) کوچک و کراندار است، پس Aggregate سمت Lua امن است.
+--   ۴) نمودار روزانهٔ ۷ روز + روند ۳۰ روز هرکدام از ۲ Query (چک/درخواست، جدا) به ۱ Query با Subquery
+--      همبسته تبدیل شدند — هزینهٔ محاسباتی تقریباً یکسان (هر دو کاملاً Index-Driven روی ۷/۳۰ ردیف
+--      report_dimdate)، فقط یک رفت‌وبرگشت به‌جای دو تا.
+--   نکته: Aggregate درخواست‌های خزانه‌داری (rq) عمداً جدا ماند — جمعیت واقعی‌اش (خصوصاً STATUS=3،
+--   ~۶۱۷ ردیف) از سقف LIMIT جدول لیست درخواست‌ها (۳۰۰) بیشتر است؛ اگر از آن لیست محدودشده حساب
+--   می‌شد، KPIهای پرداخت‌شده/معوق کم‌شمار می‌شدند — کارایی هرگز نباید درستی عدد را قربانی کند.
+--   حین این بازنویسی یک باگ ریز هم رفع شد: محاسبهٔ «سررسید گذشته/امروز» چک قبلاً چک بدون سررسید ثبت‌شده
+--   (DATE_ISSUE=0) را هم به‌اشتباه «سررسید گذشته» می‌شمرد (چون 0 < امروز همیشه درست است)؛ الان
+--   due_raw > 0 هم چک می‌شود.
 -- اصلاح باگ گزارش‌شدهٔ کاربر («درخواست‌ها باز نمی‌شوند»، «اکشن‌ها ارور می‌دهند») — ریشه‌یابی‌شده با
 -- Dry-run واقعی JS در jsdom (نه فقط luac -p که فقط Lua را چک می‌کند، نه جاوااسکریپت تعبیه‌شده):
 --   یک جدول Lua کاملاً خالی (مثلاً وقتی هیچ چکی/درخواستی در بازهٔ فعلی نبود) می‌تواند به‌جای آرایهٔ
@@ -175,73 +192,111 @@ local trend_start = today_start - (CONFIG.TREND_DAYS - 1) * CONFIG.DAY_TICKS_FUL
 -- ---------- سازمان‌ها (برای Dropdown فیلتر — از همان org_info که بات RFM با دستور res استفاده می‌کند) ----------
 local org_rows = fetch_rows("SELECT id, name FROM org_info ORDER BY name") or {}
 
--- ---------- بازهٔ ۷ روز آینده از report_dimdate (تاریخ شمسی هر روز) ----------
-local window_dates = fetch_rows([[
-    SELECT DATEKEY, JNDATE, JTDAY
-    FROM report_dimdate
-    WHERE DATEKEY BETWEEN ? AND ?
-    ORDER BY DATEKEY
-]], { today_start, window_end }) or {}
-
--- ---------- بازهٔ ۳۰ روز اخیر از report_dimdate ----------
-local trend_dates = fetch_rows([[
-    SELECT DATEKEY, JNDATE
-    FROM report_dimdate
-    WHERE DATEKEY BETWEEN ? AND ?
-    ORDER BY DATEKEY
-]], { trend_start, today_end }) or {}
-
 -- ---------- موجودی بانک/صندوق (بخش C) ----------
-local bank_row = fetch_row1([[
-    SELECT DISTINCT acc.ID, acc.BALANCE
-    FROM pa_bank_account ba
-    JOIN pa_account acc ON acc.ID = ba.ACCOUNT_ID AND acc.ORG_ID = ba.ORG_ID
-    WHERE ba.ORG_ID = ?
-    LIMIT 1
-]], { org_id })
-local bank_balance = bank_row ~= nil and to_num(bank_row[2]) or 0
+-- (کارایی) قبلاً دو Query جدا برای موجودی بانک و صندوق زده می‌شد؛ اینجا با UNION ALL یک رفت‌وبرگشت
+-- شد. همچنین دو Query «window_dates»/«trend_dates» که قبلاً اینجا بودند حذف شدند — نتیجه‌شان هیچ‌جای
+-- فایل مصرف نمی‌شد (daily_series/trend_series از Queryهای دیگری که مستقیم از report_dimdate رانده
+-- می‌شوند ساخته می‌شوند)، پس صرفاً دو رفت‌وبرگشت بی‌فایده به دیتابیس بودند.
+local balance_rows = fetch_rows([[
+    (SELECT DISTINCT 'bank' AS kind, acc.BALANCE AS balance
+     FROM pa_bank_account ba
+     JOIN pa_account acc ON acc.ID = ba.ACCOUNT_ID AND acc.ORG_ID = ba.ORG_ID
+     WHERE ba.ORG_ID = ? LIMIT 1)
+    UNION ALL
+    (SELECT DISTINCT 'cash' AS kind, acc.BALANCE AS balance
+     FROM pa_cashdesk cd
+     JOIN pa_account acc ON acc.ID = cd.ACCOUNT_ID AND acc.ORG_ID = cd.ORG_ID
+     WHERE cd.ORG_ID = ? LIMIT 1)
+]], { org_id, org_id }) or {}
 
-local cash_row = fetch_row1([[
-    SELECT DISTINCT acc.ID, acc.BALANCE
-    FROM pa_cashdesk cd
-    JOIN pa_account acc ON acc.ID = cd.ACCOUNT_ID AND acc.ORG_ID = cd.ORG_ID
-    WHERE cd.ORG_ID = ?
-    LIMIT 1
-]], { org_id })
-local cash_balance = cash_row ~= nil and to_num(cash_row[2]) or 0
+local bank_balance, cash_balance = 0, 0
+for _, r in ipairs(balance_rows) do
+    if r[1] == "bank" then bank_balance = to_num(r[2])
+    elseif r[1] == "cash" then cash_balance = to_num(r[2]) end
+end
 local available_cash = bank_balance + cash_balance
 
--- ---------- KPIهای چک (Aggregate تکی، بدون Loop) ----------
-local cq = fetch_row1([[
-    SELECT
-        SUM(CASE WHEN TYPE=1 THEN 1 ELSE 0 END) AS issued_cnt,
-        COALESCE(SUM(CASE WHEN TYPE=1 THEN AMOUNT ELSE 0 END),0) AS issued_amt,
-        SUM(CASE WHEN TYPE=2 THEN 1 ELSE 0 END) AS received_cnt,
-        COALESCE(SUM(CASE WHEN TYPE=2 THEN AMOUNT ELSE 0 END),0) AS received_amt,
-        SUM(CASE WHEN TYPE=1 AND DATE_ISSUE <= ? THEN 1 ELSE 0 END) AS issued_due_cnt,
-        COALESCE(SUM(CASE WHEN TYPE=1 AND DATE_ISSUE <= ? THEN AMOUNT ELSE 0 END),0) AS issued_due_amt,
-        SUM(CASE WHEN TYPE=1 AND DATE_ISSUE < ? THEN 1 ELSE 0 END) AS issued_overdue_cnt,
-        COALESCE(SUM(CASE WHEN TYPE=1 AND DATE_ISSUE < ? THEN AMOUNT ELSE 0 END),0) AS issued_overdue_amt,
-        SUM(CASE WHEN TYPE=1 AND DATE_ISSUE BETWEEN ? AND ? THEN 1 ELSE 0 END) AS issued_next7_cnt,
-        COALESCE(SUM(CASE WHEN TYPE=1 AND DATE_ISSUE BETWEEN ? AND ? THEN AMOUNT ELSE 0 END),0) AS issued_next7_amt,
-        SUM(CASE WHEN TYPE=1 AND DATE_ISSUE > ? THEN 1 ELSE 0 END) AS issued_later_cnt,
-        COALESCE(SUM(CASE WHEN TYPE=1 AND DATE_ISSUE > ? THEN AMOUNT ELSE 0 END),0) AS issued_later_amt
-    FROM pa_pdc
-    WHERE ORG_ID=? AND DELETED=0 AND STATUS=1
-]], {
-    today_end, today_end,
-    today_start, today_start,
-    today_start, window_end, today_start, window_end,
-    window_end, window_end,
-    org_id,
-}) or {}
+-- ---------- چک‌های در جریان (صادره+دریافتی یک‌جا) ----------
+-- (کارایی) این Query جایگزین سه Query قبلی شد: Aggregate جداگانهٔ KPI چک، Query جداگانهٔ نمودار
+-- «به تفکیک واحد»، و دو Query جداگانهٔ لیست صادره/دریافتی — همه از همین یک واکشی سطحی (Row-level)
+-- در Lua محاسبه می‌شوند (KPIها/سررسید/واحد)، چون داده‌اش را برای جدول Drill-down به هر حال لازم
+-- داشتیم؛ اسکن دوبارهٔ همان جدول با Query جدا برای همان دادهٔ همان لحظه بی‌فایده بود. حجم این جدول
+-- (چک‌های STATUS=1) کوچک و کراندار است (نه کل تاریخچه)، پس Aggregate سمت Lua این‌جا امن است — برخلاف
+-- درخواست‌های خزانه‌داری که جمعیتشان (خصوصاً STATUS=3) از سقف LIMIT جدول لیست بیشتر است (پایین‌تر).
+local cheque_list_rows = fetch_rows([[
+    SELECT p.ID, p.TYPE, p.SERIAL, p.BANK_NAME, COALESCE(c.NAME, p.TRANSFEREE, p.PAY_TO, 'نامشخص') AS beneficiary,
+           p.EXPORT_DATE, rd_exp.JNDATE, p.DATE_ISSUE, rd_due.JNDATE,
+           p.AMOUNT, p.STATUS, COALESCE(u.UNIT_NAME,'—') AS unit_name
+    FROM pa_pdc p
+    LEFT JOIN pa_client c ON c.ID = p.RECEIVER_CLIENT_ID AND c.ORG_ID = p.ORG_ID
+    LEFT JOIN pa_pdc_units u ON u.ID = p.unit_id AND u.ORG_ID = p.ORG_ID
+    LEFT JOIN report_dimdate rd_exp ON p.EXPORT_DATE BETWEEN rd_exp.DATEKEY AND rd_exp.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
+    LEFT JOIN report_dimdate rd_due ON p.DATE_ISSUE BETWEEN rd_due.DATEKEY AND rd_due.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
+    WHERE p.ORG_ID=? AND p.DELETED=0 AND p.TYPE IN (1,2) AND p.STATUS=1
+    ORDER BY p.TYPE ASC, p.DATE_ISSUE ASC
+]], { org_id }) or {}
 
-local issued_cnt = to_num(cq[1]); local issued_amt = to_num(cq[2])
-local received_cnt = to_num(cq[3]); local received_amt = to_num(cq[4])
-local issued_due_cnt = to_num(cq[5]); local issued_due_amt = to_num(cq[6])
-local issued_overdue_cnt = to_num(cq[7]); local issued_overdue_amt = to_num(cq[8])
-local issued_next7_cnt = to_num(cq[9]); local issued_next7_amt = to_num(cq[10])
-local issued_later_cnt = to_num(cq[11]); local issued_later_amt = to_num(cq[12])
+local function cheque_row_to_obj(r)
+    return {
+        id = r[1], type = to_num(r[2]), serial = r[3] or "", bank = r[4] or "",
+        counterparty = r[5],
+        export_raw = to_num(r[6]), export_jdate = r[7] or "—",
+        due_raw = to_num(r[8]), due_jdate = r[9] or "—",
+        amount = to_num(r[10]), status = to_num(r[11]), unit_name = r[12],
+    }
+end
+
+local issued_list, received_list = {}, {}
+local issued_cnt, issued_amt = 0, 0
+local issued_due_cnt, issued_due_amt = 0, 0
+local issued_overdue_cnt, issued_overdue_amt = 0, 0
+local issued_next7_cnt, issued_next7_amt = 0, 0
+local issued_later_cnt, issued_later_amt = 0, 0
+local received_cnt, received_amt = 0, 0
+local unit_map, unit_order = {}, {}
+
+for _, r in ipairs(cheque_list_rows) do
+    local obj = cheque_row_to_obj(r)
+    if obj.type == 1 then
+        table.insert(issued_list, obj)
+        issued_cnt = issued_cnt + 1
+        issued_amt = issued_amt + obj.amount
+        -- due_raw > 0 : یک چک بدون سررسید ثبت‌شده (۰) نباید «سررسید گذشته» حساب شود — پیش از این در
+        -- Query SQL این محافظت نبود (0 <= هر عددی همیشه True است)، این‌جا در بازنویسی رفع شد.
+        if obj.due_raw > 0 then
+            if obj.due_raw <= today_end then
+                issued_due_cnt = issued_due_cnt + 1
+                issued_due_amt = issued_due_amt + obj.amount
+            end
+            if obj.due_raw < today_start then
+                issued_overdue_cnt = issued_overdue_cnt + 1
+                issued_overdue_amt = issued_overdue_amt + obj.amount
+            elseif obj.due_raw <= window_end then
+                issued_next7_cnt = issued_next7_cnt + 1
+                issued_next7_amt = issued_next7_amt + obj.amount
+            else
+                issued_later_cnt = issued_later_cnt + 1
+                issued_later_amt = issued_later_amt + obj.amount
+            end
+        end
+    elseif obj.type == 2 then
+        table.insert(received_list, obj)
+        received_cnt = received_cnt + 1
+        received_amt = received_amt + obj.amount
+    end
+    -- نمودار «به تفکیک واحد» طبق همان منطق Query قبلی‌اش هر دو TYPE را با هم می‌گیرد (بدون فیلتر TYPE)
+    local uname = obj.unit_name or "—"
+    if unit_map[uname] == nil then
+        unit_map[uname] = { unit_name = uname, cnt = 0, amt = 0 }
+        table.insert(unit_order, uname)
+    end
+    unit_map[uname].cnt = unit_map[uname].cnt + 1
+    unit_map[uname].amt = unit_map[uname].amt + obj.amount
+end
+
+local unit_chart = {}
+for _, uname in ipairs(unit_order) do table.insert(unit_chart, unit_map[uname]) end
+table.sort(unit_chart, function(a, b) return a.amt > b.amt end)
 
 -- ---------- KPIهای درخواست خزانه‌داری ----------
 -- «معوق» طبق درخواست کاربر: درخواست STATUS=1 (در انتظار تایید، هنوز پرداخت نشده) که REQUEST_DATE آن
@@ -273,111 +328,61 @@ local total_next7_cnt = issued_next7_cnt + req_pending_next7_cnt
 local cash_gap = available_cash - total_next7_amt
 
 -- ---------- نمودار Stacked Bar روزانه (۷ روز آینده) — چک صادره در برابر درخواست خزانه‌داری ----------
-local daily_cheques = fetch_rows([[
+-- (کارایی) قبلاً ۲ Query جدا (یکی برای چک، یکی برای درخواست) بعد در Lua با یک نگاشت DATEKEY ترکیب
+-- می‌شدند. چون هر دو از همان ۷ ردیف report_dimdate رانده می‌شوند، این‌جا با Subquery همبسته
+-- (Correlated) در همان یک Query ترکیب شدند — روی ۷ ردیف Outer، هزینهٔ ناچیز و کاملاً Index-Driven
+-- است (ORG_ID/STATUS/DATE_ISSUE/REQUEST_DATE همه Index دارند)، ولی یک رفت‌وبرگشت به‌جای دو تا.
+local daily_combined = fetch_rows([[
     SELECT rd.DATEKEY, rd.JNDATE,
-           COALESCE(SUM(p.AMOUNT),0) AS amt, COUNT(p.ID) AS cnt
+        (SELECT COALESCE(SUM(p.AMOUNT),0) FROM pa_pdc p
+           WHERE p.DATE_ISSUE BETWEEN rd.DATEKEY AND rd.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
+             AND p.ORG_ID=? AND p.DELETED=0 AND p.STATUS=1 AND p.TYPE=1) AS cheque_amt,
+        (SELECT COUNT(*) FROM pa_pdc p
+           WHERE p.DATE_ISSUE BETWEEN rd.DATEKEY AND rd.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
+             AND p.ORG_ID=? AND p.DELETED=0 AND p.STATUS=1 AND p.TYPE=1) AS cheque_cnt,
+        (SELECT COALESCE(SUM(d.AMOUNT),0) FROM pa_request r
+           JOIN pa_request_record rr ON rr.REQUEST_ID = r.ID
+           JOIN pa_request_record_det d ON d.REQUEST_RECORD_ID = rr.ID
+           WHERE r.REQUEST_DATE BETWEEN rd.DATEKEY AND rd.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
+             AND r.ORG_ID=? AND r.STATUS=1 AND r.CANCELED=0) AS req_amt,
+        (SELECT COUNT(DISTINCT r.ID) FROM pa_request r
+           JOIN pa_request_record rr ON rr.REQUEST_ID = r.ID
+           JOIN pa_request_record_det d ON d.REQUEST_RECORD_ID = rr.ID
+           WHERE r.REQUEST_DATE BETWEEN rd.DATEKEY AND rd.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
+             AND r.ORG_ID=? AND r.STATUS=1 AND r.CANCELED=0) AS req_cnt
     FROM report_dimdate rd
-    LEFT JOIN pa_pdc p ON p.DATE_ISSUE BETWEEN rd.DATEKEY AND rd.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
-        AND p.ORG_ID=? AND p.DELETED=0 AND p.STATUS=1 AND p.TYPE=1
     WHERE rd.DATEKEY BETWEEN ? AND ?
-    GROUP BY rd.DATEKEY, rd.JNDATE
     ORDER BY rd.DATEKEY
-]], { org_id, today_start, window_end }) or {}
+]], { org_id, org_id, org_id, org_id, today_start, window_end }) or {}
 
-local daily_requests = fetch_rows([[
-    SELECT rd.DATEKEY, rd.JNDATE,
-           COALESCE(SUM(d.AMOUNT),0) AS amt, COUNT(DISTINCT r.ID) AS cnt
-    FROM report_dimdate rd
-    LEFT JOIN pa_request r ON r.REQUEST_DATE BETWEEN rd.DATEKEY AND rd.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
-        AND r.ORG_ID=? AND r.STATUS=1 AND r.CANCELED=0
-    LEFT JOIN pa_request_record rr ON rr.REQUEST_ID = r.ID
-    LEFT JOIN pa_request_record_det d ON d.REQUEST_RECORD_ID = rr.ID
-    WHERE rd.DATEKEY BETWEEN ? AND ?
-    GROUP BY rd.DATEKEY, rd.JNDATE
-    ORDER BY rd.DATEKEY
-]], { org_id, today_start, window_end }) or {}
-
-local daily_map = {}
-local daily_order = {}
-for _, r in ipairs(daily_cheques) do
-    local key = tostring(r[1])
-    daily_map[key] = { datekey = r[1], jdate = r[2], cheque_amt = to_num(r[3]), cheque_cnt = to_num(r[4]), req_amt = 0, req_cnt = 0 }
-    table.insert(daily_order, key)
-end
-for _, r in ipairs(daily_requests) do
-    local key = tostring(r[1])
-    if daily_map[key] == nil then
-        daily_map[key] = { datekey = r[1], jdate = r[2], cheque_amt = 0, cheque_cnt = 0, req_amt = 0, req_cnt = 0 }
-        table.insert(daily_order, key)
-    end
-    daily_map[key].req_amt = to_num(r[3])
-    daily_map[key].req_cnt = to_num(r[4])
-end
 local daily_series = {}
-for _, key in ipairs(daily_order) do
-    local d = daily_map[key]
+for _, r in ipairs(daily_combined) do
+    local cheque_amt, req_amt = to_num(r[3]), to_num(r[5])
     table.insert(daily_series, {
-        jdate = d.jdate, cheque_amt = d.cheque_amt, req_amt = d.req_amt,
-        total_amt = d.cheque_amt + d.req_amt, cheque_cnt = d.cheque_cnt, req_cnt = d.req_cnt,
+        jdate = r[2], cheque_amt = cheque_amt, req_amt = req_amt,
+        total_amt = cheque_amt + req_amt, cheque_cnt = to_num(r[4]), req_cnt = to_num(r[6]),
     })
 end
 
 -- ---------- روند ۳۰ روز اخیر (چک به سررسید در آن روز + درخواست ثبت‌شده در آن روز) ----------
-local trend_cheques = fetch_rows([[
-    SELECT rd.DATEKEY, rd.JNDATE, COALESCE(SUM(p.AMOUNT),0) AS amt
+local trend_combined = fetch_rows([[
+    SELECT rd.DATEKEY, rd.JNDATE,
+        (SELECT COALESCE(SUM(p.AMOUNT),0) FROM pa_pdc p
+           WHERE p.DATE_ISSUE BETWEEN rd.DATEKEY AND rd.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
+             AND p.ORG_ID=? AND p.DELETED=0 AND p.TYPE=1) AS cheque_amt,
+        (SELECT COALESCE(SUM(d.AMOUNT),0) FROM pa_request r
+           JOIN pa_request_record rr ON rr.REQUEST_ID = r.ID
+           JOIN pa_request_record_det d ON d.REQUEST_RECORD_ID = rr.ID
+           WHERE r.REQUEST_DATE BETWEEN rd.DATEKEY AND rd.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
+             AND r.ORG_ID=?) AS req_amt
     FROM report_dimdate rd
-    LEFT JOIN pa_pdc p ON p.DATE_ISSUE BETWEEN rd.DATEKEY AND rd.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
-        AND p.ORG_ID=? AND p.DELETED=0 AND p.TYPE=1
     WHERE rd.DATEKEY BETWEEN ? AND ?
-    GROUP BY rd.DATEKEY, rd.JNDATE
     ORDER BY rd.DATEKEY
-]], { org_id, trend_start, today_end }) or {}
+]], { org_id, org_id, trend_start, today_end }) or {}
 
-local trend_requests = fetch_rows([[
-    SELECT rd.DATEKEY, rd.JNDATE, COALESCE(SUM(d.AMOUNT),0) AS amt
-    FROM report_dimdate rd
-    LEFT JOIN pa_request r ON r.REQUEST_DATE BETWEEN rd.DATEKEY AND rd.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
-        AND r.ORG_ID=?
-    LEFT JOIN pa_request_record rr ON rr.REQUEST_ID = r.ID
-    LEFT JOIN pa_request_record_det d ON d.REQUEST_RECORD_ID = rr.ID
-    WHERE rd.DATEKEY BETWEEN ? AND ?
-    GROUP BY rd.DATEKEY, rd.JNDATE
-    ORDER BY rd.DATEKEY
-]], { org_id, trend_start, today_end }) or {}
-
-local trend_map = {}
-local trend_order = {}
-for _, r in ipairs(trend_cheques) do
-    local key = tostring(r[1])
-    trend_map[key] = { jdate = r[2], amt = to_num(r[3]) }
-    table.insert(trend_order, key)
-end
-for _, r in ipairs(trend_requests) do
-    local key = tostring(r[1])
-    if trend_map[key] == nil then
-        trend_map[key] = { jdate = r[2], amt = 0 }
-        table.insert(trend_order, key)
-    end
-    trend_map[key].amt = trend_map[key].amt + to_num(r[3])
-end
 local trend_series = {}
-for _, key in ipairs(trend_order) do
-    table.insert(trend_series, { jdate = trend_map[key].jdate, amt = trend_map[key].amt })
-end
-
--- ---------- نمودار میله‌ای «به تفکیک واحد» (فقط چک — تنها منبع دارای پوشش کامل واحد) ----------
-local unit_rows = fetch_rows([[
-    SELECT u.UNIT_NAME, COUNT(p.ID) AS cnt, COALESCE(SUM(p.AMOUNT),0) AS amt
-    FROM pa_pdc p
-    JOIN pa_pdc_units u ON u.ID = p.unit_id AND u.ORG_ID = p.ORG_ID
-    WHERE p.ORG_ID=? AND p.DELETED=0 AND p.STATUS=1
-    GROUP BY u.UNIT_NAME
-    ORDER BY amt DESC
-]], { org_id }) or {}
-
-local unit_chart = {}
-for _, r in ipairs(unit_rows) do
-    table.insert(unit_chart, { unit_name = r[1], cnt = to_num(r[2]), amt = to_num(r[3]) })
+for _, r in ipairs(trend_combined) do
+    table.insert(trend_series, { jdate = r[2], amt = to_num(r[3]) + to_num(r[4]) })
 end
 
 -- ---------- Doughnut: ترکیب تعهدات کوتاه‌مدت (غیرهم‌پوشان) ----------
@@ -389,35 +394,7 @@ local mix_slices = {
     { name = "درخواست خزانه‌داری در انتظار (سررسید نرسیده)", value = req_pending_not_overdue_amt },
 }
 
--- ---------- جدول Drill-down: چک‌های صادرشده در جریان ----------
--- توجه: EXPORT_DATE/DATE_ISSUE در pa_pdc جزء ساعت هم دارند (تست زنده تأیید کرد) — تبدیل شمسی از طریق
--- Join دوباره به report_dimdate با BETWEEN انجام می‌شود، نه استفادهٔ مستقیم از عدد خام FILETIME.
-local issued_list_rows = fetch_rows([[
-    SELECT p.ID, p.SERIAL, p.BANK_NAME, COALESCE(c.NAME, p.TRANSFEREE, p.PAY_TO, 'نامشخص') AS beneficiary,
-           p.EXPORT_DATE, rd_exp.JNDATE, p.DATE_ISSUE, rd_due.JNDATE,
-           p.AMOUNT, p.STATUS, COALESCE(u.UNIT_NAME,'—') AS unit_name
-    FROM pa_pdc p
-    LEFT JOIN pa_client c ON c.ID = p.RECEIVER_CLIENT_ID AND c.ORG_ID = p.ORG_ID
-    LEFT JOIN pa_pdc_units u ON u.ID = p.unit_id AND u.ORG_ID = p.ORG_ID
-    LEFT JOIN report_dimdate rd_exp ON p.EXPORT_DATE BETWEEN rd_exp.DATEKEY AND rd_exp.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
-    LEFT JOIN report_dimdate rd_due ON p.DATE_ISSUE BETWEEN rd_due.DATEKEY AND rd_due.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
-    WHERE p.ORG_ID=? AND p.DELETED=0 AND p.TYPE=1 AND p.STATUS=1
-    ORDER BY p.DATE_ISSUE ASC
-]], { org_id }) or {}
-
--- ---------- جدول Drill-down: چک‌های دریافتی در جریان ----------
-local received_list_rows = fetch_rows([[
-    SELECT p.ID, p.SERIAL, p.BANK_NAME, COALESCE(c.NAME, p.TRANSFEREE, p.PAY_TO, 'نامشخص') AS payer,
-           p.EXPORT_DATE, rd_exp.JNDATE, p.DATE_ISSUE, rd_due.JNDATE,
-           p.AMOUNT, p.STATUS, COALESCE(u.UNIT_NAME,'—') AS unit_name
-    FROM pa_pdc p
-    LEFT JOIN pa_client c ON c.ID = p.RECEIVER_CLIENT_ID AND c.ORG_ID = p.ORG_ID
-    LEFT JOIN pa_pdc_units u ON u.ID = p.unit_id AND u.ORG_ID = p.ORG_ID
-    LEFT JOIN report_dimdate rd_exp ON p.EXPORT_DATE BETWEEN rd_exp.DATEKEY AND rd_exp.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
-    LEFT JOIN report_dimdate rd_due ON p.DATE_ISSUE BETWEEN rd_due.DATEKEY AND rd_due.DATEKEY + ]] .. CONFIG.DAY_TICKS .. [[
-    WHERE p.ORG_ID=? AND p.DELETED=0 AND p.TYPE=2 AND p.STATUS=1
-    ORDER BY p.DATE_ISSUE ASC
-]], { org_id }) or {}
+-- (issued_list/received_list از cheque_list_rows بالاتر ساخته شدند — دیگر Query جدا لازم نیست)
 
 -- ---------- جدول Drill-down: درخواست‌های خزانه‌داری (در انتظار تایید + تایید/پرداخت‌شده، اخیر) ----------
 local requests_list_rows = fetch_rows([[
@@ -435,23 +412,8 @@ local requests_list_rows = fetch_rows([[
     LIMIT ]] .. CONFIG.REQUESTS_LIST_LIMIT, { org_id }) or {}
 
 -- ============================================================
--- تبدیل ردیف‌های خام به جدول‌های JSON برای صفحه (بدون Query داخل Loop — همه از نتایج بالا)
+-- تبدیل ردیف‌های خام درخواست‌ها به جدول JSON (issued_list/received_list قبلاً بالاتر ساخته شدند)
 -- ============================================================
-
-local function cheque_row_to_obj(r)
-    return {
-        id = r[1], serial = r[2] or "", bank = r[3] or "",
-        counterparty = r[4],
-        export_raw = to_num(r[5]), export_jdate = r[6] or "—",
-        due_raw = to_num(r[7]), due_jdate = r[8] or "—",
-        amount = to_num(r[9]), status = to_num(r[10]), unit_name = r[11],
-    }
-end
-
-local issued_list = {}
-for _, r in ipairs(issued_list_rows) do table.insert(issued_list, cheque_row_to_obj(r)) end
-local received_list = {}
-for _, r in ipairs(received_list_rows) do table.insert(received_list, cheque_row_to_obj(r)) end
 
 local requests_list = {}
 for _, r in ipairs(requests_list_rows) do
