@@ -1,5 +1,16 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 10:15
+-- Last Edit = 1405/06/07 15:40
+-- بازبینی موبایل + دکمهٔ «تمام صفحه» (طبق درخواست کاربر):
+--   ۱) نمودار Stacked ۷روزه با ۷ ستون زیر عرض خاصی دیگر خوانا نبود؛ چون overflow-x:hidden سراسری
+--      صفحه (محافظ اسکرول عرضی، از دور قبل) در آن حالت باعث می‌شد برچسب تاریخ‌ها به‌جای اسکرول‌شدن
+--      بی‌صدا بریده/ناخوانا شوند. رفع شد: خودِ جعبهٔ نمودار (.chart-box) یک اسکرول عرضی محلی می‌گیرد
+--      (دقیقاً همان الگوی جدول‌ها/.table-scroll) و نمودار Stacked حداقل عرض معنادار (420px) دارد —
+--      پس روی موبایل به‌جای له‌شدن، در همان کارت اسکرول می‌کند، نه کل صفحه.
+--   ۲) دکمهٔ «تمام صفحه»: تنها راه خروج، همان دکمهٔ بالای Toolbar بود که با Scroll به پایین این
+--      داشبورد نسبتاً طولانی کاملاً از دید خارج می‌شد — کاربر راه برگشتی نداشت جز اسکرول کامل به بالا.
+--      یک دکمهٔ کوچک «خروج از تمام صفحه» شناور (Fixed، گوشهٔ پایین‌چپ) اضافه شد که فقط داخل حالت
+--      تمام‌صفحه دیده می‌شود — هرجای صفحه که باشید در دسترس است. Sticky‌کردن خودِ Toolbar عمداً انتخاب
+--      نشد چون با هدر Sticky جدول‌ها هم‌پوشانی/تداخل ایجاد می‌کرد.
 -- بهینه‌سازی کارایی (طبق درخواست کاربر) — تعداد رفت‌وبرگشت به دیتابیس از ۱۵ به ۷ کاهش یافت
 -- (اندازه‌گیری‌شده با شمارش واقعی db.query در Dry-run، نه تخمین):
 --   ۱) دو Query کاملاً بلااستفاده حذف شد (window_dates/trend_dates — نتیجه‌شان هیچ‌جا مصرف نمی‌شد).
@@ -499,6 +510,17 @@ local REPORT_CSS = [[
 html,body{ margin:0; padding:0; background:var(--bg); color:#000; font-size:14px; direction:rtl; max-width:100%; overflow-x:hidden; }
 #reportRoot{ max-width:1400px; margin:0 auto; padding:14px; overflow-x:hidden; }
 #reportRoot.pseudo-fullscreen{ position:fixed; inset:0; z-index:9999; overflow-y:auto; background:var(--bg); max-width:100%; margin:0; }
+/* دکمهٔ خروج شناور — قبلاً تنها راه خروج از تمام‌صفحه، دکمهٔ «تمام صفحه» بالای Toolbar بود که با
+   Scroll به پایین صفحه (این داشبورد طولانی است) کاملاً از دید خارج می‌شد و راه برگشتی نمی‌ماند. به‌جای
+   Sticky‌کردن Toolbar (که با هدر Sticky جدول‌ها تداخل/هم‌پوشانی پیدا می‌کرد)، یک دکمهٔ کوچک Fixed در
+   گوشهٔ پایین صفحه اضافه شد که فقط داخل حالت تمام‌صفحه دیده می‌شود. */
+.fullscreen-exit-btn{ display:none; }
+#reportRoot.pseudo-fullscreen .fullscreen-exit-btn{
+  display:flex; align-items:center; gap:6px; position:fixed; bottom:18px; left:18px; z-index:9990;
+  background:var(--accent); color:#fff; border:none; border-radius:24px; padding:11px 18px;
+  font-size:14px; font-weight:bold; cursor:pointer; box-shadow:0 3px 14px rgba(0,0,0,.28);
+}
+#reportRoot.pseudo-fullscreen .fullscreen-exit-btn:hover{ filter:brightness(0.92); }
 .toolbar{ display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
 .btn-toolbar{ background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:14px; font-weight:bold; cursor:pointer; }
 .btn-toolbar:hover{ filter:brightness(0.9); }
@@ -534,7 +556,12 @@ header.hero .brand140-logo{ position:absolute; top:16px; left:20px; height:32px;
 .card{ border:1px solid var(--border); border-radius:12px; padding:14px; background:#fff; min-width:0; }
 .card h3{ font-size:15px; font-weight:bold; margin:0 0 4px; }
 .card .desc{ font-size:14px; color:var(--muted); margin-bottom:10px; }
-.chart-box{ position:relative; width:100%; min-width:0; }
+/* overflow-x:auto این‌جا عمداً است: نمودار Stacked با ۷ ستون زیر یک عرض خاص دیگر خوانا نیست؛ به‌جای
+   له‌شدن برچسب تاریخ‌ها (که چون overflow-x:hidden سراسری صفحه محافظ اسکرول عرضی است، در آن حالت به‌جای
+   اسکرول‌شدن ناخوانا/بریده می‌شدند)، خودِ این جعبه یک اسکرول عرضی محلی و قابل‌کنترل می‌گیرد — همان الگوی
+   جدول‌ها (.table-scroll). سایر نمودارها (Donut/خطی/میله‌ای افقی) کوچک‌تر از عرض جعبه می‌مانند و این
+   Overflow برایشان بی‌اثر است. */
+.chart-box{ position:relative; width:100%; min-width:0; overflow-x:auto; }
 /* Grid tracks با فقط «1fr» حداقل عرضشان min-content محتواست، نه صفر — روی موبایل باعث
    اسکرول عرضی کل صفحه می‌شد (باگ گزارش‌شده). minmax(0,1fr) این حداقل را صفر می‌کند تا Grid واقعاً
    جمع شود، نه این‌که همهٔ ستون‌ها/صفحه را عریض نگه دارد. */
@@ -595,12 +622,12 @@ footer{ text-align:center; font-size:14px; color:var(--muted); padding:14px 0; }
 .donut-legend .sw{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-inline-end:6px; vertical-align:middle; flex:none; }
 .donut-legend .ln{ flex:1; }
 .donut-legend .lv{ font-weight:bold; color:var(--accent); }
-.stacked-wrap{ display:flex; align-items:flex-end; gap:10px; height:220px; padding-top:10px; min-width:0; }
+.stacked-wrap{ display:flex; align-items:flex-end; gap:10px; height:220px; padding-top:10px; min-width:420px; }
 /* min-width:0 لازم است — پیش‌فرض آیتم Flex حداقل عرضش محتواست (مثل Grid)، همان دلیل اسکرول عرضی موبایل */
 .stacked-col{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; cursor:pointer; }
 .stacked-bars{ width:100%; max-width:46px; display:flex; flex-direction:column-reverse; height:100%; border-radius:6px 6px 0 0; overflow:hidden; background:var(--zebra); }
 .stacked-seg{ width:100%; }
-.stacked-label{ font-size:14px; color:var(--muted); margin-top:6px; text-align:center; }
+.stacked-label{ font-size:14px; color:var(--muted); margin-top:6px; text-align:center; overflow-wrap:anywhere; }
 .stacked-legend{ display:flex; gap:16px; margin-bottom:6px; font-size:14px; justify-content:center; }
 .line-chart-wrap{ width:100%; }
 .line-chart-wrap svg{ width:100%; height:auto; display:block; }
@@ -971,6 +998,10 @@ table.insert(html, '<div class="toolbar">' ..
     '<button type="button" class="btn-toolbar" onclick="toggleFullScreen()">تمام صفحه</button>' ..
     '<button type="button" class="btn-toolbar" onclick="exportActiveTab()">خروجی Excel</button>' ..
     '<button type="button" class="btn-toolbar secondary" onclick="openHelp()">راهنما</button></div>\n')
+
+-- فقط داخل حالت تمام‌صفحه دیده می‌شود (CSS بالا) — چون دکمهٔ بالای Toolbar با Scroll به پایین صفحهٔ
+-- طولانی از دید خارج می‌شود و بدون این، راه برگشتی نمی‌ماند.
+table.insert(html, '<button type="button" class="fullscreen-exit-btn" onclick="toggleFullScreen()">✕ خروج از تمام صفحه</button>\n')
 
 table.insert(html, '<header class="hero"><img class="brand140-logo" alt="140" src="data:image/png;base64,' .. CONFIG.LOGO140_WHITE_B64 .. '">' ..
     '<h1>داشبورد مدیریتی جریان نقدینگی و خزانه‌داری</h1>' ..
