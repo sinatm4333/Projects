@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/09 10:45
+-- Last Edit = 1405/06/09 11:30
 
 -- فاکتورهای تکراری با شماره سفارش سایت (بازطراحی بات زندهٔ id=478)
 -- منطق پایه همان بات مبدأ است: فاکتورهای فروش حذف‌نشده‌ای که TITLE (شماره سفارش سایت) آن‌ها
@@ -12,8 +12,10 @@
 --      نام مشتری → پروندهٔ مشتری (/?page=/crm/client/edit/{CLIENT_ID}). بات مبدأ هیچ لینکی نداشت.
 --   ۳) عنوان‌های خالی/فقط-فاصله از گروه تکراری‌ها حذف شدند (در بات مبدأ همهٔ فاکتورهای بدون
 --      شماره سفارش با هم یک «گروه تکراری» بی‌معنی می‌ساختند).
---   ۴) تاریخ با REPORT_FN_JDATE (به‌جای JOIN بازه‌ای report_dimdate) و مبلغ با تقسیم بر
---      MONEY_SCALE و جداکنندهٔ هزارگان (بات مبدأ عدد خام ×10^7 را نشان می‌داد).
+--   ۴) مبلغ با تقسیم بر MONEY_SCALE و جداکنندهٔ هزارگان (بات مبدأ عدد خام ×10^7 را نشان می‌داد).
+--      تاریخ شمسی مثل بات مبدأ از JOIN بازه‌ای report_dimdate می‌آید — تایید‌شده روی سرور زنده
+--      (۱۴۰۵/۰۶/۰۹): تابع REPORT_FN_JDATE روی erp.bimehland.com وجود ندارد (INFORMATION_SCHEMA
+--      خالی است) و هر کوئری حاوی آن «sql error» می‌دهد؛ استفاده نکنید.
 --   ۵) سقف نمایش MAX_DISPLAY_ROWS ردیف + جمع‌های کل جداگانه، تا خروجی نامحدود صفحه را نکشد.
 -- ورودی: format=json (اختیاری)
 
@@ -81,12 +83,13 @@ local function fetch_rows(query, params, column_count)
 end
 
 local function fetch_generated_at()
+    -- بدون REPORT_FN_JDATE (روی این سرور وجود ندارد) — تاریخ شمسیِ امروز از report_dimdate
     local rows = fetch_rows([[
-        SELECT CONCAT(
-            REPORT_FN_JDATE((UNIX_TIMESTAMP() + 11644473600) * 10000000, '-'),
-            ' ',
-            DATE_FORMAT(NOW(), '%H:%i:%s')
-        ) AS generated_at
+        SELECT CONCAT(dd.JNDATE, ' ', DATE_FORMAT(NOW(), '%H:%i:%s')) AS generated_at
+        FROM report_dimdate dd
+        WHERE (UNIX_TIMESTAMP() + 11644473600) * 10000000 >= dd.DATEKEY
+          AND (UNIX_TIMESTAMP() + 11644473600) * 10000000 < dd.DATEKEY + (60*60*24*10000000)
+        LIMIT 1
     ]], {}, 1)
     if rows == nil or #rows == 0 or rows[1][1] == nil then return "—" end
     return tostring(rows[1][1])
@@ -147,7 +150,7 @@ SELECT
     si.ID,
     COALESCE(TRIM(si.TITLE), '') AS order_title,
     COALESCE(si.INVOICE_CODE, '') AS invoice_code,
-    COALESCE(REPORT_FN_JDATE(si.RUN_DATE, '-'), '') AS run_date_jalali,
+    COALESCE(dd.JNDATE, '') AS run_date_jalali,
     COALESCE(si.RECEPTION_AMOUNT, 0) + COALESCE(si.REMAINED_AMOUNT, 0) AS invoice_amount,
     COALESCE(p.REFFERE_ID, 0) AS customer_code,
     COALESCE(p.NAME, '') AS customer_name,
@@ -165,6 +168,9 @@ JOIN (
 ) dup ON dup.TITLE = si.TITLE
 LEFT JOIN pa_client p
        ON p.ID = si.CLIENT_ID
+LEFT JOIN report_dimdate dd
+       ON si.RUN_DATE >= dd.DATEKEY
+      AND si.RUN_DATE < dd.DATEKEY + (60*60*24*10000000)
 WHERE COALESCE(si.DELETED, 0) = 0
 ORDER BY si.TITLE, si.RUN_DATE DESC
 LIMIT ]] .. tostring(MAX_DISPLAY_ROWS) .. [[

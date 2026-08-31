@@ -1,5 +1,97 @@
-﻿{
+{
     "bots":  [
+                 {
+                     "id":  172,
+                     "cat_id":  69,
+                     "name":  "res",
+                     "description":  "",
+                     "run_path":  "2/res_bot_1",
+                     "run_id":  "2",
+                     "run_slug":  "res_bot_1",
+                     "run_url":  "https://erp.bimehland.com/bot/run/2/res_bot_1?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=172\u0026cat_id=69\u0026tab=0",
+                     "result_type":  2,
+                     "run_count":  0,
+                     "categories":  "صورت مالی",
+                     "local_src":  "src/res_bot_1_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  2822,
+                     "synced_at":  "2026-08-30 12:05:02"
+                 },
+                 {
+                     "id":  199,
+                     "cat_id":  69,
+                     "name":  "Bot TeleWork Info",
+                     "description":  "بات نمایش اطلاعات دورکاری",
+                     "run_path":  "2/RW_1",
+                     "run_id":  "2",
+                     "run_slug":  "RW_1",
+                     "run_url":  "https://erp.bimehland.com/bot/run/2/RW_1?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=199\u0026cat_id=69\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  2,
+                     "categories":  "profile",
+                     "local_src":  "src/RW_1_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  2570,
+                     "synced_at":  "2026-08-30 11:55:29"
+                 },
+                 {
+                     "id":  243,
+                     "cat_id":  69,
+                     "name":  "My Tasks",
+                     "description":  "",
+                     "run_path":  "2/tasks_my_tasks",
+                     "run_id":  "2",
+                     "run_slug":  "tasks_my_tasks",
+                     "run_url":  "https://erp.bimehland.com/bot/run/2/tasks_my_tasks?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=243\u0026cat_id=69\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  111959,
+                     "categories":  "Todo",
+                     "local_src":  "src/tasks_my_tasks_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  4366,
+                     "synced_at":  "2026-08-30 11:53:30"
+                 },
+                 {
+                     "id":  294,
+                     "cat_id":  69,
+                     "name":  "Bot Higher Profit Dealer",
+                     "description":  "Show three of most higher profit dealer",
+                     "run_path":  "2/m_higher_profit",
+                     "run_id":  "2",
+                     "run_slug":  "m_higher_profit",
+                     "run_url":  "https://erp.bimehland.com/bot/run/2/m_higher_profit?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=294\u0026cat_id=69\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  217038,
+                     "categories":  "profile",
+                     "local_src":  "src/m_higher_profit_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  2784,
+                     "synced_at":  "2026-08-30 11:55:59"
+                 },
                  {
                      "id":  296,
                      "cat_id":  59,
@@ -72,6 +164,29 @@
                      "synced_at":  "2026-08-15 09:08:35"
                  },
                  {
+                     "id":  478,
+                     "cat_id":  59,
+                     "name":  "فاکتورهای تکراری با شماره سفارش سایت",
+                     "description":  "",
+                     "run_path":  "443/GetDupplicateFactorsByName2",
+                     "run_id":  "443",
+                     "run_slug":  "GetDupplicateFactorsByName2",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/GetDupplicateFactorsByName2?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=478\u0026cat_id=59\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  1440,
+                     "categories":  "Sale",
+                     "local_src":  "src/sales_duplicate_order_invoices_report_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  220061,
+                     "synced_at":  "2026-08-31 11:22:37"
+                 },
+                 {
                      "id":  501,
                      "cat_id":  79,
                      "name":  "RFM CRM",
@@ -93,6 +208,29 @@
                                        },
                      "command_bytes":  18411,
                      "synced_at":  "2026-08-12 12:35:59"
+                 },
+                 {
+                     "id":  511,
+                     "cat_id":  69,
+                     "name":  "My Tasks",
+                     "description":  "",
+                     "run_path":  "2/tasks_my_tasks_1",
+                     "run_id":  "2",
+                     "run_slug":  "tasks_my_tasks_1",
+                     "run_url":  "https://erp.bimehland.com/bot/run/2/tasks_my_tasks_1?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=511\u0026cat_id=69\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  0,
+                     "categories":  "",
+                     "local_src":  "src/tasks_my_tasks_1_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  4366,
+                     "synced_at":  "2026-08-30 11:53:30"
                  },
                  {
                      "id":  565,
@@ -674,6 +812,52 @@
                                        },
                      "command_bytes":  9814,
                      "synced_at":  "2026-07-25 10:53:40"
+                 },
+                 {
+                     "id":  623,
+                     "cat_id":  79,
+                     "name":  "فراخوان عمومی API داخلی",
+                     "description":  "Deployed from api_caller_json_bot.lua",
+                     "run_path":  "443/api_caller_json",
+                     "run_id":  "443",
+                     "run_slug":  "api_caller_json",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/api_caller_json?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=623\u0026cat_id=79\u0026tab=0",
+                     "result_type":  0,
+                     "run_count":  0,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/api_caller_json_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  5643,
+                     "synced_at":  "2026-08-29 17:30:02"
+                 },
+                 {
+                     "id":  624,
+                     "cat_id":  79,
+                     "name":  "همراه ۱۴۰ — پنل پرسنلی",
+                     "description":  "Deployed from hr_companion_report_bot.lua",
+                     "run_path":  "443/hr_companion_report",
+                     "run_id":  "443",
+                     "run_slug":  "hr_companion_report",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/hr_companion_report?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=624\u0026cat_id=79\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  0,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/hr_companion_report_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  374905,
+                     "synced_at":  "2026-08-29 17:30:14"
                  },
                  {
                      "id":  698,

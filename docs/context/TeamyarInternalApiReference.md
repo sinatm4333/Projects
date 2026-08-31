@@ -849,6 +849,29 @@ schema چهار endpoint زیر از پورتال گرفته شد (۱۴۰۵/۰۶
 **Request:** `{"name":"","status":0,"keywords":[""],"public_name":""}`
 **Response:** `{"data":{"id":0},"error":{…},"success":0}`
 
+### `/api/message/add` — ارسال پیام متنی به یک گفتگو
+
+**Request (فیلدها مسطح؛ ⚠️ متن باید در هر دو فیلد `content` و `message` بیاید):**
+`{"dialog_id":0,"content":"<p dir=\"rtl\">…</p>","message":"<p dir=\"rtl\">…</p>","type":1,"is_public":0,"reply_id":0,"user_id":0,"author_id":0}`
+
+⚠️ **دام تاییدشده (۱۴۰۵/۰۶/۰۸، سه ارسال واقعی):** اعتبارسنجی وجودِ `content` را می‌خواهد، ولی
+**بدنهٔ واقعی پیام از فیلد `message` خوانده می‌شود** (مثل هندلر داخلی `/chat/dialog/send` در
+`dialogY.js`). ارسال فقط `content` → پیام با موفقیت ثبت می‌شود ولی **CONTENT خالی** (حباب خالی در
+گفتگو). قالب محتوا HTML است — `<p dir="rtl">…</p>` مثل پیام‌های خود پلتفرم؛ متن خام را escape و
+بپیچید. ستون `CONTENT` خودش `utf8mb4` است.
+
+کشف با probe زنده (۱۴۰۵/۰۶/۰۷، بات ۶۲۴): مسیرهای `dialog/message/add`، `chat/message/add` و
+`messageAdd` همگی «invaid api path» می‌دهند؛ فقط `/api/message/add` وجود دارد. نبود هر یک از
+فیلدهای بالا → `json validation error (status -5)`؛ `dialog_id` نامعتبر → `FAILED (status -1)`.
+`type=1` پیام متنی عادی است (۸۸هزار ردیف `chat_message`؛ `type=10` رویداد سیستمی join با محتوای
+`{"add":"<profile_id>"}` است). `is_public` در عمل همیشه `0`. `user_id`/`author_id` = شناسهٔ پروفایل
+فرستنده.
+
+⚠️ **یافتهٔ جانبی customform (مهم برای همهٔ بات‌ها):** مقدارهای غیراسکالر (آرایه/شیء تودرتو و حتی
+رشتهٔ حاوی JSON با کوتیشن) هنگام عبور از `customform` **بی‌سروصدا حذف یا خالی می‌شوند** — به
+`teamyar.get_input()` فقط اسکالرهای ساده می‌رسند. هر ورودی ساخت‌یافته باید مسطح (چند فیلد جدا)
+فرستاده شود.
+
 ### `/api/assign/add` — افزودن کاربر به گفتگو («جوین»)
 
 **Request:** `{"assigned":[0],"author_id":0,"dialog_id":0}`
@@ -912,6 +935,38 @@ schema از پورتال گرفته شد (۱۴۰۵/۰۶/۰۶، اسکرین‌ش
 2. **واحد `value` در پورتال اعلام نشده.** مثل بقیهٔ مدت‌های این اسکیما tick (۱۰۰ نانوثانیه) در نظر
    گرفته شده. مقدار خام در خروجی `format=json` بات نگه داشته می‌شود (`leave_balance_raw`) تا در
    اولین اجرای واقعی با عدد پنل رسمی مقایسه و در صورت نیاز ضریب اصلاح شود.
+
+### `/api/hr/vacation_update` — ثبت درخواست مرخصی (ساعتی/روزانه)
+
+schema با probe زنده کشف شد (۱۴۰۵/۰۶/۰۷، بات ۶۲۴) و با سه ثبت واقعی تاییدشده (id=5687 روزانه،
+5688 و 5689 ساعتی). نام فیلدها از فرم رسمی `/hr/vacation/show/?id=0&personnel_id=N` درآمد —
+**هیچ‌کدام حدس‌زدنی نبودند** (بیش از ۱۵ نام/قالب حدسی قبلش «EMPTY_DATE» می‌داد).
+
+**روزانه (type=2) — حداقلِ اثبات‌شده:**
+`{"id":0,"personnel_id":N,"org_id":N,"entity":0,"type":2,"kind":K,"description":"",
+"date_vacation":daykey,"day_from":daykey,"day_to":daykey}`
+
+**ساعتی (type=1) — ترکیب اثبات‌شده (فرستادن همهٔ این فیلدها با هم؛ حداقل دقیق جدا نشده):**
+همان فیلدهای بالا + `day_from_hourly/day_to_hourly` (daykey) + `hour_from/hour_to`
+(**ثانیهٔ درون‌روز به قرارداد ذخیره‌ای، یعنی ۳:۳۰ عقب‌تر از ساعت واقعی**) +
+`time_from/time_to` (FILETIME مطلق = daykey + ثانیه×۱۰^۷) + `date_from/date_to` (همان مطلق‌ها)
++ `date_d`/`date` (daykey).
+
+- `kind` = `hr_vacation_type.ID`؛ برای مرخصی. **ماموریت هم با همین endpoint** (تایید زنده ۱۴۰۵/۰۶/۰۹،
+  رکورد 5699): `type=3` ساعتی / `type=4` روزانه، `kind=0`، بعلاوهٔ `city_type` (۰=درون‌شهری،
+  ۱=برون‌شهری، ۲=برون‌کشوری) — بقیهٔ فیلدها همان مرخصی.
+- **حذف درخواستِ خودی از لایهٔ API ممکن نیست** (هیچ‌کدام از vacation_delete/… وجود ندارند)؛ مسیر
+  رسمی، هندلر داخلی با نشست خود کاربر است: `GET /hr/vacation/delete?id=&personnel_id=` و برای
+  ماموریت `GET /hr/mission/delete?...` — پاسخ خالی = موفق (هر دو تایید زندهٔ ۱۴۰۵/۰۶/۰۹).
+- **وام/مساعده**: فرم رسمی `/hr/salary/loan/show/` → POST `/hr/salary/loan/add/` با
+  `type=4` (درخواست جدید)، `loan_type` (hr_loan_setting)، `reguested_amount` (با همین غلط املایی)،
+  `date_d`. لایهٔ API آن `/api/hr/loanUpdate` وجود دارد ولی با همهٔ ترکیب‌های آزموده
+  (amount/reguested_amount پاس شد) روی «EMPTY_DATE» می‌ماند — **schema ناتمام؛ ثبت وام از بات هنوز
+  فراهم نیست.**
+- **Response:** `{"data":{"message":"<id رکورد جدید>"},"success":true}`.
+- سامانه خودش ساعت شیفت را برای روزانه پر می‌کند و زنجیرهٔ تایید را می‌سازد.
+- خطاها: `EMPTY_DATE`/`EMPTY_DATE.` (دو چک متفاوت تاریخ)، `NOT_FOUND` (بدون personnel).
+- ⚠️ `leaveTransferGet.value` هم **ثانیه** است نه tick (273000=75:50 — تایید با فرم رسمی).
 
 ### `/api/hr/orderInDateGet` — دریافت حکم فعال کارمند در یک تاریخ مشخص
 
