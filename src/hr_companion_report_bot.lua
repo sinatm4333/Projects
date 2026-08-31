@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/09 16:45
+-- Last Edit = 1405/06/09 17:20
 
 -- botName = hr_companion
 -- description = همراه ۱۴۰ — پنل پرسنلی (تردد و کارکرد، درخواست‌ها، اطلاعات پرسنلی، همراهِ روز و تولدها)
@@ -2069,9 +2069,11 @@ LEFT JOIN hr_personnel_order o ON o.ID = (
 LEFT JOIN org_organization_unit oou ON oou.ID = o.UNIT_ID
 LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
 WHERE h.HIRING_STATUS = 2 AND h.ORG_ID = ? AND uf.BIRTHDAY > 0 AND rd.JMONTH = ?
+  AND rd.JMDAY >= ?
 ORDER BY rd.JMDAY, p.FULLNAME
 LIMIT 200
-]], { to_date, to_date, personnel.org_id or 0, today_meta.jmonth }, 8)
+]], { to_date, to_date, personnel.org_id or 0, today_meta.jmonth, today_meta.jmday }, 8)
+            -- rd.JMDAY >= امروز: تولدهای گذشتهٔ ماه نمایش داده نمی‌شوند (بازخورد کاربر 1405/06/09)
             if bd_rows ~= nil then
                 for _, r in ipairs(bd_rows) do
                     local entry = {
@@ -3131,7 +3133,9 @@ h1{font-size:20px;margin:0;font-weight:bold}
 /* سطر عنوان گروه در مودال فیش حقوقی */
 .ps-group td{background:#f5f5f5;color:var(--accent);font-weight:bold;font-size:14px;text-align:right}
 .ps-sum td{border-top:2px solid var(--line);font-weight:bold}
-.ps-net td{background:var(--accent);color:#fff !important;font-weight:bold;font-size:15px}
+/* !important روی پس‌زمینه لازم است: قاعدهٔ zebra جدول (tr:nth-child(even) td) پس‌زمینهٔ آبی را
+   بازنویسی می‌کرد و متن سفید روی زمینهٔ روشن ناخوانا می‌شد (بازخورد کاربر 1405/06/09) */
+.ps-net td{background:var(--accent) !important;color:#fff !important;font-weight:bold;font-size:15px}
 /* بنر پیام امروز — جایگاه ویژه بین hero و کارت‌های آماری */
 .message-banner{display:flex;gap:14px;align-items:center;margin:14px 0;border:1px solid var(--line);
   border-right:6px solid var(--accent);background:linear-gradient(90deg,#f5f5f5 0%,#fff 30%)}
