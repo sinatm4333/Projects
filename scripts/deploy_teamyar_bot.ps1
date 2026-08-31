@@ -90,7 +90,37 @@ param(
 
     [string]$HelpContent = '',
 
-    [string]$BotConfigJson = ''
+    [string]$BotConfigJson = '',
+
+    # پرچم‌های نمایشی/دسترسی — پیش‌فرض همان رفتار قبلی اسکریپت (0/خالی). برای بات‌های ویجتی
+    # (مثل res_bot و ویجت‌های داشبورد) هنگام Update باید مقادیر زندهٔ فعلی بات عیناً پاس داده شوند،
+    # وگرنه دیپلوی آن‌ها را صفر می‌کند و بات از فهرست ویجت‌ها می‌افتد.
+    [int]$ShowInWidget = 0,
+
+    [int]$ShowInPortalMenu = 0,
+
+    [int]$PublicAccess = 0,
+
+    [int]$OpenSource = 0,
+
+    [int]$NotShowingInIframe = 0,
+
+    [string]$Icon = '',
+
+    [string]$Color = '',
+
+    # فرمت طبق bot.js beforSubmit: "<categoryId>_<isDefault>" با کاما، دقیقاً یک عضو باید _1 باشد
+    # (مثلاً '59_1' برای دستهٔ Sale). خالی = رفتار قبلی "${CatId}_1".
+    [string]$Categories = '',
+
+    # زیرسیستم بات — هنگام Update بات‌هایی مثل 478 (SALES_VIEW/23_2) باید عیناً echo شود؛
+    # مقدار id از فهرست subsystem فرم ویرایش (/bot/command?cat_id=N&id=M) خوانده می‌شود.
+    [string]$SubsystemValue = '',
+
+    [string]$SubsystemName = '',
+
+    # 1 = فعال (پیش‌فرض)، 0 = غیرفعال‌کردن بات (مثلاً بات‌های آزمایشی/تکراری)
+    [int]$Status = 1
 )
 
 Set-StrictMode -Version Latest
@@ -140,7 +170,8 @@ if ($RunPath -match '\s') {
 if (-not $Sid) {
     throw 'SID is required. Set $env:TEAMYAR_SID or pass -Sid.'
 }
-if (-not $Description) {
+if (-not $Description -and -not $PSBoundParameters.ContainsKey('Description')) {
+    # فقط وقتی پارامتر اصلاً پاس نشده default بگذار؛ -Description '' یعنی «توضیح خالی را حفظ کن»
     $Description = "Deployed from $([System.IO.Path]::GetFileName($resolvedScript))"
 }
 
@@ -148,7 +179,7 @@ $baseUrl = 'https://erp.bimehland.com'
 $url = "$baseUrl/bot/command/update?cat_id=$CatId&id=$BotId"
 $referer = "$baseUrl/?page=/bot/command&cat_id=$CatId&id=$BotId"
 $formJson = Get-EmptyFormJson
-$categories = "${CatId}_1"
+$categories = if ($Categories) { $Categories } else { "${CatId}_1" }
 # نوع خروجی = HTML (Teamyar UI) → result_type=1 (پیش‌فرض)؛ JSON = 0. با -ResultTypeValue قابل بازنویسی است
 # (تأییدشده روی داده زنده: بات‌های HTML مثل 945 مقدار 1 دارند، بات‌های JSON مثل 942 مقدار 0)
 $resultTypeValue = if ($ResultTypeValue -ge 0) { [string]$ResultTypeValue } else { '1' }
@@ -164,7 +195,8 @@ $helpContentArg = 'help_content='
 $tempHelpFile = $null
 if ($HelpContent) {
     $tempHelpFile = [System.IO.Path]::GetTempFileName()
-    [System.IO.File]::WriteAllText($tempHelpFile, $HelpContent, [System.Text.Encoding]::UTF8)
+    # UTF8 بدون BOM — Encoding.UTF8 با BOM می‌نویسد و BOM اول مقدار فرم وارد می‌شود
+    [System.IO.File]::WriteAllText($tempHelpFile, $HelpContent, (New-Object System.Text.UTF8Encoding($false)))
     $helpContentArg = "help_content=<$($tempHelpFile -replace '\\', '/')"
 }
 
@@ -174,7 +206,7 @@ if ($HelpContent) {
 $tempBotConfigFile = $null
 if ($BotConfigJson) {
     $tempBotConfigFile = [System.IO.Path]::GetTempFileName()
-    [System.IO.File]::WriteAllText($tempBotConfigFile, $BotConfigJson, [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($tempBotConfigFile, $BotConfigJson, (New-Object System.Text.UTF8Encoding($false)))
     $botConfigArg = "bot_config=<$($tempBotConfigFile -replace '\\', '/')"
 } else {
     $botConfigArg = "bot_config=$formJson"
@@ -190,24 +222,24 @@ $curlArgs = @(
     '--header', "Origin: $baseUrl",
     '--header', "Referer: $referer",
     '--header', 'X-Requested-With: XMLHttpRequest',
-    '--form', 'status=1',
+    '--form', "status=$Status",
     '--form', "name=$Name",
-    '--form', 'subsystem_value=',
-    '--form', 'subsystem=',
+    '--form', "subsystem_value=$SubsystemValue",
+    '--form', "subsystem=$SubsystemName",
     '--form', "run_path=$RunPath",
-    '--form', 'not_showing_in_iframe=0',
-    '--form', 'icon=',
-    '--form', 'color=',
+    '--form', "not_showing_in_iframe=$NotShowingInIframe",
+    '--form', "icon=$Icon",
+    '--form', "color=$Color",
     '--form', 'db_prefix=',
     '--form', 'async_run=0',
     '--form', 'async_deadline_run=0',
     '--form', "max_execute_time=$MaxExecuteTime",
     '--form', 'cache_time_status=0',
     '--form', 'cache_time=0',
-    '--form', 'show_in_portal_menu=0',
-    '--form', 'public_access=0',
-    '--form', 'show_in_widget=0',
-    '--form', 'open_source=0',
+    '--form', "show_in_portal_menu=$ShowInPortalMenu",
+    '--form', "public_access=$PublicAccess",
+    '--form', "show_in_widget=$ShowInWidget",
+    '--form', "open_source=$OpenSource",
     '--form', "categories=$categories",
     '--form', 'deleted_details=',
     "--form", "bot_customform=$formJson",
