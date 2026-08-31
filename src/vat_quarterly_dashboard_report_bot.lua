@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/08 00:09
+-- Last Edit = 1405/06/09 23:02
 
 -- botName = vat_quarterly_dashboard
 -- version = v01
@@ -243,6 +243,12 @@ header.hero p{ margin:0; font-size:14px; opacity:.92; max-width:100%; }
 .grid-2{ display:grid; grid-template-columns:1fr; gap:12px; } .grid-4{ display:grid; grid-template-columns:1fr; gap:12px; }
 @media(min-width:640px){ .grid-2,.grid-4{ grid-template-columns:1fr 1fr; gap:14px; } }
 @media(min-width:1100px){ .grid-4{ grid-template-columns:repeat(4,1fr); } }
+@media(min-width:900px){
+  .chart-wrap{ height:280px; }
+  .stat .val{ font-size:22px; }
+  .stamp{ width:150px; height:150px; }
+  .tab-btn{ padding:10px 22px; }
+}
 .chart-wrap{ position:relative; height:230px; }
 .section-title{ font-size:14px; font-weight:bold; margin:20px 0 10px; color:#000; }
 .stat{ background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }
