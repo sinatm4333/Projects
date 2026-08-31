@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/07 21:15
+-- Last Edit = 1405/06/09 16:45
 
 -- botName = hr_companion
 -- description = همراه ۱۴۰ — پنل پرسنلی (تردد و کارکرد، درخواست‌ها، اطلاعات پرسنلی، همراهِ روز و تولدها)
@@ -197,46 +197,6 @@ local function fetch_rows(query, params, column_count)
     return rows
 end
 
--- ⚠️ REPORT_FN_JDATE اصلاً استفاده نمی‌شود (تصمیم ۱۴۰۵/۰۶/۰۷، بات ۶۲۲).
--- آن یک تابع ذخیره‌شدهٔ سرور است و رفتارش روی این نصب اثبات‌نشده بود؛ حالت تشخیصی نشان داد
--- کوئری‌های حاوی آن با «sql error» رد می‌شوند. به‌جایش تاریخ شمسی از ستون‌های عددی خالصِ جدول
--- report_dimdate ساخته می‌شود — همان جدولی که probe در گام ۱۶ ثابت کرد JOIN و خواندنش سالم است.
--- خروجی یک عدد است (مثلاً 14050607) و هیچ literal رشته‌ای، جداکننده یا تابعی در کار نیست؛ یعنی
--- کل دسته‌مشکل «تابع/جداکننده/کاراکتر خراب‌شده هنگام ذخیره» حذف می‌شود.
-local function sql_jalali_key(alias)
-    return "(COALESCE(" .. alias .. ".JYEAR, 0) * 10000 + COALESCE(" .. alias ..
-        ".JMONTH, 0) * 100 + COALESCE(" .. alias .. ".JMDAY, 0))"
-end
-
--- کلید روز برای JOIN با report_dimdate (حساب ساده؛ در گام ۳ probe تایید شد)
-local function sql_daykey(col)
-    return "(" .. col .. " - MOD(" .. col .. ", 864000000000))"
-end
-
--- 14050607 → «1405/06/07»
-local function jalali_from_key(value)
-    local n = tonumber(value)
-    if n == nil or n < 10000000 then return nil end
-    n = math.floor(n)
-    local y = math.floor(n / 10000)
-    local m = math.floor((n % 10000) / 100)
-    local d = n % 100
-    if y <= 0 or m <= 0 or m > 12 or d <= 0 or d > 31 then return nil end
-    return string.format("%04d/%02d/%02d", y, m, d)
-end
-
--- (نگه‌داشته شده برای سازگاری با مقادیر رشته‌ای احتمالی)
--- تاییدشده روی سرور زنده (بات ۶۲۲، گام ۶ حالت sqlprobe): شکل '/' با «sql error» رد می‌شود، در
--- حالی که همهٔ بات‌های مستقر و سالم این ریپو شکل '-' را استفاده می‌کنند و این بات تنها جایی بود
--- که '/' داشت. با هشدار CLAUDE.md هم می‌خواند: ذخیرهٔ command گاهی کاراکتر اسلش را خراب می‌کند.
--- نمایش فارسی همچنان با اسلش است؛ تبدیل در همین‌جا انجام می‌شود، نه در SQL.
-local function jalali_date(value)
-    if value == nil then return nil end
-    local text = tostring(value)
-    if text == "" then return nil end
-    return (text:gsub("%-", "/"))
-end
-
 -- ستون‌های متنی این بات با COALESCE هرگز NULL نمی‌شوند؛ رشتهٔ خالی یعنی «مقدار ندارد»
 local function blank_to_nil(value)
     if value == nil then return nil end
@@ -247,85 +207,50 @@ end
 
 local FT_DAY = 864000000000 -- 86400 * 10000000
 
--- ⚠️ «امروز» از خود دیتابیس گرفته می‌شود، نه از محاسبهٔ Lua روی FILETIME. این همان الگویی است که
--- بات ۶۰۹ (مستقر و سالم) استفاده می‌کند. روی بات ۶۲۲ دیده شد که مقدار محاسبه‌شده در Lua به رکورد
--- report_dimdate نمی‌خورد (تاریخ صفحه «—» می‌شد و پیام روز به آخرین روز سال می‌افتاد).
--- محاسبهٔ Lua فقط به‌عنوان آخرین fallback باقی مانده است.
 local function today_filetime()
-    local rows = fetch_rows(
-        "SELECT ((UNIX_TIMESTAMP() + 11644473600) * 10000000) " ..
-        "- MOD((UNIX_TIMESTAMP() + 11644473600) * 10000000, 864000000000) AS today_key", {}, 1)
-    if rows ~= nil and #rows > 0 then
-        local value = tonumber(rows[1][1])
-        if value ~= nil and value > 0 then return value end
-    end
-    local ok, fallback = pcall(function()
-        local now = time.current()
-        local ft = time.get_filetime(string.format(
-            '{"year":%d,"month":%d,"day":%d,"hour":0,"minute":0,"second":0}',
-            time.get_year(now), time.get_month(now), time.get_day(now)))
-        return tonumber(string.format("%18.0f", ft))
-    end)
-    if ok and tonumber(fallback) ~= nil then return tonumber(fallback) end
-    return 0
+    local now = time.current()
+    local ft = time.get_filetime(string.format(
+        '{"year":%d,"month":%d,"day":%d,"hour":0,"minute":0,"second":0}',
+        time.get_year(now), time.get_month(now), time.get_day(now)))
+    return tonumber(string.format("%18.0f", ft))
 end
+
+-- آفست منطقهٔ زمانی ایران (+03:30) به tick — مقادیر زمان‌دار HR در این دیتابیس دقیقاً ۳:۳۰ عقب‌تر
+-- از ساعت واقعی ذخیره شده‌اند (تاییدشده 1405/06/07 با تطبیق مستقیم دو رکورد hr_vacation پرسنل ۳۵۶
+-- با نمایش رسمی ماژول HR تیمیار: 45000s=12:30 ذخیره‌شده ↔ 16:00 واقعی و 19800s=05:30 ↔ 09:00).
+-- ستون‌های «کلید روز» (WORK_DATE/DAY_DATE/DATE_VACATOIN/EXT_DATE/DATEKEY) مضرب دقیق FT_DAY هستند
+-- و همین حالا به تاریخ محلی می‌خورند؛ فقط جزء درون‌روزی جابه‌جاست.
+local TZ_OFFSET_TICKS = 126000000000 -- 3.5 * 3600 * 10000000
 
 -- ساعتِ روز از یک ستون FILETIME یا tick-since-midnight، بدون فرض دربارهٔ این‌که کدام‌یک است:
 -- MOD(col, ticks_of_day) برای FILETIME کامل «ساعت همان روز» را می‌دهد و برای مقدار درون‌روزی
--- خودِ مقدار را دست‌نخورده برمی‌گرداند. پس هر دو حالت درست رندر می‌شوند.
--- ⚠️ دو نوع ستون زمانی در این اسکیما هست و هرکدام محاسبهٔ متفاوتی می‌خواهد — قاطی‌کردن‌شان همان
--- کلاس باگ ۳:۳۰ ساعته را دوباره (این‌بار روی دستهٔ دیگر) برمی‌گرداند:
---   ۱) FILETIME کامل (مثل hr_work_time.FIRST_IN، حدود 1.3e17): تیک‌شمار خام از مبدأ ۱۶۰۱ به وقت
---      UTC است — بدون تبدیل، MOD ساعت را به‌جای وقت محلی به وقت UTC می‌دهد؛ تاییدشده روی دادهٔ
---      زندهٔ ۱۴۰۵/۰۶/۰۷ (بات ۰۵:۲۱ نشان می‌داد، پنل رسمی ۰۸:۵۱ — دقیقاً ۳:۳۰ عقب‌تر). این ستون‌ها
---      باید از FROM_UNIXTIME رد شوند تا منطقهٔ زمانی نشست MySQL اعمال شود — الگوی بات ۹۲۷
---      (مستقر و سالم): DATE_FORMAT(FROM_UNIXTIME(col / 10000000 - 11644473600), '%H:%i:%s')
---   ۲) تیک از نیمهٔ‌شبِ محلی (مثل hr_day_details.TIME_FROM و مشابه‌هایش — hr_ext_time،
---      hr_vacation، hr_overtime_request، hr_telework_request، حدود 9e10): این مقدار از قبل وقت
---      محلی است، نه ثانیهٔ epoch. اگر همین مقدار به FROM_UNIXTIME داده شود، تابع آن را «ثانیهٔ
---      epoch UTC» تعبیر می‌کند و منطقهٔ زمانی نشست را رویش دوباره اضافه می‌کند — یعنی همان ۳:۳۰
---      دقیقه به‌جای رفعِ آفست، اضافه‌اش می‌کند. برای این دسته باید بدون FROM_UNIXTIME، مستقیم از
---      روی مقدار محلی HH:MM ساخته شود.
--- ⚠️ TIME_FORMAT/SEC_TO_TIME استفاده نمی‌شوند — تجربهٔ زندهٔ همین بات ثابت کرد این دو تابع با
--- «sql error» رد می‌شوند. به‌جایش HH:MM با CASE/FLOOR/MOD/CONCAT دستی ساخته می‌شود — همه‌شان
--- توابعی که همین‌جا (sql_daykey، sql_ticks_to_minutes) و در بات ۹۲۷ (CONCAT) تاییدشده کار می‌کنند.
+-- خودِ مقدار را دست‌نخورده برمی‌گرداند. سپس آفست ۳:۳۰ اضافه و دوباره MOD می‌شود تا مقادیر نزدیک
+-- پایان روز (مثل 20:29 ذخیره‌شده = 23:59 واقعی) سرریز نکنند.
+-- به‌جای NULL رشتهٔ خالی برمی‌گرداند تا هیچ NULLای به لایهٔ Lua نرسد (بالا را ببینید)
 local function sql_time_of_day(col)
-    local from_full_filetime = "DATE_FORMAT(FROM_UNIXTIME(" ..
-        col .. " / 10000000 - 11644473600), '%H:%i')"
-
-    local day_seconds = "FLOOR(MOD(COALESCE(" .. col .. ", 0), 864000000000) / 10000000)"
-    local hour_expr = "FLOOR(" .. day_seconds .. " / 3600)"
-    local minute_expr = "MOD(FLOOR(" .. day_seconds .. " / 60), 60)"
-    local function padded(numeric_expr)
-        return "CASE WHEN " .. numeric_expr .. " < 10 THEN CONCAT('0', " .. numeric_expr .. ") " ..
-            "ELSE CONCAT('', " .. numeric_expr .. ") END"
-    end
-    local from_midnight_ticks = "CONCAT(" .. padded(hour_expr) .. ", ':', " .. padded(minute_expr) .. ")"
-
-    local expr = "CASE WHEN " .. col .. " IS NULL OR " .. col .. " = 0 THEN NULL " ..
-        "WHEN " .. col .. " > 100000000000000 THEN " .. from_full_filetime .. " " ..
-        "ELSE " .. from_midnight_ticks .. " END"
-    return "COALESCE(" .. expr .. ", '')"
-end
-
--- ⚠️ تاریخ‌ها هرگز به‌عنوان پارامتر «?» فرستاده نمی‌شوند (تاییدشده روی سرور زنده ۱۴۰۵/۰۶/۰۷).
--- FILETIME یک عدد ۱۸ رقمی است (مثل 133700000000000000) و لایهٔ db.query این پلتفرم نمی‌تواند
--- عددی با این اندازه را bind کند: کوئری با همان خطای عمومی «sql error» رد می‌شود، دقیقاً مثل باگ
--- تاییدشدهٔ «LIKE ?». روی بات ۶۲۲ همبستگی کامل دیده شد: هر کوئری که تاریخ پارامتری داشت شکست و هر
--- کوئری که نداشت کار کرد. همهٔ بات‌های مستقر و سالم این ریپو هم تاریخ را داخل خود SQL می‌سازند
--- (الگوی (UNIX_TIMESTAMP() + 11644473600) * 10000000).
--- این کار امن است چون مقدار هرگز رشتهٔ کاربر نیست: یا از time.get_filetime می‌آید یا از ورودی‌ای
--- که قبلش با tonumber و بازهٔ معتبر اعتبارسنجی شده. خروجی همیشه فقط رقم است.
--- خروجی عمداً با فاصله در دو طرف پد می‌شود. Lua اولین newline بعد از [[ را حذف می‌کند، پس بدون
--- این فاصله عدد به کلمهٔ بعدی می‌چسبید و «...000000ORDER BY» می‌شد — یک sql error دیگر.
-local function sql_filetime(value)
-    local n = tonumber(value)
-    if n == nil or n ~= n or n < 0 then n = 0 end
-    return " " .. string.format("%.0f", n) .. " "
+    return "COALESCE(CASE WHEN " .. col .. " IS NULL OR " .. col .. " <= 0 THEN NULL ELSE " ..
+        "TIME_FORMAT(SEC_TO_TIME(MOD(MOD(" .. col .. ", 864000000000) + " .. TZ_OFFSET_TICKS ..
+        ", 864000000000) / 10000000), '%H:%i') END, '')"
 end
 
 local function sql_ticks_to_minutes(col)
     return "ROUND(COALESCE(" .. col .. ", 0) / 10000000 / 60, 0)"
+end
+
+-- REPORT_FN_JDATE روی این پایگاه‌داده وجود ندارد (تاییدشده روی MySQL 8.4.3، schema 0000000:
+-- information_schema.ROUTINES هیچ روتینی با پیشوند REPORT_ ندارد؛ ۴۸ روتین موجود همگی مال sys
+-- هستند). هر فراخوانی آن یک «sql error» عمومی می‌داد و کل کوئری را می‌انداخت.
+-- جایگزین: report_dimdate.JNDATE که دقیقاً همان قالب 'YYYY/MM/DD' شمسی را می‌دهد.
+-- DATEKEY نیمه‌شبِ همان روز به FILETIME است، پس ورودی با FLOOR به ابتدای روز گرد می‌شود تا
+-- ستون‌های دارای ساعت (مثل DATE_CREATE) هم بخورند. FLOOR عمداً به‌جای MOD انتخاب شده چون col را
+-- فقط یک بار تکرار می‌کند — برای مواردی که col یک placeholder «?» است، تعداد پارامترها نباید عوض شود.
+-- آفست ۳:۳۰ قبل از FLOOR اضافه می‌شود: برای کلیدهای روز (مضرب FT_DAY) بی‌اثر است و برای
+-- timestampهای واقعی (مثل DATE_CREATE) رویدادهای بین 20:30 تا 23:59 ذخیره‌شده را — که به وقت
+-- واقعی متعلق به بامداد روز بعدند — به تاریخ محلی درست می‌برد.
+local function sql_jalali_date(col)
+    return "COALESCE((SELECT rdj.JNDATE FROM report_dimdate rdj WHERE rdj.DATEKEY = " ..
+        "FLOOR((COALESCE(" .. col .. ", 0) + " .. TZ_OFFSET_TICKS .. ") / " .. FT_DAY .. ") * " ..
+        FT_DAY .. "), '')"
 end
 
 -- صفحهٔ خطای تمیز فارسی — به‌جای اینکه کاربر یک traceback خام Lua ببیند
@@ -395,162 +320,37 @@ else
     days_back = math.floor((to_date - from_date) / FT_DAY) + 1
 end
 
--- ── type=sqlprobe — تشخیص گام‌به‌گام علت «sql error» ─────────────────
--- لایهٔ db.query این پلتفرم فقط رشتهٔ عمومی «sql error» برمی‌گرداند و هیچ جزئیاتی نمی‌دهد، پس
--- تنها راه قطعیِ پیدا کردن قطعهٔ مقصر، اجرای کوئری به‌صورت تکه‌تکه و دیدن اولین تکه‌ای است که
--- می‌شکند. هر گام دقیقاً یک ساختار SQL بیشتر از گام قبل دارد.
-if action_type == "sqlprobe" then
-    local steps = {}
-
-    local function probe(label, query, params)
-        local rows, err = fetch_rows(query, params, 1)
-        table.insert(steps, {
-            step = #steps + 1,
-            label = label,
-            ok = (rows ~= nil),
-            rows = rows and #rows or 0,
-            value = (rows ~= nil and #rows > 0) and tostring(rows[1][1]) or nil,
-            error = (rows == nil) and tostring(err) or nil,
-            sql = query
-        })
+-- ── حالت پیش‌فرض: ماه شمسی (1405/06/07) ─────────────────────────────
+-- خواستهٔ صریح کاربر: همهٔ اعداد (مرخصی، کسر کار، کارکرد، درخواست‌ها) باید «در همان ماه» باشند،
+-- نه «۳۱ روز اخیر» که دو ماه را قاطی می‌کند. پس وقتی هیچ‌کدام از from_date/to_date/days به‌صراحت
+-- نیامده باشد، بازه = ماه شمسی جاری از روز اول تا امروز. با month_offset می‌شود ماه‌های قبل را
+-- دید (۱ = ماه قبل، ۲ = دو ماه قبل، ...). ورودی‌های صریح مثل قبل همه‌چیز را override می‌کنند.
+-- مرز ماه از report_dimdate خوانده می‌شود، نه محاسبهٔ دستی کبیسه.
+local month_label = nil       -- «شهریور 1405» — فقط در حالت ماه پر می‌شود
+local month_from_j, month_to_j = nil, nil
+local month_mode = (tonumber(input.from_date) == nil and tonumber(input.to_date) == nil
+    and tonumber(input.days) == nil)
+if month_mode then
+    local month_offset = tonumber(input.month_offset) or 0
+    if month_offset ~= month_offset or month_offset < 0 then month_offset = 0 end
+    if month_offset > 120 then month_offset = 120 end
+    month_offset = math.floor(month_offset)
+    local rows = fetch_rows([[
+SELECT MIN(m.DATEKEY), MAX(m.DATEKEY), MIN(m.JNDATE), MAX(m.JNDATE), MAX(m.JTMONTH), MAX(m.JYEAR)
+FROM report_dimdate rd
+JOIN report_dimdate m ON (m.JYEAR * 12 + m.JMONTH) = (rd.JYEAR * 12 + rd.JMONTH - ?)
+WHERE rd.DATEKEY = ?
+]], { month_offset, today_ft }, 6)
+    if rows ~= nil and rows[1] ~= nil and tonumber(rows[1][1]) ~= nil then
+        from_date = tonumber(rows[1][1])
+        -- ماه جاری تا امروز؛ ماه‌های گذشته کامل (MAX ماهِ گذشته خودش قبل از امروز است)
+        to_date = math.min(tonumber(rows[1][2]) or today_ft, today_ft)
+        month_from_j = rows[1][3]
+        month_to_j = rows[1][4]
+        month_label = tostring(rows[1][5] or "") .. " " .. tostring(rows[1][6] or "")
+        days_back = math.floor((to_date - from_date) / FT_DAY) + 1
     end
-
-    probe("01 SELECT 1", "SELECT 1", {})
-    probe("02 UNIX_TIMESTAMP filetime",
-        "SELECT (UNIX_TIMESTAMP() + 11644473600) * 10000000", {})
-    probe("03 MOD big literal",
-        "SELECT MOD((UNIX_TIMESTAMP() + 11644473600) * 10000000, 864000000000)", {})
-    probe("04 FLOOR", "SELECT FLOOR(864000000000 / 10000000)", {})
-    probe("05 ROUND", "SELECT ROUND(864000000000 / 10000000 / 60, 0)", {})
-    probe("06 JDATE expr + DASH (was slash)",
-        "SELECT COALESCE(REPORT_FN_JDATE((UNIX_TIMESTAMP() + 11644473600) * 10000000, '/'), '')", {})
-    -- گام‌های اختصاصی جداکننده: دقیقاً ثابت می‌کنند اسلش مقصر بوده یا نه
-    probe("06a JDATE literal + dash", "SELECT REPORT_FN_JDATE(" ..
-        sql_filetime(133700000000000000) .. ", '-')", {})
-    probe("06b JDATE literal + SLASH", "SELECT REPORT_FN_JDATE(" ..
-        sql_filetime(133700000000000000) .. ", '/')", {})
-    probe("06c JDATE column + dash",
-        "SELECT REPORT_FN_JDATE(w.WORK_DATE, '-') FROM hr_work_time w LIMIT 1", {})
-    probe("06d JDATE column + SLASH",
-        "SELECT REPORT_FN_JDATE(w.WORK_DATE, '/') FROM hr_work_time w LIMIT 1", {})
-    probe("07 N-literal persian", "SELECT COALESCE(NULL, N'نامشخص')", {})
-    probe("08 hr_work_time count", "SELECT COUNT(*) FROM hr_work_time", {})
-    probe("09 small param",
-        "SELECT COUNT(*) FROM hr_work_time w WHERE w.PERSONNEL_ID = ?", { 1 })
-    probe("10 date range literal",
-        "SELECT COUNT(*) FROM hr_work_time w WHERE w.WORK_DATE BETWEEN " ..
-        sql_filetime(0) .. " AND " .. sql_filetime(133700000000000000), {})
-    probe("11 FIRST_IN time-of-day",
-        "SELECT " .. sql_time_of_day("w.FIRST_IN") .. " FROM hr_work_time w LIMIT 1", {})
-    probe("12 TOTAL_WORK round",
-        "SELECT " .. sql_ticks_to_minutes("w.TOTAL_WORK") .. " FROM hr_work_time w LIMIT 1", {})
-    probe("13 CASE final_over_time",
-        "SELECT " .. sql_ticks_to_minutes(
-            "CASE WHEN w.FINAL_OVER_TIME = -1 THEN w.OVER_TIME ELSE w.FINAL_OVER_TIME END") ..
-        " FROM hr_work_time w LIMIT 1", {})
-    probe("14 mission sum",
-        "SELECT " .. sql_ticks_to_minutes("w.MISSION + w.MISSION_OUT_CITY + w.MISSION_OUT_COUNTRY") ..
-        " FROM hr_work_time w LIMIT 1", {})
-    probe("15 ABSENT", "SELECT COALESCE(w.ABSENT, 0) FROM hr_work_time w LIMIT 1", {})
-    probe("16 join report_dimdate",
-        "SELECT COALESCE(rd.JTDAY, '') FROM hr_work_time w " ..
-        "LEFT JOIN report_dimdate rd ON rd.DATEKEY = w.WORK_DATE LIMIT 1", {})
-    probe("17 CTE", "WITH t AS (SELECT 1 AS a) SELECT a FROM t", {})
-    probe("18 CTE hr_day_details",
-        "WITH shift_day AS (SELECT d.CALENDAR_ID, d.DAY_DATE, MIN(d.TIME_FROM) AS shift_from " ..
-        "FROM hr_day_details d WHERE d.CALENDAR_ID = ? GROUP BY d.CALENDAR_ID, d.DAY_DATE) " ..
-        "SELECT COUNT(*) FROM shift_day", { 1 })
-    probe("19 hr_ext_time count", "SELECT COUNT(*) FROM hr_ext_time", {})
-    probe("20 hr_vacation count", "SELECT COUNT(*) FROM hr_vacation", {})
-    probe("21 hr_vacation join type",
-        "SELECT COUNT(*) FROM hr_vacation v " ..
-        "LEFT JOIN hr_vacation_type vt ON vt.TYPE = v.TYPE", {})
-    probe("22 correlated subquery",
-        "SELECT (SELECT COUNT(*) FROM hr_leave_verify lv WHERE lv.LEAVE_ID = v.ID) " ..
-        "FROM hr_vacation v LIMIT 1", {})
-    probe("23 hr_machine", "SELECT COALESCE(m.NAME, N'—') FROM hr_machine m LIMIT 1", {})
-    probe("24 GREATEST",
-        "SELECT " .. sql_ticks_to_minutes("GREATEST(e.TIME_TO - e.TIME_FROM, 0)") ..
-        " FROM hr_ext_time e LIMIT 1", {})
-
-    local first_failure = nil
-    for _, st in ipairs(steps) do
-        if not st.ok and first_failure == nil then first_failure = st.step end
-    end
-
-    teamyar.write_result(json.encode({
-        ok = true,
-        first_failing_step = first_failure,
-        total_steps = #steps,
-        steps = steps
-    }))
-    return
-end
-
--- ── type=rawdata — مقدار خامِ ستون‌ها، بدون هیچ تفسیری ───────────────
--- وقتی صفحه بالا می‌آید ولی عددها اشتباه‌اند، مشکل «تفسیر» است نه «اجرا». این حالت مقدار خام را
--- همان‌طور که در جدول است برمی‌گرداند تا واحد و معنای هر ستون با دادهٔ واقعی مشخص شود، نه با حدس.
-if action_type == "rawdata" then
-    local out = { ok = true }
-
-    local who = fetch_rows(
-        "SELECT h.PERSONNEL_ID, h.PERSONNEL_CODE, p.FULLNAME FROM hr_personnels h " ..
-        "JOIN profile_main p ON p.id = h.PROFILE_ID WHERE h.PROFILE_ID = ? LIMIT 1",
-        { current_profile_id or 0 }, 3)
-    local pid = (who ~= nil and #who > 0) and tonumber(who[1][1]) or 0
-    out.personnel_id = pid
-    out.personnel_code = (who ~= nil and #who > 0) and who[1][2] or nil
-    out.fullname = (who ~= nil and #who > 0) and who[1][3] or nil
-
-    -- خامِ hr_work_time: هیچ MOD، هیچ ROUND، هیچ تبدیلی
-    local wt, wt_err = fetch_rows(
-        "SELECT w.WORK_DATE, w.FIRST_IN, w.LAST_OUT, w.TOTAL_WORK, w.ABSENCE, w.FINAL_ABSENCE, " ..
-        "w.OVER_TIME, w.FINAL_OVER_TIME, w.TOTAL_LEAVE, w.MISSION, w.ABSENT, w.CALENDAR_ID, " ..
-        "w.SHIFT_ID, w.MACHINE_TIME " ..
-        "FROM hr_work_time w WHERE w.PERSONNEL_ID = ? ORDER BY w.WORK_DATE DESC LIMIT 5",
-        { pid }, 14)
-    out.work_time_error = wt_err and tostring(wt_err) or nil
-    out.work_time_columns = { "WORK_DATE", "FIRST_IN", "LAST_OUT", "TOTAL_WORK", "ABSENCE",
-        "FINAL_ABSENCE", "OVER_TIME", "FINAL_OVER_TIME", "TOTAL_LEAVE", "MISSION", "ABSENT",
-        "CALENDAR_ID", "SHIFT_ID", "MACHINE_TIME" }
-    out.work_time_rows = {}
-    if wt ~= nil then
-        for _, r in ipairs(wt) do
-            local row = {}
-            for i = 1, 14 do row[i] = tostring(r[i]) end
-            table.insert(out.work_time_rows, row)
-        end
-    end
-
-    -- خامِ hr_day_details برای تقویم همان پرسنل
-    local cal = fetch_rows(
-        "SELECT o.CALENDAR_ID FROM hr_personnel_order o WHERE o.PERSONNEL_ID = ? " ..
-        "ORDER BY o.ID DESC LIMIT 1", { pid }, 1)
-    local calendar_id = (cal ~= nil and #cal > 0) and tonumber(cal[1][1]) or 0
-    out.calendar_id = calendar_id
-
-    local dd, dd_err = fetch_rows(
-        "SELECT d.DAY_DATE, d.TIME_FROM, d.TIME_TO, d.TYPE, d.kind, d.DESCRIPTION " ..
-        "FROM hr_day_details d WHERE d.CALENDAR_ID = ? ORDER BY d.DAY_DATE DESC LIMIT 8",
-        { calendar_id }, 6)
-    out.day_details_error = dd_err and tostring(dd_err) or nil
-    out.day_details_columns = { "DAY_DATE", "TIME_FROM", "TIME_TO", "TYPE", "kind", "DESCRIPTION" }
-    out.day_details_rows = {}
-    if dd ~= nil then
-        for _, r in ipairs(dd) do
-            local row = {}
-            for i = 1, 6 do row[i] = tostring(r[i]) end
-            table.insert(out.day_details_rows, row)
-        end
-    end
-
-    -- مرجع: «الان» طبق خود دیتابیس، برای مقایسهٔ مقیاس
-    local nw = fetch_rows("SELECT (UNIX_TIMESTAMP() + 11644473600) * 10000000", {}, 1)
-    out.db_now_filetime = (nw ~= nil and #nw > 0) and tostring(nw[1][1]) or nil
-    out.lua_today_filetime = tostring(to_date)
-
-    teamyar.write_result(json.encode(out))
-    return
+    -- شکست کوئری → بی‌سروصدا همان بازهٔ ۳۱ روزهٔ بالا می‌ماند؛ پنل هرگز به‌خاطر این نمی‌شکند
 end
 
 -- ── resolve the signed-in user ───────────────────────────────────────
@@ -745,24 +545,6 @@ if chat_module_url == nil or tostring(chat_module_url) == "" then
     chat_module_url = "/?page=/chat/index"
 end
 chat_module_url = tostring(chat_module_url)
-
--- قالب لینک مستقیم به یک گفتگوی مشخص. {id} با شناسهٔ گفتگو جایگزین می‌شود.
--- ⚠️ رشتهٔ پیش‌فرض عمداً با پیوند ساخته می‌شود و نه به‌صورت یک literal پیوسته: در متن پیوسته،
--- نام پارامتر با «and» شروع می‌شود که پیشوند یک entity نام‌دار است و طبق باگ تاییدشدهٔ
--- این پلتفرم، هنگام ذخیرهٔ command بی‌سروصدا decode و خراب می‌شد.
--- این پلتفرم دو الگوی لینک‌دهی دارد (هر دو در بات‌های زندهٔ همین ریپو دیده می‌شوند):
---   شناسه در مسیر    → /?page=/sales/invoice/view_invoice/{id}
---   شناسه در پارامتر → /?page=/pm/service_request/view/view_request/ + and + id={id}
--- اگر شکل واقعی ماژول گفتگو با پیش‌فرض زیر فرق داشت، فقط کافی است
--- chat_dialog_url_template در bot_config عوض شود؛ نیازی به تغییر کد نیست.
--- پیش‌فرض عمداً خالی است. شکل واقعی این آدرس هنوز تایید نشده و سه حالت ممکن دارد که هر سه در
--- بات‌های زندهٔ همین ریپو دیده می‌شوند؛ یک لینک اشتباه روی باتی که با دادهٔ پرسنلی کار می‌کند بدتر
--- از نبودِ لینک است. تا وقتی این مقدار در bot_config ثبت نشود، دکمه همان ماژول گفتگو را باز می‌کند
--- و عنوان قطعی گفتگو هم کنارش نشان داده می‌شود. نمونهٔ مقدار پس از تایید:
---   chat_dialog_url_template = مسیر ماژول + and + dialog_id={id}
-local chat_dialog_url_template = config_data.chat_dialog_url_template
-if chat_dialog_url_template == nil then chat_dialog_url_template = "" end
-chat_dialog_url_template = tostring(chat_dialog_url_template)
 if celebration_show_in_portal ~= 1 then celebration_show_in_portal = 0 end
 
 -- ⛔ کلید ایمنی نوشتن روی ماژول گفتگو — پیش‌فرض خاموش.
@@ -773,9 +555,10 @@ if celebration_show_in_portal ~= 1 then celebration_show_in_portal = 0 end
 --   • فهرست تولدها، پیام روز و کل بقیهٔ پنل کاملاً کار می‌کند (همه خواندنی‌اند)
 --   • خواندن گفتگوی موجود از chat_message هم کار می‌کند (باز هم خواندنی)
 --   • فقط ساخت گفتگو و پیوستن (تنها دو عملیات نوشتنی این بات) انجام نمی‌شود
--- بعد از تایید schema، یک بار مقدار را ۱ کنید؛ نیازی به تغییر کد نیست.
+-- ۱۴۰۵/۰۶/۰۷: به درخواست صریح کاربر پیش‌فرض «روشن» شد — پیام تبریک پیش‌فرض باید بدون پیکربندی
+-- ارسال شود. برای خاموش کردن، celebration_enabled را در bot_config برابر ۰ بگذارید.
 local celebration_enabled = (tonumber(input.celebration_enabled)
-    or tonumber(config_data.celebration_enabled) or 0) == 1
+    or tonumber(config_data.celebration_enabled) or 1) == 1
 
 local function celebration_topic(person_name, jalali_date)
     return "تبریک تولد " .. tostring(person_name) .. " — " .. tostring(jalali_date)
@@ -808,6 +591,9 @@ local function unwrap_api_error(result)
             detail = tostring(result.error.message)
         elseif type(result.error) == "string" then
             detail = result.error
+        elseif result.message ~= nil then
+            -- بعضی خطاها (مثل «invaid api path») پیام را سطح بالا می‌گذارند، نه داخل error
+            detail = tostring(result.message)
         end
         return detail
     end
@@ -886,23 +672,30 @@ end
 local function load_celebration_messages(dialog_id)
     local rows = fetch_rows([[
 SELECT COALESCE(pm.fullname, N'همکار') AS author_name, cm.CONTENT,
-  ]] .. sql_jalali_key("rd") .. [[ AS jdate_key,
+  ]] .. sql_jalali_date("cm.DATE_CREATE") .. [[ AS jdate,
   ]] .. sql_time_of_day("cm.DATE_CREATE") .. [[ AS jtime
 FROM chat_message cm
-LEFT JOIN report_dimdate rd ON rd.DATEKEY = ]] .. sql_daykey("cm.DATE_CREATE") .. [[
 LEFT JOIN profile_main pm ON pm.id = cm.USER_ID
-WHERE cm.DIALOG_ID = ?
+WHERE cm.DIALOG_ID = ? AND cm.TYPE = 1
 ORDER BY cm.DATE_CREATE ASC, cm.ID ASC
 LIMIT 200
 ]], { dialog_id }, 4)
+    -- cm.TYPE = 1 فقط پیام‌های متنی واقعی: TYPE=10 رویدادهای سیستمی‌اند (مثل {"add":"<profile_id>"}
+    -- هنگام پیوستن اعضا) که نمایش خامشان در مودال تبریک بی‌معنی بود
     local messages = {}
     if rows ~= nil then
         for _, r in ipairs(rows) do
+            -- محتوای گفتگو HTML است (<p dir="rtl">…</p>) — برای نمایش متنی، تگ‌ها حذف و
+            -- entityهای پایه باز می‌شوند (رشته‌های entity با الحاق ساخته می‌شوند — قانون ذخیرهٔ بات)
+            local text = tostring(r[2] or ""):gsub("<[^>]*>", " ")
+            text = text:gsub("&" .. "amp;", "&"):gsub("&" .. "lt;", "<"):gsub("&" .. "gt;", ">")
+            text = text:gsub("&" .. "quot;", '"'):gsub("&" .. "#39;", "'"):gsub("&" .. "nbsp;", " ")
+            text = text:gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
             table.insert(messages, {
                 author = r[1] or "همکار",
-                text = r[2] or "",
-                date = jalali_from_key(r[3]) or "",
-                clock = blank_to_nil(r[4]) or ""
+                text = text,
+                date = r[3] or "",
+                clock = r[4] or ""
             })
         end
     end
@@ -967,6 +760,178 @@ local function resolve_group_id()
         return nil, "گروه ساخته شد ولی شناسه‌اش برگردانده نشد"
     end
     return created, nil
+end
+
+
+-- POST type=request_add → ثبت درخواست مرخصی (ساعتی/روزانه) با API رسمی ماژول پرسنلی
+-- schema با probe زنده کشف و با دو ثبت واقعیِ تاییدشده (id=5687 روزانه، id=5688 ساعتی) اثبات شد
+-- (۱۴۰۵/۰۶/۰۷). endpoint: /api/hr/vacation_update — نام فیلدها از فرم رسمی /hr/vacation/show
+-- (day_from/day_to/day_from_hourly/hour_from/... — هیچ‌کدام حدس‌زدنی نبودند). زنجیرهٔ تایید و
+-- ساعت شیفت را خودِ سامانه می‌سازد؛ به همین دلیل INSERT مستقیم ممنوع و فقط API.
+if action_type == "request_add" then
+    if personnel == nil then
+        teamyar.write_result(json.encode({ ok = false, error = identity_err or "کاربر شناسایی نشد" }))
+        return
+    end
+
+    -- ۱=مرخصی ساعتی، ۲=مرخصی روزانه، ۳=ماموریت ساعتی، ۴=ماموریت روزانه (همان hr_vacation.TYPE؛
+    -- ماموریت با probe زندهٔ رکورد 5699 تایید شد: همین vacation_update با type=3/4 + city_type)
+    local shape = tonumber(input.req_shape) or 0
+    if shape ~= 1 and shape ~= 2 and shape ~= 3 and shape ~= 4 then
+        teamyar.write_result(json.encode({ ok = false, error = "نوع درخواست نامعتبر است" }))
+        return
+    end
+    local is_mission = (shape == 3 or shape == 4)
+
+    -- مرخصی: kind از hr_vacation_type؛ ماموریت: kind همیشه ۰ (فرم رسمی هم hidden=0 می‌فرستد)
+    local kind = 0
+    local city_type = 0
+    if is_mission then
+        city_type = tonumber(input.req_city_type) or 0
+        if city_type ~= 0 and city_type ~= 1 and city_type ~= 2 then
+            teamyar.write_result(json.encode({ ok = false, error = "نوع ماموریت نامعتبر است" }))
+            return
+        end
+    else
+        kind = tonumber(input.req_kind) or 0
+        local kind_rows = fetch_rows("SELECT ID FROM hr_vacation_type WHERE ID = ? LIMIT 1", { kind }, 1)
+        if kind_rows == nil or kind_rows[1] == nil then
+            teamyar.write_result(json.encode({ ok = false, error = "نوع مرخصی نامعتبر است" }))
+            return
+        end
+    end
+
+    -- تاریخ شمسی «YYYY/MM/DD» → کلید روز، از report_dimdate (نه محاسبهٔ دستی کبیسه).
+    -- ارقام فارسی/عربی به لاتین تبدیل و بخش‌ها صفرگذاری می‌شوند تا با قالب JNDATE بخورند.
+    local function jalali_to_daykey(raw)
+        local text = tostring(raw or "")
+        local digit_map = {
+            ["۰"] = "0", ["۱"] = "1", ["۲"] = "2", ["۳"] = "3", ["۴"] = "4",
+            ["۵"] = "5", ["۶"] = "6", ["۷"] = "7", ["۸"] = "8", ["۹"] = "9",
+            ["٠"] = "0", ["١"] = "1", ["٢"] = "2", ["٣"] = "3", ["٤"] = "4",
+            ["٥"] = "5", ["٦"] = "6", ["٧"] = "7", ["٨"] = "8", ["٩"] = "9"
+        }
+        for fa, en in pairs(digit_map) do text = text:gsub(fa, en) end
+        local y, m, d = text:match("^%s*(%d%d%d%d)%s*[/%-.]%s*(%d%d?)%s*[/%-.]%s*(%d%d?)%s*$")
+        if y == nil then return nil end
+        local normalized = string.format("%04d/%02d/%02d", tonumber(y), tonumber(m), tonumber(d))
+        local rows = fetch_rows(
+            "SELECT DATEKEY FROM report_dimdate WHERE JNDATE = ? LIMIT 1", { normalized }, 1)
+        if rows ~= nil and rows[1] ~= nil then return tonumber(rows[1][1]), normalized end
+        return nil
+    end
+
+    local day_from, jfrom_norm = jalali_to_daykey(input.req_date_from)
+    if day_from == nil then
+        teamyar.write_result(json.encode({ ok = false,
+            error = "تاریخ شروع نامعتبر است (قالب درست: 1405/06/10)" }))
+        return
+    end
+    local day_to = day_from
+    if tostring(input.req_date_to or "") ~= "" then
+        day_to = jalali_to_daykey(input.req_date_to)
+        if day_to == nil then
+            teamyar.write_result(json.encode({ ok = false,
+                error = "تاریخ پایان نامعتبر است (قالب درست: 1405/06/10)" }))
+            return
+        end
+    end
+    if day_to < day_from then
+        teamyar.write_result(json.encode({ ok = false, error = "تاریخ پایان قبل از تاریخ شروع است" }))
+        return
+    end
+
+    local description = tostring(input.req_description or "")
+
+    -- payload پایه — دقیقاً همان ترکیبی که در ثبت‌های آزمایشی موفق بود
+    local payload = {
+        id = 0,
+        personnel_id = personnel.personnel_id,
+        org_id = personnel.org_id or 0,
+        entity = 0,
+        type = shape,
+        kind = kind,
+        description = description,
+        date_vacation = day_from,
+        day_from = day_from,
+        day_to = day_to
+    }
+    if is_mission then payload.city_type = city_type end
+
+    if shape == 1 or shape == 3 then
+        -- ساعت واقعی «HH:MM» → ثانیهٔ ذخیره‌ای (قرارداد پایگاه‌داده ۳:۳۰ عقب‌تر از ساعت واقعی است)
+        local function real_clock_to_stored_sec(raw)
+            local text = tostring(raw or "")
+            local h, m = text:match("^%s*(%d%d?)%s*:%s*(%d%d)%s*$")
+            if h == nil then return nil end
+            h, m = tonumber(h), tonumber(m)
+            if h > 23 or m > 59 then return nil end
+            return h * 3600 + m * 60 - 12600 -- منهای ۳:۳۰
+        end
+        local from_sec = real_clock_to_stored_sec(input.req_hour_from)
+        local to_sec = real_clock_to_stored_sec(input.req_hour_to)
+        if from_sec == nil or to_sec == nil then
+            teamyar.write_result(json.encode({ ok = false,
+                error = "ساعت نامعتبر است (قالب درست: 09:30)" }))
+            return
+        end
+        if from_sec < 0 or to_sec < 0 then
+            teamyar.write_result(json.encode({ ok = false,
+                error = "ساعت درخواست باید بعد از ۰۳:۳۰ بامداد باشد" }))
+            return
+        end
+        if to_sec <= from_sec then
+            teamyar.write_result(json.encode({ ok = false, error = "ساعت پایان باید بعد از ساعت شروع باشد" }))
+            return
+        end
+        payload.day_from_hourly = day_from
+        payload.day_to_hourly = day_to
+        payload.hour_from = from_sec
+        payload.hour_to = to_sec
+        payload.time_from = day_from + from_sec * 10000000
+        payload.time_to = day_to + to_sec * 10000000
+        payload.date_from = payload.time_from
+        payload.date_to = payload.time_to
+        payload.date_d = day_from
+        payload.date = day_from
+    end
+
+    -- پیام‌های خطای این API گاهی entity و پیکان خام دارند
+    -- (نمونهٔ زنده: «...تداخل دارد(1405/06/10)--&gt;نام کارمند...») — تمیزکاری برای نمایش
+    local function clean_api_message(raw)
+        local text = tostring(raw or "")
+        text = text:gsub("&" .. "gt;", ">"):gsub("&" .. "lt;", "<")
+            :gsub("&" .. "quot;", '"'):gsub("&" .. "amp;", "&")
+        text = text:gsub("%-%-+>", " — "):gsub("%s+", " ")
+        return text
+    end
+
+    local response, api_err = call_teamyar_api(HR_MODULE_ID, "/api/hr/vacation_update", payload)
+    if api_err ~= nil then
+        teamyar.write_result(json.encode({ ok = false,
+            error = "ثبت درخواست انجام نشد: " .. clean_api_message(api_err) }))
+        return
+    end
+    if _G.type(response) ~= "table" or response.success ~= true then
+        local api_message = "پاسخ نامشخص"
+        if _G.type(response) == "table" and _G.type(response.error) == "table" then
+            api_message = tostring(response.error.message or "خطای سامانه")
+        end
+        teamyar.write_result(json.encode({ ok = false,
+            error = "سامانه درخواست را نپذیرفت: " .. clean_api_message(api_message) }))
+        return
+    end
+
+    local request_id = nil
+    if _G.type(response.data) == "table" then
+        request_id = tonumber(response.data.message)
+    end
+    teamyar.write_result(json.encode({
+        ok = true,
+        request_id = request_id,
+        date_from = jfrom_norm
+    }))
+    return
 end
 
 -- POST type=celebrate → «به گفتگوی تبریک بپیوند» (اگر گفتگو نبود، ساخته می‌شود)
@@ -1060,11 +1025,72 @@ if action_type == "celebrate" then
         return
     end
 
+    -- خودِ صاحب تولد هم به گفتگو اضافه می‌شود تا پیام تبریک را ببیند. شکست این مرحله جریان را
+    -- نمی‌شکند (مثلاً اگر قبلاً عضو شده باشد).
+    local birthday_profile_id = tonumber(input.person_profile_id)
+    if birthday_profile_id ~= nil and birthday_profile_id > 0
+        and birthday_profile_id ~= tonumber(personnel.profile_id) then
+        pcall(function()
+            call_chat_api("/api/assign/add", {
+                assigned = { birthday_profile_id },
+                author_id = personnel.profile_id,
+                dialog_id = dialog_id
+            })
+        end)
+    end
+
+    -- ارسال پیام تبریک (متن کاربر یا پیش‌فرض). schema با probe زنده تایید شد (۱۴۰۵/۰۶/۰۷):
+    -- /api/message/add فیلدهای «مسطح» می‌خواهد و نبود هر فیلد «json validation error» می‌دهد.
+    -- TYPE=1 پیام متنی عادی است (۸۸هزار ردیف chat_message؛ TYPE=10 رویداد سیستمی join است).
+    -- ⚠️ کاراکترهای غیر BMP (ایموجی‌های ۴بایتی مثل 🎂/🎈) حذف می‌شوند: پیام ارسالی واقعی
+    -- ۱۴۰۵/۰۶/۰۸ (گفتگوی 69671) که با 🎂 شروع می‌شد، در گفتگو با محتوای «خالی» ظاهر شد —
+    -- الگوی شناخته‌شدهٔ truncation ستون utf8mb3 در MySQL: رشته از اولین کاراکتر ۴بایتی بریده
+    -- می‌شود و چون ایموجی اولِ پیام بود، کل متن رفت. ✨ (U+2728، سه‌بایتی BMP) امن است.
+    local function strip_non_bmp(text)
+        return (tostring(text or ""):gsub("[\240-\244][\128-\191][\128-\191][\128-\191]", ""))
+    end
+    local message_text = strip_non_bmp(input.message)
+    -- تک‌خطی: رفتار newline در رندر گفتگوی رسمی تاییدنشده است
+    message_text = message_text:gsub("[\r\n]+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+    if message_text == "" then
+        message_text = "✨ " .. target_name .. " عزیز، تولدت مبارک! " ..
+            "امیدواریم سالِ پیشِ رو برایت پر از سلامتی، شادی و موفقیت باشد. ✨ — " ..
+            tostring(personnel.fullname or "همکار شما")
+    end
+    -- قالب واقعی پیام‌های گفتگو HTML است (نمونهٔ زندهٔ chat_message:
+    -- <p dir="rtl">…</p>) — متن خام escape و در همان قالب پیچیده می‌شود؛ ارسال متن ساده
+    -- ردیفی با CONTENT خالی می‌ساخت (تاییدشده ۱۴۰۵/۰۶/۰۸ با دو ارسال واقعی).
+    message_text = '<p dir="rtl">' .. escape_html(message_text) .. '</p>'
+    local message_sent = false
+    local message_err = nil
+    -- هم content و هم message فرستاده می‌شود: اعتبارسنجی API وجود «content» را می‌خواهد، ولی
+    -- هندلر داخلی گفتگو (/chat/dialog/send در dialogY.js) متن را در فیلد «message» می‌فرستد —
+    -- ارسال فقط content ردیفی با متن خالی می‌ساخت (تاییدشده ۱۴۰۵/۰۶/۰۸ با سه ارسال واقعی)
+    local msg_response, msg_api_err = call_chat_api("/api/message/add", {
+        dialog_id = dialog_id,
+        content = message_text,
+        message = message_text,
+        type = 1,
+        is_public = 0,
+        reply_id = 0,
+        user_id = personnel.profile_id,
+        author_id = personnel.profile_id
+    })
+    if msg_api_err ~= nil then
+        message_err = msg_api_err
+    elseif _G.type(msg_response) == "table" and msg_response.success == false then
+        message_err = (msg_response.error and msg_response.error.message) or "FAILED"
+    else
+        message_sent = true
+    end
+
     teamyar.write_result(json.encode({
         ok = true,
         created = created,
         joined = true,
         dialog_id = dialog_id,
+        message_sent = message_sent,
+        message_err = message_err,
         members = load_celebration_members(dialog_id),
         messages = load_celebration_messages(dialog_id),
         create_response = create_response,
@@ -1139,44 +1165,53 @@ local function resolve_order_names(unit_id, calendar_id, supervisor_id, date_fro
 SELECT COALESCE(ou.NAME, N'نامشخص') AS unit_name,
        COALESCE(hc.NAME, N'—') AS calendar_name,
        COALESCE(sup.FULLNAME, N'—') AS supervisor_name,
-       ]] .. sql_jalali_key("rd_from") .. [[ AS date_from_key,
-       ]] .. sql_jalali_key("rd_to") .. [[ AS date_to_key
+       ]] .. sql_jalali_date("?") .. [[ AS date_from_j,
+       ]] .. sql_jalali_date("?") .. [[ AS date_to_j
 FROM (SELECT 1) seed
-LEFT JOIN report_dimdate rd_from ON rd_from.DATEKEY = ]] ..
-    sql_daykey(sql_filetime(date_from)) .. [[
-LEFT JOIN report_dimdate rd_to ON rd_to.DATEKEY = ]] ..
-    sql_daykey(sql_filetime(date_to)) .. [[
 LEFT JOIN org_organization_unit oou ON oou.ID = ?
 LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
 LEFT JOIN hr_calendar hc ON hc.ID = ?
 LEFT JOIN profile_main sup ON sup.id = ?
 LIMIT 1
-]], { unit_id or 0, calendar_id or 0, supervisor_id or 0 }, 5)
+]], { date_from or 0, date_to or 0, unit_id or 0, calendar_id or 0, supervisor_id or 0 }, 5)
     if rows == nil or #rows == 0 then return nil end
     return {
         unit_name = rows[1][1] or "نامشخص",
         calendar_name = rows[1][2] or "—",
         supervisor_name = rows[1][3] or "—",
-        date_from = jalali_from_key(rows[1][4]) or "—",
-        date_to = jalali_from_key(rows[1][5]) or "—"
+        date_from = rows[1][4] or "—",
+        date_to = rows[1][5] or "—"
     }
 end
 
+-- فیلدهای مدت‌دار حکم (WORKING_HOURS و ...) در دیتابیس و API هر دو به «ثانیه» هستند، نه tick —
+-- تاییدشده 1405/06/07 با خواندن مستقیم hr_personnel_order (28800=۸ساعت موظفی که دقیقاً با بند
+-- شیفت TYPE=2 تقویم جفت است، 900=۱۵دقیقه، 10800=۳ساعت) و تطبیق با همان مقادیر خام API.
+-- ستون‌های ۱۲ به بعد برای مسیر fallback دیتابیس اضافه شده‌اند تا «قواعد محاسبهٔ حکم» و
+-- «تنظیمات حکم» با ACCESS_DENIED شدن API (کاربر غیرادمین) خالی نمانند.
 local ORDER_SELECT = [[
 SELECT o.ID, o.UNIT_ID, COALESCE(ou.NAME, N'نامشخص') AS unit_name,
        o.SUPERVISOR, COALESCE(sup.FULLNAME, N'—') AS supervisor_name,
        o.CALENDAR_ID, COALESCE(hc.NAME, N'—') AS calendar_name,
-       ]] .. sql_ticks_to_minutes("o.WORKING_HOURS") .. [[ AS working_minutes,
-       ]] .. sql_ticks_to_minutes("o.LEAVE_PER_MONTH") .. [[ AS leave_per_month_minutes,
-       ]] .. sql_jalali_key("rdf") .. [[ AS date_from_key,
-       ]] .. sql_jalali_key("rdt") .. [[ AS date_to_key
+       COALESCE(o.WORKING_HOURS, 0) AS working_seconds,
+       COALESCE(o.LEAVE_PER_MONTH, 0) AS leave_per_month_seconds,
+       ]] .. sql_jalali_date("o.DATE_FROM") .. [[ AS date_from_j,
+       ]] .. sql_jalali_date("o.DATE_TO") .. [[ AS date_to_j,
+       COALESCE(o.MAX_DELAY_MONTH, 0) AS max_delay_seconds,
+       COALESCE(o.MAX_HOURLY_LEAVE, 0) AS max_hourly_seconds,
+       COALESCE(o.MIN_HOURLY_LEAVE, 0) AS min_hourly_seconds,
+       COALESCE(o.TELEWORK_REQUEST, 0), COALESCE(o.OVERTIME_DISABLED, 0),
+       COALESCE(o.OVERTIME_CONFIRM, 0), COALESCE(o.PRE_OVERTIME_DISABLED, 0),
+       COALESCE(o.PRE_OVERTIME_CONFIRM, 0), COALESCE(o.FLOATING_ENABLED, 0),
+       COALESCE(o.CAL_DAILY_VACATION, 0), COALESCE(o.INSURABLE, 0), COALESCE(o.TAXABLE, 0),
+       COALESCE(o.unemployment_insurance_exemption, 0),
+       COALESCE(op.NAME, '') AS position_title
 FROM hr_personnel_order o
-LEFT JOIN report_dimdate rdf ON rdf.DATEKEY = ]] .. sql_daykey("o.DATE_FROM") .. [[
-LEFT JOIN report_dimdate rdt ON rdt.DATEKEY = ]] .. sql_daykey("o.DATE_TO") .. [[
 LEFT JOIN org_organization_unit oou ON oou.ID = o.UNIT_ID
 LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
 LEFT JOIN profile_main sup ON sup.id = o.SUPERVISOR
 LEFT JOIN hr_calendar hc ON hc.ID = o.CALENDAR_ID
+LEFT JOIN org_position op ON op.ID = o.POSITION_ID
 ]]
 
 do
@@ -1227,16 +1262,25 @@ do
                     })
                 end
             end
+            -- سمت واقعی از POSITION_ID حکم API (نام از org_position)
+            local api_position_id = tonumber(order.position_id)
+            if api_position_id ~= nil and api_position_id > 0 then
+                local prow = fetch_rows(
+                    "SELECT COALESCE(NAME, '') FROM org_position WHERE ID = ? LIMIT 1",
+                    { api_position_id }, 1)
+                if prow ~= nil and prow[1] ~= nil and tostring(prow[1][1] or "") ~= "" then
+                    employment.position_title = tostring(prow[1][1])
+                end
+            end
             employment_source = "api"
             return
         end
 
         local rows, query_err = fetch_rows(ORDER_SELECT .. [[
-WHERE o.PERSONNEL_ID = ? AND o.DATE_FROM <= ]] .. sql_filetime(to_date) .. [[
-  AND o.DATE_TO >= ]] .. sql_filetime(to_date) .. [[
+WHERE o.PERSONNEL_ID = ? AND o.DATE_FROM <= ? AND o.DATE_TO >= ?
 ORDER BY o.ID DESC
 LIMIT 1
-]], { personnel.personnel_id }, 11)
+]], { personnel.personnel_id, to_date, to_date }, 25)
         if rows == nil then
             employment_err = (employment_err and (employment_err .. " | ") or "") .. tostring(query_err)
             return
@@ -1247,7 +1291,7 @@ LIMIT 1
 WHERE o.PERSONNEL_ID = ?
 ORDER BY o.ID DESC
 LIMIT 1
-]], { personnel.personnel_id }, 11)
+]], { personnel.personnel_id }, 25)
             if rows == nil or #rows == 0 then return end
             employment.is_current = false
         else
@@ -1263,11 +1307,46 @@ LIMIT 1
         employment.calendar_name = r[7] or "—"
         employment.working_hours_raw = tonumber(r[8])
         employment.leave_per_month_raw = tonumber(r[9])
-        employment.date_from = jalali_from_key(r[10]) or "—"
-        employment.date_to = jalali_from_key(r[11]) or "—"
+        employment.date_from = r[10] or "—"
+        employment.date_to = r[11] or "—"
+        employment.max_delay_month_raw = tonumber(r[12])
+        employment.max_hourly_leave_raw = tonumber(r[13])
+        employment.min_hourly_leave_raw = tonumber(r[14])
+        -- ترتیب ستون‌های پرچمی (۱۵ به بعد) عمداً با ترتیب ORDER_SETTING_LABELS یکی است
+        employment_settings = {}
+        for i, setting in ipairs(ORDER_SETTING_LABELS) do
+            local raw = tonumber(r[14 + i])
+            if raw ~= nil then
+                table.insert(employment_settings, {
+                    label = setting.label,
+                    value = (raw == 1) and setting.on or setting.off
+                })
+            end
+        end
+        -- سمت واقعی (org_position.NAME از POSITION_ID حکم — مثلاً «مدیر سیستم ها و روش ها»)
+        local pos = tostring(r[25] or "")
+        if pos ~= "" then employment.position_title = pos end
         employment_source = "db"
     end)
     if not ok then employment_err = tostring(err) end
+    -- وقتی یکی از دو منبع جواب داده، خطای منبع دیگر (مثل ACCESS_DENIED برای کاربر غیرادمین)
+    -- ارزش نمایش در بنر ندارد — منبعِ استفاده‌شده در «اطلاعات پرسنلی» نشان داده می‌شود
+    if employment_source ~= nil then employment_err = nil end
+end
+
+-- fallback سمت: اگر نه API و نه حکم دیتابیس آن را نداد، از POSITION_ID پروندهٔ پرسنلی
+if employment.position_title == nil and personnel ~= nil then
+    pcall(function()
+        local rows = fetch_rows([[
+SELECT COALESCE(op.NAME, '') FROM hr_personnels h
+LEFT JOIN org_position op ON op.ID = h.POSITION_ID
+WHERE h.PERSONNEL_ID = ?
+LIMIT 1
+]], { personnel.personnel_id }, 1)
+        if rows ~= nil and rows[1] ~= nil and tostring(rows[1][1] or "") ~= "" then
+            employment.position_title = tostring(rows[1][1])
+        end
+    end)
 end
 
 -- ── section: direct supervisor (profileSupervisorGet) ────────────────
@@ -1325,12 +1404,14 @@ WITH shift_day AS (
          MAX(d.TIME_TO) AS shift_to,
          SUM(GREATEST(d.TIME_TO - d.TIME_FROM, 0)) AS shift_duration
   FROM hr_day_details d
-  WHERE d.CALENDAR_ID = ? AND d.DAY_DATE BETWEEN ]] .. sql_filetime(from_date) ..
-        [[ AND ]] .. sql_filetime(to_date) .. [[
+  -- d.TYPE = 2 فقط بند شیفت موظف: هر روز تا ۳ بند دارد (تاییدشده روی تقویم ۷، 1405/06/07:
+  -- TYPE=5 پنجرهٔ اضافه‌کاری ابتدای کار، TYPE=2 شیفت موظف ~۸ ساعته، TYPE=3 پنجرهٔ اضافه‌کاری
+  -- بعد از شیفت تا 23:59). بدون این فیلتر، جمع هر سه بند «موظفی 17:59» می‌داد.
+  WHERE d.CALENDAR_ID = ? AND d.DAY_DATE BETWEEN ? AND ? AND d.TYPE = 2
   GROUP BY d.CALENDAR_ID, d.DAY_DATE
 )
 SELECT
-  ]] .. sql_jalali_key("rd") .. [[ AS jdate_key,
+  COALESCE(rd.JNDATE, '') AS jdate,
   COALESCE(rd.JTDAY, '—') AS jday_name,
   COALESCE(rd.JMDAY, 0) AS jmday,
   ]] .. sql_time_of_day("w.FIRST_IN") .. [[ AS first_in,
@@ -1345,20 +1426,14 @@ SELECT
   ]] .. sql_time_of_day("sd.shift_from") .. [[ AS shift_from,
   ]] .. sql_time_of_day("sd.shift_to") .. [[ AS shift_to,
   ]] .. sql_ticks_to_minutes("sd.shift_duration") .. [[ AS shift_minutes,
-  w.WORK_DATE AS work_date_raw,
-  w.FIRST_IN AS first_in_raw,
-  w.LAST_OUT AS last_out_raw,
-  w.TOTAL_WORK AS total_work_raw,
-  COALESCE(sd.shift_from, 0) AS shift_from_raw,
-  COALESCE(sd.shift_to, 0) AS shift_to_raw
+  w.WORK_DATE AS work_date_raw
 FROM hr_work_time w
 LEFT JOIN report_dimdate rd ON rd.DATEKEY = w.WORK_DATE
 LEFT JOIN shift_day sd ON sd.DAY_DATE = w.WORK_DATE
-WHERE w.PERSONNEL_ID = ? AND w.WORK_DATE BETWEEN ]] .. sql_filetime(from_date) ..
-      [[ AND ]] .. sql_filetime(to_date) .. [[
+WHERE w.PERSONNEL_ID = ? AND w.WORK_DATE BETWEEN ? AND ?
 ORDER BY w.WORK_DATE DESC
 LIMIT 200
-]], { employment.calendar_id or 0, personnel.personnel_id }, 21)
+]], { employment.calendar_id or 0, from_date, to_date, personnel.personnel_id, from_date, to_date }, 16)
 
         if rows == nil then
             attendance_err = tostring(query_err)
@@ -1372,7 +1447,10 @@ LIMIT 200
             local mission_minutes = tonumber(r[10]) or 0
             local absent_flag = tonumber(r[11]) or 0
             local first_in, last_out = blank_to_nil(r[4]), blank_to_nil(r[5])
+            -- تک‌تردد هم ناقص است: تا وقتی خروج ثبت نشده، پلتفرم LAST_OUT را برابر FIRST_IN
+            -- نگه می‌دارد (تاییدشده روی رکورد زندهٔ روز جاری: هر دو 08:51 و TOTAL_WORK=0)
             local incomplete = (first_in ~= nil and last_out == nil) or (first_in == nil and last_out ~= nil)
+                or (first_in ~= nil and first_in == last_out and work_minutes == 0)
 
             local deficit = 0
             if shift_minutes > 0 and absent_flag == 0 and not incomplete then
@@ -1398,7 +1476,7 @@ LIMIT 200
             end
 
             table.insert(daily, {
-                jdate = jalali_from_key(r[1]) or "—",
+                jdate = r[1] or "—",
                 jday_name = r[2] or "—",
                 first_in = first_in,
                 last_out = last_out,
@@ -1413,17 +1491,18 @@ LIMIT 200
                 deficit_minutes = deficit,
                 incomplete = incomplete,
                 status = status,
-                work_date_raw = r[16],
-                first_in_raw = r[17],
-                last_out_raw = r[18],
-                total_work_raw = r[19],
-                shift_from_raw = r[20],
-                shift_to_raw = r[21]
+                work_date_raw = r[16]
             })
 
             totals.work = totals.work + work_minutes
             totals.overtime = totals.overtime + (tonumber(r[7]) or 0)
-            totals.delay = totals.delay + (tonumber(r[8]) or 0)
+            -- «کسر کار» فقط برای روزهای حضورِ تمام‌شده جمع می‌شود: روز غیبت کل موظفی‌اش در
+            -- ABSENCE می‌نشیند (و جدا در «روزهای غیبت» شمرده می‌شود) و روز ناقص — از جمله روزِ
+            -- جاری که هنوز خروج ندارد — کسرش قطعی نیست. جمع‌زدن هر دو، عدد را چند برابرِ واقعیت
+            -- می‌کرد (نمونهٔ زنده: ۱۵:۰۳ به‌جای ~۱:۲۰ برای چهار روز حضور)
+            if absent_flag == 0 and not incomplete then
+                totals.delay = totals.delay + (tonumber(r[8]) or 0)
+            end
             totals.leave = totals.leave + leave_minutes
             totals.mission = totals.mission + mission_minutes
             totals.deficit = totals.deficit + deficit
@@ -1459,7 +1538,7 @@ do
     local ok, err = pcall(function()
         local rows, query_err = fetch_rows([[
 SELECT
-  ]] .. sql_jalali_key("rd") .. [[ AS jdate_key,
+  ]] .. sql_jalali_date("e.EXT_DATE") .. [[ AS jdate,
   ]] .. sql_time_of_day("e.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_time_of_day("e.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(e.TIME_TO - e.TIME_FROM, 0)") .. [[ AS duration_minutes,
@@ -1469,21 +1548,19 @@ SELECT
   COALESCE(mt.NAME, N'—') AS machine_to,
   COALESCE(e.COMMENT, '') AS ext_comment
 FROM hr_ext_time e
-LEFT JOIN report_dimdate rd ON rd.DATEKEY = ]] .. sql_daykey("e.EXT_DATE") .. [[
 LEFT JOIN hr_machine mf ON mf.ID = e.MACHINE_ID_FROM
 LEFT JOIN hr_machine mt ON mt.ID = e.MACHINE_ID_TO
-WHERE e.PERSONNEL_ID = ? AND e.EXT_DATE BETWEEN ]] .. sql_filetime(from_date) ..
-      [[ AND ]] .. sql_filetime(to_date) .. [[
+WHERE e.PERSONNEL_ID = ? AND e.EXT_DATE BETWEEN ? AND ?
 ORDER BY e.EXT_DATE DESC, e.TIME_FROM DESC
 LIMIT 300
-]], { personnel.personnel_id }, 9)
+]], { personnel.personnel_id, from_date, to_date }, 9)
         if rows == nil then
             events_err = tostring(query_err)
             return
         end
         for _, r in ipairs(rows) do
             table.insert(events, {
-                jdate = jalali_from_key(r[1]) or "—",
+                jdate = r[1] or "—",
                 time_from = blank_to_nil(r[2]),
                 time_to = blank_to_nil(r[3]),
                 duration_minutes = tonumber(r[4]) or 0,
@@ -1499,6 +1576,11 @@ LIMIT 300
 end
 
 -- ── section: requests (leave / mission / overtime / telework) ────────
+
+-- بازهٔ فهرست درخواست‌ها عمداً تا یک سال بعد از پایان بازهٔ گزارش باز است: درخواست مرخصی معمولاً
+-- برای آینده ثبت می‌شود و با سقفِ «تا امروز»، درخواست تازه‌ثبت‌شده در فهرست دیده نمی‌شد
+-- (باگ زندهٔ 1405/06/09: رکورد 5693 برای 06/26 ثبت شد ولی فهرست خالی ماند)
+local requests_to_date = to_date + 366 * FT_DAY
 
 local requests = {}
 local requests_err = nil
@@ -1516,91 +1598,127 @@ local function request_status_label(code)
     return "وضعیت " .. n
 end
 
+-- hr_vacation_type.NAME روی این سامانه کدهای انگلیسی خام است (MEDICAL/PAID/... — فقط «زایمان»
+-- فارسی ثبت شده). ترجمه به همان برچسب‌هایی که ماژول HR تیمیار نشان می‌دهد؛ کد ناشناخته خام می‌ماند.
+-- دسته از hr_vacation_type.TYPE می‌آید (۱=با حقوق، ۲=بدون حقوق) و مثل UI رسمی به شکل
+-- «با حقوق / استحقاقی» جلوی نام می‌نشیند.
+local VACATION_TYPE_LABELS = {
+    MEDICAL = "استعلاجی",
+    PAID = "استحقاقی",
+    PERSUASIVE = "تشویقی",
+    NOT_PAID = "بدون حقوق",
+    MARRIAGE = "ازدواج",
+    HOLIDAY = "تعطیل"
+}
+
+local function vacation_type_label(raw_name, category, is_mission)
+    if is_mission then return "ماموریت" end
+    local name = tostring(raw_name or "")
+    if name == "" then return "مرخصی" end
+    local translated = VACATION_TYPE_LABELS[name] or name
+    local cat = tonumber(category) or 0
+    local cat_label = nil
+    if cat == 1 then cat_label = "با حقوق" end
+    if cat == 2 then cat_label = "بدون حقوق" end
+    -- «بدون حقوق / بدون حقوق» نسازیم (NOT_PAID خودش نام دسته است)
+    if cat_label == nil or cat_label == translated then return translated end
+    return cat_label .. " / " .. translated
+end
+
 do
     local ok, err = pcall(function()
-        -- مرخصی و ماموریت: hr_vacation. نام نوع از hr_vacation_type خوانده می‌شود؛ چون در این
-        -- جدول هم ستون ID و هم ستون TYPE وجود دارد و مشخص نیست hr_vacation.TYPE به کدام ارجاع
-        -- می‌دهد، هر دو LEFT JOIN می‌شوند و اولین نام غیرخالی برداشته می‌شود.
+        -- مرخصی و ماموریت: hr_vacation. معنای واقعی ستون‌ها (تاییدشده 1405/06/07 با تطبیق مستقیم
+        -- رکوردهای پرسنل ۳۵۶ و ۱۸۶ با نمایش رسمی ماژول HR تیمیار):
+        --   v.TYPE = شکل درخواست: ۱=مرخصی ساعتی، ۲=مرخصی روزانه، ۳=ماموریت ساعتی، ۴=ماموریت روزانه
+        --            (کل جدول فقط همین چهار مقدار را دارد؛ TYPE=3/4 همیشه KIND=0)
+        --   v.KIND = نوع مرخصی = hr_vacation_type.ID (KIND=2 یعنی PAID/استحقاقی و ...)؛ ماموریت‌ها ۰
+        -- نسخهٔ قبلی v.TYPE را به hr_vacation_type وصل می‌کرد — هم روی ID و هم روی TYPE (که غیر
+        -- یکتاست) — و چون TYPE=1 پنج ردیف و TYPE=2 دو ردیف دارد، هر درخواست تا ۵ بار با نام‌های
+        -- غلط (MEDICAL/PAID/PERSUASIVE/MARRIAGE/زایمان...) تکرار می‌شد. LEFT JOIN روی vt.ID = v.KIND
+        -- یکتاست و fan-out ندارد.
+        -- TOTAL_TIME_LICENSE = مدت درخواست‌شده (ستون «مرخصی» در UI رسمی)، TOTAL_TIME = مدت
+        -- استفاده‌شدهٔ محاسبه‌شده — هر دو برگردانده می‌شوند.
         local rows, query_err = fetch_rows([[
 SELECT
   v.ID,
-  COALESCE(NULLIF(vt_by_type.NAME, ''), NULLIF(vt_by_id.NAME, ''), N'مرخصی/ماموریت') AS type_name,
-  ]] .. sql_jalali_key("rdv") .. [[ AS jdate_key,
+  COALESCE(NULLIF(vt.NAME, ''), '') AS type_name,
+  COALESCE(vt.TYPE, 0) AS type_category,
+  COALESCE(v.TYPE, 0) AS request_shape,
+  ]] .. sql_jalali_date("v.DATE_VACATOIN") .. [[ AS jdate,
   ]] .. sql_time_of_day("v.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_time_of_day("v.TIME_TO") .. [[ AS time_to,
-  ]] .. sql_ticks_to_minutes("v.TOTAL_TIME") .. [[ AS total_minutes,
+  ]] .. sql_ticks_to_minutes("COALESCE(NULLIF(v.TOTAL_TIME_LICENSE, 0), v.TOTAL_TIME)") .. [[ AS total_minutes,
+  ]] .. sql_ticks_to_minutes("v.TOTAL_TIME") .. [[ AS used_minutes,
   COALESCE(v.STATUS, 0) AS status_code,
   COALESCE(v.DESCRIPTION, '') AS description,
-  ]] .. sql_jalali_key("rdc") .. [[ AS created_key,
-  COALESCE(v.KIND, 0) AS kind_code,
+  ]] .. sql_jalali_date("v.DATE_CREATE") .. [[ AS created_j,
   (SELECT COUNT(*) FROM hr_leave_verify lv WHERE lv.LEAVE_ID = v.ID) AS verify_count,
   (SELECT COUNT(*) FROM hr_leave_verify lv WHERE lv.LEAVE_ID = v.ID AND lv.STATUS = 1) AS verify_done,
   v.DATE_VACATOIN AS day_raw
 FROM hr_vacation v
-LEFT JOIN report_dimdate rdv ON rdv.DATEKEY = ]] .. sql_daykey("v.DATE_VACATOIN") .. [[
-LEFT JOIN report_dimdate rdc ON rdc.DATEKEY = ]] .. sql_daykey("v.DATE_CREATE") .. [[
-LEFT JOIN hr_vacation_type vt_by_type ON vt_by_type.TYPE = v.TYPE
-LEFT JOIN hr_vacation_type vt_by_id ON vt_by_id.ID = v.TYPE
-WHERE v.PERSONNEL_ID = ? AND v.DATE_VACATOIN BETWEEN ]] .. sql_filetime(from_date) ..
-      [[ AND ]] .. sql_filetime(to_date) .. [[
+LEFT JOIN hr_vacation_type vt ON vt.ID = v.KIND
+WHERE v.PERSONNEL_ID = ? AND v.DATE_VACATOIN BETWEEN ? AND ?
 ORDER BY v.DATE_VACATOIN DESC, v.ID DESC
 LIMIT 200
-]], { personnel.personnel_id }, 13)
+]], { personnel.personnel_id, from_date, requests_to_date }, 15)
         if rows == nil then
             requests_err = tostring(query_err)
         else
             for _, r in ipairs(rows) do
+                local shape = tonumber(r[4]) or 0
+                local is_mission = (shape == 3 or shape == 4)
+                local is_daily = (shape == 2 or shape == 4)
                 table.insert(requests, {
                     id = tonumber(r[1]),
-                    family = "مرخصی و ماموریت",
-                    type_name = r[2] or "مرخصی/ماموریت",
-                    jdate = jalali_from_key(r[3]) or "—",
-                    time_from = blank_to_nil(r[4]),
-                    time_to = blank_to_nil(r[5]),
-                    total_minutes = tonumber(r[6]) or 0,
-                    status_code = tonumber(r[7]) or 0,
-                    status = request_status_label(r[7]),
-                    description = r[8] or "",
-                    created = jalali_from_key(r[9]) or "—",
-                    verify_count = tonumber(r[11]) or 0,
-                    verify_done = tonumber(r[12]) or 0,
-                    sort_key = tonumber(r[13]) or 0
+                    family = is_mission and "ماموریت" or "مرخصی",
+                    type_name = vacation_type_label(r[2], r[3], is_mission),
+                    is_daily = is_daily,
+                    jdate = r[5] or "—",
+                    -- درخواست روزانه ساعت معنادار ندارد — UI رسمی هم «------» نشان می‌دهد
+                    time_from = (not is_daily) and blank_to_nil(r[6]) or nil,
+                    time_to = (not is_daily) and blank_to_nil(r[7]) or nil,
+                    total_minutes = tonumber(r[8]) or 0,
+                    used_minutes = tonumber(r[9]) or 0,
+                    status_code = tonumber(r[10]) or 0,
+                    status = request_status_label(r[10]),
+                    description = r[11] or "",
+                    created = r[12] or "—",
+                    verify_count = tonumber(r[13]) or 0,
+                    verify_done = tonumber(r[14]) or 0,
+                    sort_key = tonumber(r[15]) or 0
                 })
             end
         end
 
         local ot_rows = fetch_rows([[
 SELECT r.ID,
-  ]] .. sql_jalali_key("rdd") .. [[ AS jdate_key,
+  ]] .. sql_jalali_date("r.DAY_DATE") .. [[ AS jdate,
   ]] .. sql_time_of_day("r.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_time_of_day("r.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(r.TIME_TO - r.TIME_FROM, 0)") .. [[ AS total_minutes,
   COALESCE(r.STATUS, 0) AS status_code,
   COALESCE(r.DESCRIPTION, '') AS description,
-  ]] .. sql_jalali_key("rdc") .. [[ AS created_key,
+  ]] .. sql_jalali_date("r.DATE_CREATE") .. [[ AS created_j,
   r.DAY_DATE AS day_raw
 FROM hr_overtime_request r
-LEFT JOIN report_dimdate rdd ON rdd.DATEKEY = ]] .. sql_daykey("r.DAY_DATE") .. [[
-LEFT JOIN report_dimdate rdc ON rdc.DATEKEY = ]] .. sql_daykey("r.DATE_CREATE") .. [[
-WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ]] .. sql_filetime(from_date) ..
-      [[ AND ]] .. sql_filetime(to_date) .. [[
+WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ? AND ?
 ORDER BY r.DAY_DATE DESC, r.ID DESC
 LIMIT 100
-]], { personnel.personnel_id }, 9)
+]], { personnel.personnel_id, from_date, requests_to_date }, 9)
         if ot_rows ~= nil then
             for _, r in ipairs(ot_rows) do
                 table.insert(requests, {
                     id = tonumber(r[1]),
                     family = "اضافه‌کاری",
                     type_name = "درخواست اضافه‌کاری",
-                    jdate = jalali_from_key(r[2]) or "—",
+                    jdate = r[2] or "—",
                     time_from = blank_to_nil(r[3]),
                     time_to = blank_to_nil(r[4]),
                     total_minutes = tonumber(r[5]) or 0,
                     status_code = tonumber(r[6]) or 0,
                     status = request_status_label(r[6]),
                     description = r[7] or "",
-                    created = jalali_from_key(r[8]) or "—",
+                    created = r[8] or "—",
                     verify_count = 0,
                     verify_done = 0,
                     sort_key = tonumber(r[9]) or 0
@@ -1610,36 +1728,33 @@ LIMIT 100
 
         local tw_rows = fetch_rows([[
 SELECT r.ID,
-  ]] .. sql_jalali_key("rdd") .. [[ AS jdate_key,
+  ]] .. sql_jalali_date("r.DAY_DATE") .. [[ AS jdate,
   ]] .. sql_time_of_day("r.TIME_FROM") .. [[ AS time_from,
   ]] .. sql_time_of_day("r.TIME_TO") .. [[ AS time_to,
   ]] .. sql_ticks_to_minutes("GREATEST(r.TIME_TO - r.TIME_FROM, 0)") .. [[ AS total_minutes,
   COALESCE(r.STATUS, 0) AS status_code,
   COALESCE(r.DESCRIPTION, '') AS description,
-  ]] .. sql_jalali_key("rdc") .. [[ AS created_key,
+  ]] .. sql_jalali_date("r.DATE_CREATE") .. [[ AS created_j,
   r.DAY_DATE AS day_raw
 FROM hr_telework_request r
-LEFT JOIN report_dimdate rdd ON rdd.DATEKEY = ]] .. sql_daykey("r.DAY_DATE") .. [[
-LEFT JOIN report_dimdate rdc ON rdc.DATEKEY = ]] .. sql_daykey("r.DATE_CREATE") .. [[
-WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ]] .. sql_filetime(from_date) ..
-      [[ AND ]] .. sql_filetime(to_date) .. [[
+WHERE r.PERSONNEL_ID = ? AND r.DAY_DATE BETWEEN ? AND ?
 ORDER BY r.DAY_DATE DESC, r.ID DESC
 LIMIT 100
-]], { personnel.personnel_id }, 9)
+]], { personnel.personnel_id, from_date, requests_to_date }, 9)
         if tw_rows ~= nil then
             for _, r in ipairs(tw_rows) do
                 table.insert(requests, {
                     id = tonumber(r[1]),
                     family = "دورکاری",
                     type_name = "درخواست دورکاری",
-                    jdate = jalali_from_key(r[2]) or "—",
+                    jdate = r[2] or "—",
                     time_from = blank_to_nil(r[3]),
                     time_to = blank_to_nil(r[4]),
                     total_minutes = tonumber(r[5]) or 0,
                     status_code = tonumber(r[6]) or 0,
                     status = request_status_label(r[6]),
                     description = r[7] or "",
-                    created = jalali_from_key(r[8]) or "—",
+                    created = r[8] or "—",
                     verify_count = 0,
                     verify_done = 0,
                     sort_key = tonumber(r[9]) or 0
@@ -1661,6 +1776,141 @@ for _, r in ipairs(requests) do
     elseif r.status_code == 0 then
         request_counts.pending = request_counts.pending + 1
     end
+end
+
+-- ── section: payslips (فقط خواندنی — hr_payslip از طریق ORDER_ID→حکم به پرسنل می‌رسد) ────
+local payslips = {}
+local payslips_err = nil
+do
+    local ok, err = pcall(function()
+        local rows, query_err = fetch_rows([[
+SELECT ps.ID, COALESCE(rd1.JNDATE, '') AS from_j, COALESCE(rd2.JNDATE, '') AS to_j,
+       CAST(COALESCE(ps.WORKING_HOURS, 0) AS SIGNED) AS daily_seconds
+FROM hr_payslip ps
+JOIN hr_personnel_order o ON o.ID = ps.ORDER_ID
+LEFT JOIN report_dimdate rd1 ON rd1.DATEKEY = ps.DATE_FROM
+LEFT JOIN report_dimdate rd2 ON rd2.DATEKEY = ps.DATE_TO
+WHERE o.PERSONNEL_ID = ?
+ORDER BY ps.DATE_FROM DESC
+LIMIT 24
+]], { personnel.personnel_id }, 4)
+        if rows == nil then
+            payslips_err = tostring(query_err)
+            return
+        end
+        local by_id = {}
+        for _, r in ipairs(rows) do
+            local entry = {
+                id = tonumber(r[1]) or 0,
+                from_j = r[2] ~= "" and r[2] or "—",
+                to_j = r[3] ~= "" and r[3] or "—",
+                daily_minutes = math.floor((tonumber(r[4]) or 0) / 60),
+                items = {}
+            }
+            table.insert(payslips, entry)
+            by_id[entry.id] = entry
+        end
+        if #payslips == 0 then return end
+        -- اقلام قابل نمایش فیش (PAYSLIP_VIEW=1) با مقدار غیرصفر — فقط همان مقادیر ثبت‌شدهٔ
+        -- سامانه نمایش داده می‌شود؛ هیچ جمع/محاسبه‌ای این‌طرف انجام نمی‌شود
+        -- pd.TYPE از نمونهٔ زندهٔ فیش‌های همین کاربر: ۲=اضافات/پرداختی (حقوق ثابت، سایر
+        -- پرداختنی، معوقات)، ۱=کسورات (حق بیمهٔ کارمند، حق مالیات کارمند، بیمهٔ تکمیلی)،
+        -- ۰=اطلاعات پایه (جمع رسمی، روزکارکرد، پارامترها، تعداد اولاد)
+        local item_rows = fetch_rows([[
+SELECT pd.PAYSLIP_ID, COALESCE(pd.NAME, ''),
+       CAST(ROUND(COALESCE(pd.VALUE_, 0)) AS SIGNED), COALESCE(pd.TYPE, 0)
+FROM hr_payslip_payment_detail pd
+JOIN hr_payslip ps ON ps.ID = pd.PAYSLIP_ID
+JOIN hr_personnel_order o ON o.ID = ps.ORDER_ID
+WHERE o.PERSONNEL_ID = ? AND pd.PAYSLIP_VIEW = 1 AND COALESCE(pd.VALUE_, 0) <> 0
+ORDER BY pd.PAYSLIP_ID, pd.TYPE DESC, pd.R_ORDER
+LIMIT 3000
+]], { personnel.personnel_id }, 4)
+        if item_rows ~= nil then
+            for _, r in ipairs(item_rows) do
+                local holder = by_id[tonumber(r[1]) or 0]
+                if holder ~= nil then
+                    table.insert(holder.items, {
+                        n = tostring(r[2] or ""),
+                        v = tonumber(r[3]) or 0,
+                        t = tonumber(r[4]) or 0
+                    })
+                end
+            end
+        end
+
+        -- جمع حقوق هر فیش: جمع اضافات (TYPE=2) منهای جمع کسورات (TYPE=1) روی «همهٔ» اقلام.
+        -- صحت فرمول با دادهٔ زنده اثبات شد (۱۴۰۵/۰۶/۰۹): برای هر سه فیش موجود، حاصل دقیقاً
+        -- برابر قلمِ ذخیره‌شدهٔ «جمع رسمی» خود سامانه است (310,333,333 − 21,723,333 = 288,610,000)
+        local sum_rows = fetch_rows([[
+SELECT pd.PAYSLIP_ID,
+       CAST(SUM(CASE WHEN pd.TYPE = 2 THEN pd.VALUE_ ELSE 0 END) AS SIGNED),
+       CAST(SUM(CASE WHEN pd.TYPE = 1 THEN pd.VALUE_ ELSE 0 END) AS SIGNED)
+FROM hr_payslip_payment_detail pd
+JOIN hr_payslip ps ON ps.ID = pd.PAYSLIP_ID
+JOIN hr_personnel_order o ON o.ID = ps.ORDER_ID
+WHERE o.PERSONNEL_ID = ?
+GROUP BY pd.PAYSLIP_ID
+]], { personnel.personnel_id }, 3)
+        if sum_rows ~= nil then
+            for _, r in ipairs(sum_rows) do
+                local holder = by_id[tonumber(r[1]) or 0]
+                if holder ~= nil then
+                    holder.adds = tonumber(r[2]) or 0
+                    holder.deds = tonumber(r[3]) or 0
+                    holder.net = holder.adds - holder.deds
+                end
+            end
+        end
+    end)
+    if not ok then payslips_err = tostring(err) end
+end
+
+-- ── section: loans (وام/مساعده — فقط خواندنی) ────────────────────────
+local loans = {}
+local loans_err = nil
+do
+    local ok, err = pcall(function()
+        local rows, query_err = fetch_rows([[
+SELECT l.ID, COALESCE(l.TYPE, 0), CAST(COALESCE(l.AMOUNT, 0) AS SIGNED),
+       COALESCE(l.INSTALLMENTS_COUNT, 0), COALESCE(l.STATUS, 0),
+       ]] .. sql_jalali_date("l.date_request") .. [[ AS request_j,
+       ]] .. sql_jalali_date("l.DATE_START_INSTALLMENTS") .. [[ AS start_j,
+       COALESCE(ls.NAME, '') AS setting_name,
+       (SELECT COUNT(*) FROM hr_loan_verify lv WHERE lv.LOAN_ID = l.ID) AS verify_count,
+       (SELECT COUNT(*) FROM hr_loan_verify lv WHERE lv.LOAN_ID = l.ID AND lv.STATUS = 1) AS verify_done
+FROM hr_loan l
+LEFT JOIN hr_loan_setting ls ON ls.ID = l.TYPE
+WHERE l.PERSONNEL_ID = ?
+ORDER BY l.ID DESC
+LIMIT 50
+]], { personnel.personnel_id }, 10)
+        if rows == nil then
+            loans_err = tostring(query_err)
+            return
+        end
+        for _, r in ipairs(rows) do
+            local loan_type = tonumber(r[2]) or 0
+            local type_label = "وام"
+            if loan_type == 0 then
+                type_label = "مساعده"
+            elseif tostring(r[8] or "") ~= "" then
+                type_label = tostring(r[8])
+            end
+            table.insert(loans, {
+                id = tonumber(r[1]),
+                type_label = type_label,
+                amount = tonumber(r[3]) or 0,
+                installments = tonumber(r[4]) or 0,
+                status_code = tonumber(r[5]) or 0,
+                request_j = r[6] ~= "" and r[6] or "—",
+                start_j = r[7] ~= "" and r[7] or "—",
+                verify_count = tonumber(r[9]) or 0,
+                verify_done = tonumber(r[10]) or 0
+            })
+        end
+    end)
+    if not ok then loans_err = tostring(err) end
 end
 
 -- ── section: leave balance ───────────────────────────────────────────
@@ -1692,10 +1942,15 @@ do
                         local item_personnel = tonumber(item.personnel_id)
                         if item_personnel == nil or item_personnel == personnel.personnel_id then
                             local raw_value = tonumber(item.value)
-                            if raw_value ~= nil then
+                            -- واحد value «ثانیه» است، نه tick (تاییدشده ۱۴۰۵/۰۶/۰۷: مقدار خام
+                            -- 273000 = 75:50 ساعت ≈ همان «۹ روز و ...» که فرم رسمی برای همین
+                            -- کاربر نشان می‌داد — تقسیم قبلی بر ده‌میلیون همیشه صفر می‌ساخت).
+                            -- سومین فیلد HR با همین دام واحد در یک روز؛ WORKING_HOURS و
+                            -- LEAVE_PER_MONTH هم ثانیه بودند. صفر → سقوط به مسیر دیتابیس.
+                            if raw_value ~= nil and raw_value > 0 then
                                 leave_balance_raw = raw_value
                                 leave_balance = {
-                                    remained_minutes = math.floor((raw_value / 10000000 / 60) + 0.5)
+                                    remained_minutes = math.floor((raw_value / 60) + 0.5)
                                 }
                                 leave_balance_source = "api"
                                 break
@@ -1713,12 +1968,10 @@ do
         local rows, query_err = fetch_rows([[
 SELECT ]] .. sql_ticks_to_minutes("rec.LEAVE_REMAINED") .. [[ AS remained_minutes,
        ]] .. sql_ticks_to_minutes("rec.PAID_LEAVE_REMAINED") .. [[ AS paid_remained_minutes,
-       ]] .. sql_jalali_key("rdf") .. [[ AS date_from_key,
-       ]] .. sql_jalali_key("rdt") .. [[ AS date_to_key
+       ]] .. sql_jalali_date("lst.DATE_FROM") .. [[ AS date_from_j,
+       ]] .. sql_jalali_date("lst.DATE_TO") .. [[ AS date_to_j
 FROM hr_leave_remained_records rec
 JOIN hr_leave_remained lst ON lst.ID = rec.LIST_ID
-LEFT JOIN report_dimdate rdf ON rdf.DATEKEY = ]] .. sql_daykey("lst.DATE_FROM") .. [[
-LEFT JOIN report_dimdate rdt ON rdt.DATEKEY = ]] .. sql_daykey("lst.DATE_TO") .. [[
 WHERE rec.PERSONNEL_ID = ?
 ORDER BY lst.DATE_TO DESC, lst.ID DESC
 LIMIT 1
@@ -1733,12 +1986,13 @@ LIMIT 1
                 remained_minutes = tonumber(rows[1][1]) or 0,
                 paid_remained_minutes = tonumber(rows[1][2]) or 0
             }
-            leave_balance_period = (jalali_from_key(rows[1][3]) or "—") .. " تا " ..
-                (jalali_from_key(rows[1][4]) or "—")
+            leave_balance_period = (rows[1][3] or "—") .. " تا " .. (rows[1][4] or "—")
             leave_balance_source = "db"
         end
     end)
     if not ok then leave_balance_err = tostring(err) end
+    -- مثل حکم: وقتی یکی از دو منبع جواب داده، خطای منبع دیگر در بنر نمایش داده نمی‌شود
+    if leave_balance_source ~= nil then leave_balance_err = nil end
 end
 
 local leave_balance_note = "برای این پرسنل دوره‌ای برای محاسبهٔ مانده ثبت نشده است"
@@ -1780,16 +2034,15 @@ local celebration_err = nil
 do
     local ok, err = pcall(function()
         local rows = fetch_rows([[
-SELECT ]] .. sql_jalali_key("rd") .. [[ AS jdate_key, COALESCE(rd.JTDAY, '—') AS jday_name,
+SELECT COALESCE(rd.JNDATE, '') AS jdate, COALESCE(rd.JTDAY, '—') AS jday_name,
        COALESCE(rd.JYDAY, 0) AS jyday, COALESCE(rd.JMONTH, 0) AS jmonth,
        COALESCE(rd.JMDAY, 0) AS jmday, COALESCE(rd.JTMONTH, '—') AS jmonth_name
 FROM report_dimdate rd
-WHERE rd.DATEKEY = (]] .. sql_filetime(to_date) .. [[ - MOD(]] .. sql_filetime(to_date) ..
-      [[, 864000000000))
+WHERE rd.DATEKEY = (? - MOD(?, 864000000000))
 LIMIT 1
-]], {}, 6)
+]], { to_date, to_date }, 6)
         if rows ~= nil and #rows > 0 then
-            today_meta.jdate = jalali_from_key(rows[1][1]) or "—"
+            today_meta.jdate = rows[1][1] or "—"
             today_meta.jday_name = rows[1][2] or "—"
             today_meta.jyday = tonumber(rows[1][3]) or 0
             today_meta.jmonth = tonumber(rows[1][4]) or 0
@@ -1803,33 +2056,32 @@ LIMIT 1
             -- «شاغل» است که بات ۴۴۴ و hr_dashboard_report_bot استفاده می‌کنند.
             local bd_rows = fetch_rows([[
 SELECT p.FULLNAME, COALESCE(rd.JMDAY, 0) AS jmday, COALESCE(rd.JTMONTH, '—') AS jmonth_name,
-       COALESCE(rd.JMONTH, 0) AS jmonth, ]] .. sql_jalali_key("rd") .. [[ AS birth_key,
-       COALESCE(ou.NAME, N'—') AS unit_name, h.PERSONNEL_ID
+       COALESCE(rd.JMONTH, 0) AS jmonth, ]] .. sql_jalali_date("uf.BIRTHDAY") .. [[ AS birth_j,
+       COALESCE(ou.NAME, N'—') AS unit_name, h.PERSONNEL_ID, p.id AS profile_id
 FROM hr_personnels h
 JOIN profile_main p ON p.id = h.PROFILE_ID
 JOIN profile_user_info uf ON uf.id = p.id
 JOIN report_dimdate rd ON rd.DATEKEY = (uf.BIRTHDAY - MOD(uf.BIRTHDAY, 864000000000))
 LEFT JOIN hr_personnel_order o ON o.ID = (
   SELECT o2.ID FROM hr_personnel_order o2
-  WHERE o2.PERSONNEL_ID = h.PERSONNEL_ID
-    AND o2.DATE_FROM <= ]] .. sql_filetime(to_date) .. [[
-    AND o2.DATE_TO >= ]] .. sql_filetime(to_date) .. [[
+  WHERE o2.PERSONNEL_ID = h.PERSONNEL_ID AND o2.DATE_FROM <= ? AND o2.DATE_TO >= ?
   ORDER BY o2.ID DESC LIMIT 1)
 LEFT JOIN org_organization_unit oou ON oou.ID = o.UNIT_ID
 LEFT JOIN org_units ou ON ou.ID = oou.UNIT_ID
 WHERE h.HIRING_STATUS = 2 AND h.ORG_ID = ? AND uf.BIRTHDAY > 0 AND rd.JMONTH = ?
 ORDER BY rd.JMDAY, p.FULLNAME
 LIMIT 200
-]], { personnel.org_id or 0, today_meta.jmonth }, 7)
+]], { to_date, to_date, personnel.org_id or 0, today_meta.jmonth }, 8)
             if bd_rows ~= nil then
                 for _, r in ipairs(bd_rows) do
                     local entry = {
                         name = r[1] or "-",
                         jmday = tonumber(r[2]) or 0,
                         jmonth_name = r[3] or "—",
-                        birth_date = jalali_from_key(r[5]) or "—",
+                        birth_date = r[5] or "—",
                         unit_name = r[6] or "—",
                         personnel_id = tonumber(r[7]),
+                        profile_id = tonumber(r[8]) or 0,
                         is_self = (tonumber(r[7]) == personnel.personnel_id)
                     }
                     entry.display_date = tostring(entry.jmday) .. " " .. entry.jmonth_name
@@ -2267,6 +2519,13 @@ end
 if format_out == "json" then
     teamyar.write_result(json.encode({
         ok = true,
+        range = {
+            mode = month_label ~= nil and "month" or "explicit",
+            month_label = month_label,
+            from_jalali = month_from_j,
+            to_jalali = month_to_j,
+            days = days_back
+        },
         personnel = personnel,
         employment = employment,
         employment_settings = employment_settings,
@@ -2310,6 +2569,11 @@ end
 -- کاربر می‌گذاشت. حالا در بدترین حالت هم یک صفحهٔ خطای تمیز فارسی برگردانده می‌شود.
 local render_ok, render_output = pcall(function()
 
+-- لینک بازگشت داخل خودِ صفحه‌های داخلی — علاوه بر دکمهٔ نوارابزار، تا برگشتن به نمای کلی
+-- از هر صفحه بدون جست‌وجو ممکن باشد (بازخورد کاربر 1405/06/08)
+local PAGE_BACK_LINK = '<div class="page-back"><button type="button" class="link-btn" ' ..
+    'onclick="goToPage(\'overview\')">→ بازگشت به نمای کلی</button></div>'
+
 local function pill(text, tone)
     local cls = "pill"
     if tone == "solid" then cls = "pill pill-solid" end
@@ -2334,12 +2598,14 @@ local function empty_row(colspan, message)
         escape_html(message) .. '</td></tr>'
 end
 
--- KPI strip
+-- KPI strip — در حالت ماه، عنوان کارت‌ها اسم خود ماه را می‌گیرد («کارکرد خالص شهریور») تا
+-- روشن باشد همهٔ اعداد مال همان ماه شمسی‌اند، نه یک پنجرهٔ شناور
+local range_word = month_label or "بازه"
 local kpi_html = {}
-table.insert(kpi_html, kpi_card("کارکرد خالص بازه",
+table.insert(kpi_html, kpi_card("کارکرد خالص " .. range_word,
     minutes_to_hm(totals.work) .. ' <small>ساعت</small>',
     "روزهای حضور: " .. fmt_num(totals.present_days)))
-table.insert(kpi_html, kpi_card("اضافه‌کاری محاسبه‌شده",
+table.insert(kpi_html, kpi_card("اضافه‌کاری " .. range_word,
     minutes_to_hm(totals.overtime) .. ' <small>ساعت</small>',
     "مبنا: مقدار نهایی حکم"))
 if leave_balance ~= nil then
@@ -2350,15 +2616,15 @@ else
     table.insert(kpi_html, kpi_card("مانده مرخصی", '<span class="dash">—</span>',
         leave_balance_note))
 end
-table.insert(kpi_html, kpi_card("تاخیر محاسبه‌شده",
+table.insert(kpi_html, kpi_card("کسر کار " .. range_word,
     minutes_to_hm(totals.delay) .. ' <small>ساعت</small>',
     "روزهای ناقص: " .. fmt_num(totals.incomplete_days)))
-table.insert(kpi_html, kpi_card("مرخصی و ماموریت بازه",
+table.insert(kpi_html, kpi_card("مرخصی و ماموریت " .. range_word,
     minutes_to_hm(totals.leave + totals.mission) .. ' <small>ساعت</small>',
     "مرخصی " .. minutes_to_hm(totals.leave) .. " + ماموریت " .. minutes_to_hm(totals.mission)))
 table.insert(kpi_html, kpi_card("درخواست‌های در انتظار",
     fmt_num(request_counts.pending),
-    "کل درخواست‌های بازه: " .. fmt_num(request_counts.total)))
+    "کل درخواست‌های " .. range_word .. ": " .. fmt_num(request_counts.total)))
 
 -- Hero (today)
 local hero_html
@@ -2391,7 +2657,6 @@ do
         '<div class="hero-main">' ..
         '<div class="hero-badges">' .. pill(today_meta.jday_name .. " " .. today_meta.jdate, "solid") ..
         ' ' .. pill(status_text, nil) .. '</div>' ..
-        '<h2>' .. escape_html(daily_message) .. '</h2>' ..
         '<p>' .. escape_html(shift_text) .. '</p>' ..
         '<div class="hero-actions">' ..
         '<button type="button" class="btn-hero" data-goto="attendance">تردد و کارکرد من</button>' ..
@@ -2467,7 +2732,13 @@ if #daily_rows == 0 then
 end
 
 -- Attendance events table
-local EXT_TYPE_LABELS = { [0] = "تردد عادی", [1] = "مرخصی", [2] = "ماموریت", [3] = "ثبت دستی" }
+-- معنای واقعی hr_ext_time.TYPE (تاییدشده 1405/06/07 — شمارش هر TYPE دقیقاً با شمارش رکوردهای
+-- hr_vacation جفت شد: TYPE=2↔ماموریت روزانه (۳۰=۳۰)، TYPE=3↔ماموریت ساعتی (۷۷=۷۷)،
+-- TYPE=4↔مرخصی روزانه (۲۷۳۲=۲۷۳۲)، TYPE=5↔مرخصی ساعتی (۲۱۷۷=۲۱۷۷)؛ TYPE=1 با ۴۳۵۸۲ ردیف و
+-- تطبیق مستقیم با ترددهای عادی دستگاه پرسنل ۳۵۶ = تردد عادی. نگاشت قبلی ([1]=مرخصی) همهٔ
+-- ترددهای عادی را «مرخصی» نشان می‌داد.)
+local EXT_TYPE_LABELS = { [1] = "تردد عادی", [2] = "ماموریت روزانه", [3] = "ماموریت ساعتی",
+    [4] = "مرخصی روزانه", [5] = "مرخصی ساعتی" }
 local event_rows = {}
 for _, e in ipairs(events) do
     local type_label = EXT_TYPE_LABELS[e.ext_type] or ("نوع " .. e.ext_type)
@@ -2498,21 +2769,33 @@ for _, r in ipairs(requests) do
     if r.time_from ~= nil and r.time_to ~= nil then
         hours_text = r.time_from .. " تا " .. r.time_to
     end
+    -- درخواست روزانه مثل UI رسمی «یک روز» نمایش داده می‌شود، نه دقیقهٔ موظفی همان روز
+    local duration_text = r.is_daily and "یک روز" or minutes_to_hm_or_dash(r.total_minutes)
+    -- لغو فقط برای درخواست‌های hr_vacation (مرخصی/ماموریت — فیلد is_daily فقط آن‌ها را دارند)
+    -- در وضعیت «در انتظار» — همان قاعده‌ای که سرور هم جداگانه اعمال می‌کند
+    local cancel_cell = "—"
+    if r.is_daily ~= nil and r.status_code == 0 and r.id ~= nil then
+        -- ماموریت هندلر حذف جدا دارد (/hr/mission/delete — تاییدشدهٔ زنده روی رکورد 5699)
+        local cancel_kind = (r.family == "ماموریت") and "m" or "v"
+        cancel_cell = '<button type="button" class="btn-action" onclick="cancelRequest(' ..
+            tostring(r.id) .. ', this, \'' .. cancel_kind .. '\')">لغو درخواست</button>'
+    end
     table.insert(request_rows,
         '<tr data-status="' .. escape_html(r.status) .. '">' ..
         '<td>' .. escape_html(r.jdate) .. '</td>' ..
         '<td>' .. escape_html(r.family) .. '</td>' ..
         '<td>' .. escape_html(r.type_name) .. '</td>' ..
         '<td>' .. escape_html(hours_text) .. '</td>' ..
-        '<td>' .. minutes_to_hm_or_dash(r.total_minutes) .. '</td>' ..
+        '<td>' .. escape_html(duration_text) .. '</td>' ..
         '<td>' .. status_pill(r.status) .. '</td>' ..
         '<td>' .. tostring(r.status_code) .. '</td>' ..
         '<td>' .. escape_html(verify_text) .. '</td>' ..
         '<td>' .. escape_html(r.created) .. '</td>' ..
-        '<td class="cell-wrap">' .. escape_html(r.description) .. '</td></tr>')
+        '<td class="cell-wrap">' .. escape_html(r.description) .. '</td>' ..
+        '<td>' .. cancel_cell .. '</td></tr>')
 end
 if #request_rows == 0 then
-    table.insert(request_rows, empty_row(10, requests_err and ("خطا: " .. requests_err) or
+    table.insert(request_rows, empty_row(11, requests_err and ("خطا: " .. requests_err) or
         "در این بازه درخواستی ثبت نشده است"))
 end
 
@@ -2523,7 +2806,7 @@ for index, r in ipairs(requests) do
     table.insert(request_rows_compact,
         '<tr><td>' .. escape_html(r.jdate) .. '</td>' ..
         '<td>' .. escape_html(r.type_name) .. '</td>' ..
-        '<td>' .. minutes_to_hm_or_dash(r.total_minutes) .. '</td>' ..
+        '<td>' .. escape_html(r.is_daily and "یک روز" or minutes_to_hm_or_dash(r.total_minutes)) .. '</td>' ..
         '<td>' .. status_pill(r.status) .. '</td></tr>')
 end
 if #request_rows_compact == 0 then
@@ -2532,7 +2815,8 @@ if #request_rows_compact == 0 then
 end
 
 -- Profile details
-local MARITAL_LABELS = { [1] = "مجرد", [2] = "متاهل" }
+-- توزیع واقعی MARITAL_STATUS (تاییدشده 1405/06/07): 0=۲۸۱ نفر (ثبت‌نشده)، 1=۸، 2=۱۱
+local MARITAL_LABELS = { [0] = "ثبت نشده", [1] = "مجرد", [2] = "متاهل" }
 local SEX_LABELS = { [1] = "مرد", [2] = "زن" }
 
 local function detail_row(label, value)
@@ -2541,9 +2825,12 @@ local function detail_row(label, value)
 end
 
 -- مقادیر مدت‌دارِ حکم، هر کدام با سقف منطقی خودش (بالا را ببینید)
-local function order_hm(raw_ticks, max_minutes)
-    if raw_ticks == nil then return nil end
-    local minutes = plausible_minutes(math.floor((tonumber(raw_ticks) or 0) / 10000000 / 60 + 0.5), max_minutes)
+-- واحد این فیلدها «ثانیه» است نه tick (تاییدشده 1405/06/07: هم hr_personnel_order در دیتابیس و
+-- هم پاسخ orderInDateGet مقدار 28800=۸ساعت را برمی‌گردانند — تقسیم قبلی بر ده‌میلیون همه را
+-- صفر و در UI «—» می‌کرد)
+local function order_hm(raw_seconds, max_minutes)
+    if raw_seconds == nil then return nil end
+    local minutes = plausible_minutes(math.floor((tonumber(raw_seconds) or 0) / 60 + 0.5), max_minutes)
     if minutes == nil then return nil end
     return minutes_to_hm(minutes)
 end
@@ -2557,6 +2844,7 @@ local order_max_hourly_hm = order_hm(employment.max_hourly_leave_raw, 24 * 60) -
 
 local profile_left = detail_row("نام و نام خانوادگی", personnel.fullname) ..
     detail_row("کد پرسنلی", personnel.personnel_code) ..
+    detail_row("سمت", employment.position_title) ..
     detail_row("واحد سازمانی", employment.unit_name) ..
     detail_row("سرپرست مستقیم", employment.supervisor_name) ..
     detail_row("محل خدمت", (personnel.work_place ~= nil and personnel.work_place ~= "") and
@@ -2586,7 +2874,8 @@ do
         else
             action = '<button type="button" class="btn-action" ' ..
                 'onclick="openCelebration(\'' .. js_str(b.name) .. '\',\'' ..
-                js_str(today_meta.jdate) .. '\')">پیوستن به گفتگوی تبریک</button>'
+                js_str(today_meta.jdate) .. '\',' .. tostring(b.profile_id or 0) ..
+                ')">ارسال تبریک 🎂</button>'
         end
         table.insert(today_cards,
             '<div class="birthday-card"><div class="birthday-avatar">' ..
@@ -2601,7 +2890,8 @@ do
         local action = "—"
         if not b.is_self then
             action = '<button type="button" class="link-btn" onclick="openCelebration(\'' ..
-                js_str(b.name) .. '\',\'' .. js_str(b.display_date) .. '\')">تبریک ←</button>'
+                js_str(b.name) .. '\',\'' .. js_str(b.display_date) .. '\',' ..
+                tostring(b.profile_id or 0) .. ')">تبریک ←</button>'
         end
         local is_today_mark = (b.jmday == today_meta.jmday) and pill("امروز", "solid") or ""
         table.insert(month_rows,
@@ -2644,12 +2934,12 @@ do
             'تایید شده است؛ چون این کار روی سامانهٔ زنده گروه و گفتگوی واقعی می‌سازد، ' ..
             '<code>celebration_enabled</code> را در تنظیمات همین بات برابر ۱ بگذارید.</div>'
     elseif celebration_group_id == nil then
-        celebration_config_note = '<div class="notice">گروه گفتگوی پیش‌فرض تنظیم نشده است؛ هنگام ' ..
-            'ساخت گفتگوی تبریک، اولین گروه فعالِ ماژول گفتگو استفاده می‌شود. برای انتخاب گروه ' ..
-            'مشخص، مقدار <code>celebration_group_id</code> را در تنظیمات همین بات ثبت کنید.</div>'
+        -- اعلان توسعه‌دهنده‌ای «celebration_group_id» به خواست کاربر (1405/06/09) حذف شد —
+        -- fallback گروه پیش‌فرض بی‌سروصدا کار می‌کند و این متن برای کاربر عادی فقط گیج‌کننده بود
+        celebration_config_note = ""
     end
 
-    celebration_html = '<section id="celebration" class="page">' ..
+    celebration_html = '<section id="celebration" class="page">' .. PAGE_BACK_LINK ..
         '<article class="card message-card">' ..
         '<div class="message-logo"><img alt="140" src="data:image/png;base64,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"></div>' ..
         '<div><div class="title">پیام امروز</div>' ..
@@ -2668,28 +2958,19 @@ do
         '</article></div></section>'
 end
 
--- نوار خطا — فقط وقتی چیزی واقعاً از قلم افتاده باشد.
--- نسخهٔ قبلی هر خطای داخلی را نشان می‌داد، از جمله ACCESS_DENIED فراخوانی APIهایی که fallback
--- دیتابیس‌شان موفق شده بود. نتیجه‌اش یک نوار قرمزِ ترسناک بود در حالی که هیچ داده‌ای کم نبود.
--- حالا اگر منبع جایگزین جواب داده باشد، خطای همان بخش گزارش نمی‌شود.
+-- Error banner
 local error_html = ""
 do
     local messages = {}
-    local function report(label, err, data_is_present)
-        if err ~= nil and not data_is_present then
-            table.insert(messages, label .. ": " .. tostring(err))
-        end
-    end
-    report("حکم کاری", employment_err, employment.order_id ~= nil)
-    report("کارکرد", attendance_err, #daily > 0)
-    report("رویدادهای تردد", events_err, #events > 0)
-    report("درخواست‌ها", requests_err, #requests > 0)
-    report("مانده مرخصی", leave_balance_err, leave_balance ~= nil)
-    report("تولدها", celebration_err, today_meta.jyday > 0)
+    if employment_err then table.insert(messages, "حکم کاری: " .. tostring(employment_err)) end
+    if attendance_err then table.insert(messages, "کارکرد: " .. tostring(attendance_err)) end
+    if events_err then table.insert(messages, "رویدادهای تردد: " .. tostring(events_err)) end
+    if requests_err then table.insert(messages, "درخواست‌ها: " .. tostring(requests_err)) end
+    if leave_balance_err then table.insert(messages, "مانده مرخصی: " .. tostring(leave_balance_err)) end
+    if celebration_err then table.insert(messages, "تولدها: " .. tostring(celebration_err)) end
     if #messages > 0 then
         error_html = '<div class="error-box"><b>بخشی از اطلاعات بارگذاری نشد:</b> ' ..
-            escape_html(table.concat(messages, " | ")) ..
-            '<br>بقیهٔ بخش‌های این صفحه سالم‌اند. لطفاً همین متن را به واحد فناوری اطلاعات بدهید.</div>'
+            escape_html(table.concat(messages, " | ")) .. '</div>'
     end
 end
 
@@ -2733,7 +3014,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .sidefoot{margin-top:26px;border:1px solid #ffffff33;border-radius:12px;padding:13px;font-size:14px;color:#c9d7e6}
 .sidefoot b{display:block;color:#fff;font-size:14px}
 .main{padding:22px}
-.topbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap}
+/* سربرگ همیشه بالای دید می‌ماند (sticky). در بسترهای بدون اسکرول داخلی sticky بی‌اثر و بی‌ضرر است */
+.topbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin:-22px -22px 18px;padding:14px 22px 10px;flex-wrap:wrap;position:sticky;top:0;z-index:60;background:var(--bg);box-shadow:0 6px 14px -10px rgba(0,0,0,.3)}
 h1{font-size:20px;margin:0;font-weight:bold}
 .sub{font-size:14px;color:var(--muted);margin-top:5px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
@@ -2741,7 +3023,7 @@ h1{font-size:20px;margin:0;font-weight:bold}
 .btn-action:hover{background:var(--accent-dark)}
 .page{display:none}.page.active{display:block}
 .hero{background:var(--accent);color:#fff;border-radius:18px;padding:24px;display:grid;grid-template-columns:1.15fr 1fr;gap:26px;margin-bottom:16px}
-.hero h2{font-size:15px;font-weight:bold;margin:14px 0 0;line-height:2}
+.hero h2{font-size:17px;font-weight:bold;margin:14px 0 0;line-height:2.1;color:#fff}
 .hero p{font-size:14px;color:#d6e3f2;margin:8px 0 0}
 .hero-badges{display:flex;gap:8px;flex-wrap:wrap}
 .hero .pill{background:#ffffff26;color:#fff;border-color:transparent}
@@ -2800,9 +3082,9 @@ h1{font-size:20px;margin:0;font-weight:bold}
 .error-box{background:#f5f5f5;border:1px solid var(--accent);color:var(--accent-dark);border-radius:10px;padding:12px 14px;font-size:14px;margin-bottom:14px}
 .notice{background:#f5f5f5;border:1px solid var(--line);border-right:4px solid var(--accent);border-radius:10px;padding:12px 14px;font-size:14px;margin:14px 0}
 .notice code{background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:14px}
-.message-card{display:flex;gap:18px;align-items:flex-start}
+.message-card{display:flex;gap:18px;align-items:flex-start;border-right:5px solid var(--accent);background:linear-gradient(180deg,#fff 0%,#f5f5f5 100%)}
 .message-logo img{height:44px;width:auto}
-.message-text{font-size:15px;font-weight:bold;margin:0;line-height:2.1}
+.message-text{font-size:18px;font-weight:bold;margin:6px 0 4px;line-height:2.2;color:var(--accent)}
 .birthday-grid{display:grid;gap:12px}
 .birthday-card{display:flex;gap:14px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:13px}
 .birthday-avatar{width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:15px;font-weight:bold;flex-shrink:0}
@@ -2820,6 +3102,42 @@ h1{font-size:20px;margin:0;font-weight:bold}
 .modal-body p{margin:10px 0;line-height:2}
 .modal-body ul{margin:6px 0 14px;padding-right:20px}
 .modal-body li{margin:6px 0}
+.page-back{margin-bottom:10px}
+.cal-pop{position:absolute;top:100%;right:0;z-index:120;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 28px -12px rgba(0,0,0,.35);padding:10px;width:252px;display:none}
+.cal-head{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px}
+.cal-head b{font-size:14px;color:var(--accent)}
+.cal-nav{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:4px 10px;font-size:14px;font-weight:bold;cursor:pointer}
+.cal-nav:disabled{background:#ccc;cursor:default}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-grid span{font-size:12px;color:var(--muted);text-align:center;padding:2px 0;font-weight:bold}
+.cal-day{border:1px solid transparent;background:#f5f5f5;border-radius:7px;font-size:14px;padding:5px 0;text-align:center;cursor:pointer}
+.cal-day:hover{background:var(--accent);color:#fff}
+.cal-day.weekend{color:#999;background:#fff;border:1px solid #eee}
+.cal-day.today{border:2px solid var(--accent);font-weight:bold}
+.cal-day.blank{visibility:hidden}
+.page-back .link-btn{font-size:14px;font-weight:bold}
+.req-form{display:flex;flex-direction:column;gap:10px}
+.req-row{display:flex;gap:14px;flex-wrap:wrap}
+.req-form label{display:flex;flex-direction:column;gap:5px;font-size:14px;font-weight:bold;min-width:150px;flex:1}
+.req-form input,.req-form select,.req-form textarea{font-size:14px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-weight:normal}
+.req-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+/* کشوی ساعت — هم‌قد و هم‌خانوادهٔ بقیهٔ ورودی‌ها، اعداد وسط‌چین (بازخورد کاربر 1405/06/09) */
+.time-pick{display:flex;gap:8px;align-items:center;direction:ltr}
+.time-pick b{font-size:16px;color:var(--accent);font-weight:bold}
+.time-pick select{flex:1;min-width:72px;padding:9px 8px;font-size:15px;font-weight:bold;
+  color:var(--accent);text-align:center;text-align-last:center;border:1px solid var(--line);
+  border-radius:9px;background:#fff;cursor:pointer}
+.time-pick select:focus{border-color:var(--accent);outline:none}
+/* سطر عنوان گروه در مودال فیش حقوقی */
+.ps-group td{background:#f5f5f5;color:var(--accent);font-weight:bold;font-size:14px;text-align:right}
+.ps-sum td{border-top:2px solid var(--line);font-weight:bold}
+.ps-net td{background:var(--accent);color:#fff !important;font-weight:bold;font-size:15px}
+/* بنر پیام امروز — جایگاه ویژه بین hero و کارت‌های آماری */
+.message-banner{display:flex;gap:14px;align-items:center;margin:14px 0;border:1px solid var(--line);
+  border-right:6px solid var(--accent);background:linear-gradient(90deg,#f5f5f5 0%,#fff 30%)}
+.message-chip{flex-shrink:0;background:var(--accent);color:#fff;font-size:14px;font-weight:bold;
+  border-radius:999px;padding:7px 14px;white-space:nowrap}
+.message-banner-text{margin:0;font-size:17px;font-weight:bold;color:var(--accent);line-height:2}
 .thread{display:grid;gap:10px;margin:14px 0;max-height:34vh;overflow-y:auto}
 .thread-item{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .thread-item b{font-size:14px;color:var(--accent)}
@@ -2839,13 +3157,14 @@ textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 
 <aside class="sidebar">
   <div class="brand">
     <img alt="140" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPEAAABkCAYAAABXYNb5AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAA9rSURBVHhe7Z15bFz7VccLtGUp/FWBRKFiK2YpuAVUtrKoLAVURAWqVCGWqkWIklZlEUJQeK7aB61KaYHqvZe+vCx2Fu8erzPet/E+seM13mI78ZI8O44d746370HnvpnUOR47HnvuGc/M+UhfOZKde8/vN7/PeGZ87++8CcAogEcu5z6AHgCZAP4awDvfFCMA5IepTyN/KWvRAMA/AViIQV6WtWgA4ANhaol25gHcA9AM4OsAPgTg22UtagBYJmUArAK4BCBF1uM2AOplPRoA+KSsRQMAX5C1aADguqxFAwC/L2vRAMAdAP8YE5n5WUUWpAWAdQD/IGtyEwBVsg4N+BWIrEUDAJ+TtSiRLmvRAMAHZSGaAOgD8H5Zl6vEUuIQAC7KutzCJFYjKSVmAOwC+LiszTXOgsQMgGuyNjcwidVIWolDADgn63OFsyIxo/E+yiRWI+klZgB8WtYYdc6SxAx/gi1rjCYmsRomcRAAn5F1RpWzJjEDIFvWGS1MYjVM4n0A+HtZa9Q4ixIzAHJkrdHAJFbDJBbwn6BkvVHhrErMAMgjom+RNZ8Gk1gNkzgMfPGNrPnUnGWJGQAFRPStsu6TYhKrYRIfAoB/lnWfirMuMQPAEy2RTWI1TOKj+RdZ+4mJB4kZAEVE9G2y/kgxidUwiZ8DgH+V9Z+IeJGYAVBMRG+WY4iEJJT487IWJUziYwDg3+QYIiaeJGYAlJ5GZJNYDZP4mAB4QY4jIuJNYgaAl4jeIsdyHExiNUziCOC3PXIsxyYeJWYA+IjorXI8z8MkVsMkjhB+rOR4jkW8SswAqIj0/k2TWA2T+AQAeFGO6bnEs8QMgMpIRDaJ1TCJTwiA/5TjOpJ4l5gBUE1E3yHHFg6TWA2T+BQA+JIc26EkgsQMgFoA3ynHJzGJ1TCJTwmAL8vxhSVRJGYA1BHRd8kx7sckVsMkjgIAviLHeIBEkjhIw1Eim8RqmMRRAsBX5TifIQEl5kE3AnibHCtjEqthEkcRAF+TY31KIkrMAGgiou8OM16TWAeTOMoA+F85XodElZgJbu79PWK8fI+yOjGU+EVZixImsQvwZvVyzAktcRB+j/z0Ek0AX5Q/oIFJrEOiS8wc+LArCSTmQV/YN94Py+9rYBLrkAwSMwD+Yv+g1+QPJCLc3iM43rdzGxn5fbcB8LH9i02LWL0nBpAha9GAezHJWhIRACsAvj806ECwj4xqVlfXtlZW12h5ZdW1bG4+2T/o/tDuILyb5jMzosCjxaV/v5DhScnI8jrJ4ni8KR5vdYq32p9S7e9I6ejoSenpGUwZHBxPmZl5mLK8vJzC/apOmRcB9AIYD5OJQ3L3kHATMZnJQ3IRwLu0s7u7+1G51jSys7M7tbLC69m9Nc2+7OzsPF1TAM47EvNuGbHIleuFA5l55XTleqFL8dDVrGIqq2igyakHoUF/MCjx+/b5pUJTaxfOX8zeu3zN4yQjs2gvM7dsL7+ocq/UV79XXduy19zSudfZ1b83ODS2Nzn1YG9hcWlve3tnD8Bpwh0p37fvsX5zMPv/LfOWQ/LWcOFr18Pk08F2JtqplGtNI9dzy957NauE0jOLw6zF6CUzt4zq/R3Ok0Wwl9n37X8losqljPz+6zleunS1wLVczMin85ey6ZXXsmhi0hH56fs03qReiuYmzW236NXLuZR+o8jJtewSys73kaekhrwVfqpraKe29m7q7hmkkdG7NHN/jpaWVwmQR4ocAHMA3vPsI+Au3AVS1qEBgBpZiwYX0vPezY/r5euFB9ZhNPNaeh69fCHTEXp9Y4vH+wlZixqXr3kGbuT66PI1j+u5mFFA6ZklNDQycYefNfn8wffG03IRuEVTaxedv5j9tKaMzCLnWTW/qJJKffVUXdtCzS2d1NnVT4NDY86rh4XFJdrZ2ZWHOhEAFkO/kTUA8LeyBg34OgBZiwbpmcWpGfxbmEUOswajHf6FUFbRRPPzi652TDkS919OPxseeG5hxfbCwsLTBuf824mbRsuF4AaxlpgB8BjALz77SLhDskmcmVmcyi+nHZHDrD83cjW7lMqrm3tkLWpcyy4ZyC2qcl5WauR6TinleCqotKLxmUUM4OcAPJKLIdqcBYmDLAH4pf1z4AZJJ3GeLzUzz0s3cssOrD23kp1fTll53hlZixo5Bb6BYm8d5RT4VJLrKacSXwMP/HdkLUT0Xrf/Xn6GJGZY5F+R8xBNkk3ivOKaVH4s8worDqw9t+IpqaacfN+8rEWNwtLqgYrqFioqrVFJcVktVda2Uomv0fmEWhJ8af1QLopoccYk5sW+DOBX5TxEi2STuNjnT+XHscRbd2DtuRVvRSMVllbHTuKKqsaBhqabVF7lV0lFdRP5mzupsrY5rMQMgJ/lT3LlwogGZ01iJnjBwPvlPESDZJO4pqYttaq2hSprmg+sPbdSU9/GX2MncX1j+0BHoJcaGttV0ujvoEBnPzU23zxUYgbAzwCYlYvjtJxFiRm+eg3Ar8t5OC3JJrG/rSu1qfkm+ZsCB9aeW2lp6+avsZO4vb1noLdvhNo7elTCTxj9A3fo5s3+IyVmALwbwOtygZyGsyoxw5feAvgNOQ+nIdkk7urqS73Z1U+Bzj5qD/So5FbPIK/t2Enc2zc0cGdsivr6hlXS3z9C4+PT1N8/+lyJGQA/DeCNS72iwFmWmAmK/JtyHk5Kskk8PDyeevv2HRoYGD2w9tzK8PAE9fYNxU7isbF7Aw9ef0Rj45MqGZ+Yotm5BZqYmDyWxAyAn+LLFuVCOQlnXWImeBnfB+Q8nIRkk3h8fDr13uQDmrg7fWDtuZWp6VkaG5uMncSzs/MDq2ubNDv3SCVzDxecy9Tm5h4dW2KGiH4SwIxcLJESDxIzADYA/Jach0hJNokXFxdTHy0s0cP5xQNrz608Xlql2dn52Em8vr4xwJcFr29sqmQjeEfT5uZmRBIzwbuBTnWJZrxIzADYJKIDf0+PhGSTeGtrK3V7e4eePNmiDV5vCtnd3aP19c3YSQxgQD4AGoTuZIoUAD8OYEoe77jEk8QMiwzgd+U8HJdkkxhAqqxFA75ISdaiRrxJzATvWZ2UxzwO8SYxA+DJSecrJDEAtTB7e3smsRbxKDED4Mf4Znh53OcRjxIzALZCu6JEwsrK+jn+/3yjvFZY45WVNZNYi3iVmCGiH+WdLuSxjyJeJWaCIv+BnIejmHkwd27zya5zX7RWVtee0MyDOZNYi3iWmAHwI7zFjTz+YcSzxAyAbQAfkvNwGKOjd889nF9yNjjQyoPXF2hk5K5JrEW8S8wQ0Q8DGJPnCEe8S8wA2AHwh3IewtHbO3ju3r3XqbvntlrGxqepp+e2SaxFIkjMAPgh3ihNnkeSCBIzQZH/SM6DpK3t1rnBoQlqbbullr6BO9Ta3m0Sa5EoEjMA3glgVJ5rP4kiMRPckO7Dch72U9fQdq6ze4hq69vU0nGzn+oa201iLRJJYgbADwIYkecLkUgSM8GdNP9YzkMIX6X/XHNbD3krGtTS0NRJvspGk1iLRJOYAfADAIblORl/gknMBEX+EzkPTEFJzadq6jvIU1yllsqaVr5J3iTWIhElZgC8A8CQPG9L2y165WJWQknM4A0+Iuchu6D8b8oqm3gPKLXw9ks5+T6TWItElZjh9hpyfAODd5z9ghNNYiacyL5K/0c8pbXOBv5XM3WSX1RD17NLTGIt5CLXQkNiBsD3AvCHzsstOJzNvzPyE05iJijyb4fG//jx2s8X++qdzc6vBJ+43E52QSWlXy80ibVIdIkZbokC4L9D5x4amaCXXr3hdKZINIkZ3vo31OQLwNvG707Np98opgtX8g4I50ZMYmUA9MmClPg1WYvbAPgJ7hLI+1mN37tPnrJ6yi2spsKyOvJWNlFNQ4ezX9Kt7iEaGp6gyalZWlhcoe2dPVn7mQdAwb5xe2YfLjobnfNbiW9cynE6F7iVazle+sblHN+zs68DX1Mv50IDR2Ii+gXeTDwGOfYli9EEwGfC1OJ2eM8ubjLGn15/dPzu9FeKvHUFWXnexvyiqo5Sb32gqrY50NTcGejs7AvcHrwTuDd5P/Bo4XFga2uHu1aeNB2rq2szC4vLzs3q7mTBecXA99KG2N7edrbCDfWCXl1bp67u21RR0+y86igt5zREPdX17VRV29IRZv418mf715kWjsS8ban8hhF9APyVfPbW4MLlnM9mF1bTa+n5LiXPeXvAHTZa2m85dxIByONzc98rAINyLozoEZJYpRdRshOr7nVXrhW8kFtUe6C7XrTDMr/0aiYVe+v5dkDedO/tfH4AvyfnwogeIYldbV9ivAGAj0vBNLhyzZOWV1x74EMgt/Lya1nU1NbDzbCf3vEE4KtyPozoYBIrEjOJbxSl5ZfUHeio52Y8pfXUGuj97P46uDe0nBPj9JjEisRK4htZJWklvka+CEItRd4Gyiksf0XWAuCKnBfjdJjEisRK4hxPRVpFTSvlFpSrpbyqhb+my1oYAJfk3BgnxyRWJFYSl5TVpdU3dTldIbVS579JRWW1YSVmAFyU82OcDJNYkVhJXFHTnNYe6He6QmqltaOPKqr8h0rMALgg58iIHJNYkVhJ7PcH0nr6RqnB36GW7t5havC3HykxA+BVOU9GZJjEisRK4kCgJ230zhR1BLgzpE5GRu9x177nSswAOC/nyjg+JrEisZK4r284beb+vNMVUivT03PU1z98LIkZAK/I+TKOh0msSKwkHpuYSlta3nC6Qmpl8fEajY9PHVtiBsBLcs6M52MSKxIriWcfPkrb3SOnK6RWdnZBsw/nI5KYAfB1OW/G0ZjEisRK4o2NJ2l8/s3NJ2oJni9iiRkA/yfnzjgck1iRWEkMwJE4BpxIYgbA/8iDGeExiRUxiSMDwNfkAY2DmMSKmMSRs39rIyM8JrEiJvHJAPBf8sDGNzGJFTGJTw6AL8uDG29gEitiEp8OAF+SJzBMYlVM4tMD4IvyJMmOSayISRwdAPyHPFEyYxIrYhJHDwBfkCdLVkxiRUzi6ALg8/KEyYhJrIhJHH0AfE6eNNkwiRUxid0BwAvyxMmESayISeweAD4FIH46z0URk1gRk9hdAPwygDZZRKITkvibnbAM1wDwSbnwNIjVRRKhfkzaAPhTAHUAtmVNiQj7y4O+CqDI4nqeNuDWhLswAigOU4+b4fP9naxFEwDvAvDnfMkmgBthakyUXJVjNwzDMAzDMAzDMAzDMAzDMAzDMAzDMAzDMAzDMNzi/wF4AZG1vKLsrgAAAABJRU5ErkJggg==">
-    <span><b>همراه ۱۴۰</b><small>فضای شخصی منابع انسانی</small></span>
+    <span><b>همراه ۱۴۰</b><small>فضای شخصی پرسنلی کارکنان</small></span>
   </div>
   <nav class="nav">
     <button type="button" class="active" data-page="overview">نمای کلی</button>
     <button type="button" data-page="attendance">تردد و کارکرد</button>
     <button type="button" data-page="requests">درخواست‌های من<span class="count">__PENDING_COUNT__</span></button>
     <button type="button" data-page="profile">اطلاعات پرسنلی</button>
+    <button type="button" data-page="payslip">فیش حقوقی</button>
     <button type="button" data-page="celebration">همراهِ روز و تولدها</button>
   </nav>
   <div class="sidefoot"><b>__PERSON_NAME__</b>__PERSON_UNIT__</div>
@@ -2853,18 +3172,36 @@ textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 
 <main class="main">
 ]==]
 
+-- در حالت ماه، بازه با نام ماه و روز اول تا آخرِ واقعی نمایش داده می‌شود
+local range_text
+if month_label ~= nil then
+    local range_to = month_to_j or "—"
+    if to_date == today_ft and today_meta.jdate ~= "—" then range_to = today_meta.jdate end
+    range_text = month_label .. " (از " .. tostring(month_from_j or "—") .. " تا " .. tostring(range_to) .. ")"
+else
+    range_text = fmt_num(days_back) .. " روز اخیر"
+end
 local topbar_html = '<div class="topbar"><div><h1>' .. escape_html(greeting) .. '</h1>' ..
     '<div class="sub">' .. escape_html(today_meta.jday_name .. " " .. today_meta.jdate) ..
-    ' • بازهٔ گزارش: ' .. fmt_num(days_back) .. ' روز اخیر • کد پرسنلی ' ..
+    ' • بازهٔ گزارش: ' .. escape_html(range_text) .. ' • کد پرسنلی ' ..
     escape_html(tostring(personnel.personnel_code or "—")) .. '</div></div>' ..
     '<div class="toolbar">' ..
-    '<button type="button" class="btn-action" id="btnFullscreen" onclick="toggleFullScreen()">تمام صفحه</button>' ..
+    '<button type="button" class="btn-action" id="btnBackHome" style="display:none" onclick="goToPage(\'overview\')">← بازگشت به نمای کلی</button>' ..
     '<button type="button" class="btn-action" onclick="exportActivePageToCsv()">خروجی Excel</button>' ..
     '<button type="button" class="btn-action" onclick="openHelp()">راهنما</button>' ..
     '</div></div>'
 
+-- بنر «پیام امروز» — به خواست کاربر (1405/06/09) از داخل hero جدا شد و جایگاه ویژهٔ خودش را
+-- بین hero و کارت‌های آماری گرفت تا هر روز دیده شود، نه اینکه لای متن‌های hero گم باشد
+local daily_message_banner = '<article class="card message-banner">' ..
+    '<span class="message-chip">✨ پیام امروز</span>' ..
+    '<p class="message-banner-text">' .. escape_html(daily_message) .. '</p>' ..
+    '</article>'
+
 local section_overview = '<section id="overview" class="page active">' ..
+    -- بدون لینک بازگشت — این خودِ صفحهٔ اول است
     hero_html ..
+    daily_message_banner ..
     '<div class="kpis">' .. table.concat(kpi_html, "") .. '</div>' ..
     '<div class="grid2">' ..
     '<article class="card"><div class="title">ریتم کاری روزهای اخیر</div>' .. chart_html .. '</article>' ..
@@ -2875,53 +3212,7 @@ local section_overview = '<section id="overview" class="page active">' ..
     '<p class="note">فهرست کامل با وضعیت زنجیرهٔ تایید در تب «درخواست‌های من» است.</p>' ..
     '</article></div></section>'
 
--- کارت تشخیص: فقط وقتی ظاهر می‌شود که عددها از نظر منطقی ممکن نباشند (ورود برابر خروج،
--- شیفت بلندتر از ۱۴ ساعت، یا ورودِ ثبت‌شده با کارکرد صفر). در حالت سالم اصلاً دیده نمی‌شود، پس
--- کارمند عادی هرگز با آن روبه‌رو نمی‌شود؛ ولی وقتی چیزی خراب است، یک اسکرین‌شات برای عیب‌یابی کافی است.
-local diagnostic_needed = false
-for _, d in ipairs(daily) do
-    -- «روز ناقص» (ورود بدون خروج) وضعیت واقعی و مجاز است، پس علامت خطا نیست.
-    -- فقط چیزهایی که از نظر منطقی ناممکن‌اند کارت را فعال می‌کنند.
-    local both_punches = (d.first_in ~= nil and d.last_out ~= nil)
-    if (both_punches and d.first_in == d.last_out)
-        or (d.shift_minutes > 14 * 60)
-        or (both_punches and d.work_minutes == 0 and d.leave_minutes == 0 and d.mission_minutes == 0) then
-        diagnostic_needed = true
-    end
-end
-
-local diagnostic_card = ""
-if diagnostic_needed then
-    local rows_html = {}
-    for index, d in ipairs(daily) do
-        if index > 5 then break end
-        table.insert(rows_html,
-            '<tr><td>' .. escape_html(d.jdate) .. '</td>' ..
-            '<td>' .. escape_html(tostring(d.work_date_raw)) .. '</td>' ..
-            '<td>' .. escape_html(tostring(d.first_in_raw)) .. '</td>' ..
-            '<td>' .. escape_html(tostring(d.last_out_raw)) .. '</td>' ..
-            '<td>' .. escape_html(tostring(d.total_work_raw)) .. '</td>' ..
-            '<td>' .. escape_html(tostring(d.shift_from_raw)) .. '</td>' ..
-            '<td>' .. escape_html(tostring(d.shift_to_raw)) .. '</td>' ..
-            '<td>' .. escape_html(d.first_in or "—") .. '</td>' ..
-            '<td>' .. escape_html(d.last_out or "—") .. '</td></tr>')
-    end
-    diagnostic_card = '<article class="card" style="margin-top:14px;">' ..
-        '<div class="title">مقادیر خام — فقط برای عیب‌یابی</div>' ..
-        '<p class="note">این کارت خودکار ظاهر شده چون عددهای این صفحه از نظر منطقی ممکن نیستند. ' ..
-        'یک تصویر از همین جدول برای واحد فناوری اطلاعات بفرستید. وقتی مشکل رفع شود، این کارت ' ..
-        'خودبه‌خود ناپدید می‌شود.</p>' ..
-        '<div class="table-wrap"><table class="data-table"><thead><tr>' ..
-        '<th>تاریخ</th><th>WORK_DATE</th><th>FIRST_IN</th><th>LAST_OUT</th><th>TOTAL_WORK</th>' ..
-        '<th>SHIFT_FROM</th><th>SHIFT_TO</th><th>ورود تفسیرشده</th><th>خروج تفسیرشده</th>' ..
-        '</tr></thead><tbody>' .. table.concat(rows_html, "") .. '</tbody></table></div>' ..
-        '<p class="note">مرجع مقیاس — امروز طبق دیتابیس: <code>' ..
-        escape_html(sql_filetime(to_date)) .. '</code> | تقویم کاری: <code>' ..
-        escape_html(tostring(employment.calendar_id or "—")) .. '</code></p>' ..
-        '</article>'
-end
-
-local section_attendance = '<section id="attendance" class="page">' ..
+local section_attendance = '<section id="attendance" class="page">' .. PAGE_BACK_LINK ..
     '<article class="card">' ..
     '<div class="title">تردد و کارکرد من</div>' ..
     '<div class="tabs" role="group">' ..
@@ -2930,13 +3221,13 @@ local section_attendance = '<section id="attendance" class="page">' ..
     '</div>' ..
     '<div id="reportDaily"><div class="table-wrap"><table class="data-table"><thead><tr>' ..
     '<th>تاریخ</th><th>روز</th><th>اولین ورود</th><th>آخرین خروج</th><th>کارکرد خالص</th>' ..
-    '<th>اضافه‌کاری</th><th>تاخیر</th><th>مرخصی</th><th>ماموریت</th><th>کسری</th><th>وضعیت</th>' ..
+    '<th>اضافه‌کاری</th><th>کسر کار</th><th>مرخصی</th><th>ماموریت</th><th>کسری</th><th>وضعیت</th>' ..
     '</tr></thead><tbody>' .. table.concat(daily_rows, "") .. '</tbody></table></div></div>' ..
     '<div id="reportEvents" style="display:none;"><div class="table-wrap"><table class="data-table"><thead><tr>' ..
     '<th>تاریخ</th><th>از ساعت</th><th>تا ساعت</th><th>مدت</th><th>نوع</th>' ..
     '<th>دستگاه ورود</th><th>دستگاه خروج</th><th>وضعیت رکورد</th><th>توضیح</th>' ..
     '</tr></thead><tbody>' .. table.concat(event_rows, "") .. '</tbody></table></div></div>' ..
-    '<p class="note">کارکرد خالص، اضافه‌کاری، تاخیر، مرخصی و ماموریت مستقیماً از رکورد محاسبه‌شدهٔ ' ..
+    '<p class="note">کارکرد خالص، اضافه‌کاری، کسر کار، مرخصی و ماموریت مستقیماً از رکورد محاسبه‌شدهٔ ' ..
     'حضور و غیاب همان روز خوانده می‌شوند. «کسری» ستون ذخیره‌شده ندارد و در همین گزارش از رابطهٔ ' ..
     'موظفی شیفت منهای (کارکرد + مرخصی + ماموریت) محاسبه می‌شود؛ برای روزهای غیبت و روزهای ناقص ' ..
     'محاسبه نمی‌شود.</p>' ..
@@ -2962,13 +3253,64 @@ local section_attendance = '<section id="attendance" class="page">' ..
     detail_row("روزهای ناقص", fmt_num(totals.incomplete_days)) ..
     detail_row("روزهای غیبت", fmt_num(totals.absent_days)) ..
     detail_row("مجموع اضافه‌کاری", minutes_to_hm(totals.overtime)) ..
-    detail_row("مجموع تاخیر", minutes_to_hm(totals.delay)) ..
+    detail_row("مجموع کسر کار", minutes_to_hm(totals.delay)) ..
     detail_row("مجموع کسری محاسبه‌شده", minutes_to_hm(totals.deficit)) ..
     '<p class="note">روز ناقص یعنی فقط یکی از دو رویداد ورود/خروج ثبت شده است. این حالت به‌خودی‌خود ' ..
     'غیبت نیست و باید با درخواست اصلاح در ماژول منابع انسانی بررسی شود.</p>' ..
-    '</article></div>' .. diagnostic_card .. '</section>'
+    '</article></div></section>'
 
-local section_requests = '<section id="requests" class="page">' ..
+-- فرم «ثبت درخواست جدید» — گزینه‌های نوع مرخصی از خودِ hr_vacation_type خوانده و ترجمه می‌شوند
+local request_kind_options = ""
+do
+    local kind_rows = fetch_rows(
+        "SELECT ID, TYPE, COALESCE(NAME, '') FROM hr_vacation_type ORDER BY ID", {}, 3)
+    if kind_rows ~= nil then
+        for _, r in ipairs(kind_rows) do
+            local kid = tonumber(r[1]) or 0
+            local label = vacation_type_label(r[3], r[2], false)
+            local selected = (kid == 2) and ' selected' or '' -- استحقاقی پیش‌فرض، مثل فرم رسمی
+            request_kind_options = request_kind_options ..
+                '<option value="' .. kid .. '"' .. selected .. '>' .. escape_html(label) .. '</option>'
+        end
+    end
+end
+
+local request_form_html = '<article class="card"><div class="title">ثبت درخواست جدید</div>' ..
+    '<div class="req-form">' ..
+    '<div class="req-row">' ..
+    '<label>نوع درخواست<select id="reqShape" onchange="reqShapeChanged()">' ..
+    '<option value="1" selected>مرخصی ساعتی</option>' ..
+    '<option value="2">مرخصی روزانه</option>' ..
+    '<option value="3">ماموریت ساعتی</option>' ..
+    '<option value="4">ماموریت روزانه</option>' ..
+    '</select></label>' ..
+    '<label id="reqKindWrap">نوع مرخصی<select id="reqKind">' .. request_kind_options .. '</select></label>' ..
+    '<label id="reqCityWrap" style="display:none">نوع ماموریت<select id="reqCityType">' ..
+    '<option value="0" selected>درون‌شهری</option>' ..
+    '<option value="1">برون‌شهری</option>' ..
+    '<option value="2">برون‌کشوری</option>' ..
+    '</select></label>' ..
+    '</div><div class="req-row">' ..
+    '<label style="position:relative">از تاریخ' ..
+    '<input type="text" id="reqDateFrom" placeholder="انتخاب از تقویم…" dir="ltr" autocomplete="off" onclick="openCal(this.id)" onfocus="openCal(this.id)">' ..
+    '</label>' ..
+    '<label id="reqDateToWrap" style="display:none;position:relative">تا تاریخ' ..
+    '<input type="text" id="reqDateTo" placeholder="خالی = همان روز" dir="ltr" autocomplete="off" onclick="openCal(this.id)" onfocus="openCal(this.id)">' ..
+    '</label>' ..
+    '<label class="req-hourly">از ساعت<span class="time-pick" dir="ltr">' ..
+    '<select id="reqHourFromH"></select><b>:</b><select id="reqHourFromM"></select></span></label>' ..
+    '<label class="req-hourly">تا ساعت<span class="time-pick" dir="ltr">' ..
+    '<select id="reqHourToH"></select><b>:</b><select id="reqHourToM"></select></span></label>' ..
+    '</div>' ..
+    '<label>توضیحات<textarea id="reqDescription" rows="2" placeholder="اختیاری"></textarea></label>' ..
+    '<div class="req-actions"><button type="button" class="btn-action" id="reqSubmit" onclick="submitRequest()">ثبت درخواست</button>' ..
+    '<span class="note" id="reqResult"></span></div>' ..
+    '<p class="note">درخواست با API رسمی ماژول پرسنلی ثبت می‌شود و وارد همان زنجیرهٔ تایید سامانه می‌شود؛ ' ..
+    'پس از ثبت، در فهرست پایین و در پنل رسمی دیده می‌شود.</p>' ..
+    '</div></article>'
+
+local section_requests = '<section id="requests" class="page">' .. PAGE_BACK_LINK ..
+    request_form_html ..
     '<article class="card"><div class="title">پیگیری درخواست‌ها</div>' ..
     '<div class="tabs" role="group">' ..
     '<button type="button" class="active" data-reqfilter="all">همه</button>' ..
@@ -2978,12 +3320,43 @@ local section_requests = '<section id="requests" class="page">' ..
     '</div>' ..
     '<div class="table-wrap"><table class="data-table" id="requestsTable"><thead><tr>' ..
     '<th>تاریخ</th><th>دسته</th><th>نوع</th><th>ساعت</th><th>مدت</th><th>وضعیت</th>' ..
-    '<th>کد وضعیت</th><th>تایید</th><th>ثبت</th><th>توضیحات</th>' ..
+    '<th>کد وضعیت</th><th>تایید</th><th>ثبت</th><th>توضیحات</th><th>لغو</th>' ..
     '</tr></thead><tbody>' .. table.concat(request_rows, "") .. '</tbody></table></div>' ..
     '<p class="note">ستون «تایید» تعداد تاییدکنندگانی است که تا این لحظه درخواست مرخصی/ماموریت شما ' ..
     'را تایید کرده‌اند، نسبت به کل زنجیرهٔ تایید همان درخواست. ستون «کد وضعیت» عدد خام ثبت‌شده در ' ..
     'سامانه است تا با پنل رسمی منابع انسانی قابل تطبیق باشد.</p>' ..
-    '</article></section>'
+    '</article>' .. (function()
+        -- کارت «وام / مساعدهٔ من» — فقط خواندنی؛ ثبت درخواست وام از پنل هنوز فراهم نیست
+        -- (endpoint لایهٔ API با همهٔ ترکیب‌های آزموده EMPTY_DATE می‌دهد — پیگیری آینده)
+        local loan_rows_html = {}
+        for _, l in ipairs(loans) do
+            local verify_text = "—"
+            if l.verify_count > 0 then
+                verify_text = fmt_num(l.verify_done) .. " از " .. fmt_num(l.verify_count)
+            end
+            table.insert(loan_rows_html,
+                '<tr><td>' .. escape_html(l.request_j) .. '</td>' ..
+                '<td>' .. escape_html(l.type_label) .. '</td>' ..
+                '<td>' .. fmt_num(l.amount) .. '</td>' ..
+                '<td>' .. fmt_num(l.installments) .. '</td>' ..
+                '<td>' .. escape_html(l.start_j) .. '</td>' ..
+                '<td>' .. tostring(l.status_code) .. '</td>' ..
+                '<td>' .. escape_html(verify_text) .. '</td></tr>')
+        end
+        if #loan_rows_html == 0 then
+            table.insert(loan_rows_html, empty_row(7, loans_err and ("خطا: " .. loans_err) or
+                "وام یا مساعده‌ای برای شما ثبت نشده است"))
+        end
+        return '<article class="card"><div class="title">وام / مساعدهٔ من</div>' ..
+            '<div class="table-wrap"><table class="data-table"><thead><tr>' ..
+            '<th>تاریخ درخواست</th><th>نوع</th><th>مبلغ (ریال)</th><th>اقساط</th>' ..
+            '<th>شروع اقساط</th><th>کد وضعیت</th><th>تایید</th>' ..
+            '</tr></thead><tbody>' .. table.concat(loan_rows_html, "") .. '</tbody></table></div>' ..
+            '<p class="note">فهرست از رکوردهای رسمی وام/مساعدهٔ سامانه خوانده می‌شود. ثبت درخواست ' ..
+            'وام جدید از این پنل هنوز فراهم نیست — از داشبورد رسمی پرسنلی انجام دهید.</p>' ..
+            '</article>'
+    end)() ..
+    '</section>'
 
 local settings_card = ""
 if employment_settings ~= nil and #employment_settings > 0 then
@@ -3000,14 +3373,41 @@ if employment_settings ~= nil and #employment_settings > 0 then
             "API رسمی حکم سامانه" or "جدول احکام پرسنلی") ..
         detail_row("سرپرست مستقیم", supervisor_source == "api_supervisor" and
             "API رسمی سرپرست شعبه" or "حکم فعال") ..
-        detail_row("مانده مرخصی", leave_balance_note) ..
+        detail_row("مانده مرخصی", (leave_balance_note:gsub("^منبع: ", ""))) ..
         detail_row("کارکرد و تردد", "رکورد حضور و غیاب و تقویم کاری") ..
         '<p class="note">هر عدد این پنل از منبع رسمی خودش خوانده می‌شود. اگر جایی با پنل رسمی منابع ' ..
         'انسانی اختلاف دیدید، همان پنل رسمی ملاک است و لطفاً گزارش کنید.</p>' ..
         '</article></div>'
 end
 
-local section_profile = '<section id="profile" class="page"><div class="grid2">' ..
+-- ── صفحهٔ فیش حقوقی (فقط خواندنی — مقادیر عیناً از hr_payslip_payment_detail) ────────────
+local payslip_rows_html = {}
+for index, ps in ipairs(payslips) do
+    table.insert(payslip_rows_html,
+        '<tr><td>' .. fmt_num(index) .. '</td>' ..
+        '<td>' .. escape_html(ps.from_j) .. '</td>' ..
+        '<td>' .. escape_html(ps.to_j) .. '</td>' ..
+        '<td>' .. minutes_to_hm(ps.daily_minutes) .. '</td>' ..
+        '<td dir="ltr"><b>' .. fmt_num(ps.net or 0) .. '</b></td>' ..
+        '<td>' .. fmt_num(#ps.items) .. '</td>' ..
+        '<td><button type="button" class="btn-action" onclick="openPayslip(' ..
+        tostring(ps.id) .. ')">مشاهدهٔ اقلام</button></td></tr>')
+end
+if #payslip_rows_html == 0 then
+    table.insert(payslip_rows_html, empty_row(7, payslips_err and ("خطا: " .. payslips_err) or
+        "فیش حقوقی برای شما ثبت نشده است"))
+end
+
+local section_payslip = '<section id="payslip" class="page">' .. PAGE_BACK_LINK ..
+    '<article class="card"><div class="title">فیش‌های حقوقی من</div>' ..
+    '<div class="table-wrap"><table class="data-table"><thead><tr>' ..
+    '<th>ردیف</th><th>از تاریخ</th><th>تا تاریخ</th><th>موظفی روزانه</th><th>جمع حقوق (ریال)</th><th>اقلام</th><th>جزئیات</th>' ..
+    '</tr></thead><tbody>' .. table.concat(payslip_rows_html, "") .. '</tbody></table></div>' ..
+    '<p class="note">مقادیر عیناً همان اقلام ثبت‌شدهٔ فیش در سامانه‌اند (فقط اقلام قابل نمایش و ' ..
+    'غیرصفر)؛ هیچ محاسبه‌ای در این پنل انجام نمی‌شود. مبالغ به ریال است.</p>' ..
+    '</article></section>'
+
+local section_profile = '<section id="profile" class="page">' .. PAGE_BACK_LINK .. '<div class="grid2">' ..
     '<article class="card"><div class="title">اطلاعات پرسنلی</div>' .. profile_left .. '</article>' ..
     '<article class="card"><div class="title">حکم کاری و مرخصی</div>' .. profile_right ..
     '<p class="note">این صفحه فقط خواندنی است. اصلاح اطلاعات پرسنلی از مسیر رسمی ماژول منابع انسانی ' ..
@@ -3024,7 +3424,7 @@ local html_tail = [==[
       <button type="button" class="modal-close" onclick="closeHelp()">✕</button>
     </div>
     <div class="modal-body">
-      <p><b>این پنل چیست؟</b> فضای شخصی هر همکار در سامانهٔ منابع انسانی: کارکرد و تردد خودت،
+      <p><b>این پنل چیست؟</b> فضای شخصی پرسنلی هر همکار: کارکرد و تردد خودت،
       درخواست‌های خودت، اطلاعات پرسنلی خودت و بخش «همراهِ روز و تولدها». همهٔ اعداد از رکوردهای
       واقعی حضور و غیاب و احکام کاری خوانده می‌شوند.</p>
       <ul>
@@ -3043,9 +3443,15 @@ local html_tail = [==[
       گفتگوی مشترک جمع می‌شوند، نه چند گفتگوی جدا.</p>
       <p><b>پیام امروز:</b> برای هر روزِ سالِ شمسی یک پیام یکتا وجود دارد (۳۶۶ پیام)، پس تا پایان
       سال هیچ پیامی تکرار نمی‌شود و همهٔ همکاران در یک روز پیام یکسان می‌بینند.</p>
-      <p><b>ورودی‌ها:</b> <code>days</code> (طول بازه، پیش‌فرض ۳۱ روز)، <code>from_date</code> و
-      <code>to_date</code> (FILETIME عددی)، <code>format=json</code> برای خروجی داده. پنل همیشه
-      اطلاعات کاربرِ واردشده را نشان می‌دهد و شناسهٔ فرد دیگری را از ورودی نمی‌پذیرد.</p>
+      <p><b>بازهٔ گزارش:</b> به‌صورت پیش‌فرض همهٔ اعداد (کارکرد، کسر کار، مرخصی، درخواست‌ها)
+      مربوط به <b>ماه شمسی جاری</b> است — از روز اول ماه تا امروز. با ورودی
+      <code>month_offset</code> می‌توانید ماه‌های قبل را کامل ببینید (<code>1</code> = ماه قبل،
+      <code>2</code> = دو ماه قبل و ...).</p>
+      <p><b>ورودی‌ها:</b> <code>month_offset</code> (شمارهٔ ماه قبل، پیش‌فرض ۰ = ماه جاری)،
+      <code>days</code> (طول بازهٔ دلخواه به روز — دادنش حالت ماهانه را خاموش می‌کند)،
+      <code>from_date</code> و <code>to_date</code> (FILETIME عددی)، <code>format=json</code>
+      برای خروجی داده. پنل همیشه اطلاعات کاربرِ واردشده را نشان می‌دهد و شناسهٔ فرد دیگری را از
+      ورودی نمی‌پذیرد.</p>
       <p><b>تعامل‌ها:</b> کلیک روی عنوان هر ستون جدول را مرتب می‌کند؛ «خروجی Excel» جدول‌های همین
       صفحه را به فایل CSV می‌دهد؛ «تمام صفحه» صفحه را بدون وابستگی به قابلیت fullscreen مرورگر
       بزرگ می‌کند؛ کلید Esc پنجره‌های باز را می‌بندد.</p>
@@ -3055,6 +3461,21 @@ local html_tail = [==[
       <p><b>آنچه عمداً در این پنل نیست:</b> ثبت درخواست جدید (که باید از فرم رسمی و با گردش تایید
       انجام شود)، فیش حقوقی (دادهٔ حساس)، و برچسب «تردد ناموفق» (سامانه لاگ تلاش ناموفق هر نفر را
       به این شکل نگه نمی‌دارد؛ به‌جای آن رویدادهای واقعی تردد نمایش داده می‌شود).</p>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="payslipOverlay" onclick="if(event.target===this){closePayslip();}">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="payslipTitle">اقلام فیش حقوقی</span>
+      <button type="button" class="modal-close" onclick="closePayslip()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="table-wrap"><table class="data-table"><thead><tr>
+        <th>شرح</th><th>مبلغ (ریال)</th>
+      </tr></thead><tbody id="payslipItems"></tbody></table></div>
+      <p class="note">مقادیر عیناً از فیش ثبت‌شده در سامانه خوانده شده‌اند؛ فقط اقلام قابل نمایش و غیرصفر.</p>
     </div>
   </div>
 </div>
@@ -3069,13 +3490,15 @@ local html_tail = [==[
       <p class="note" id="celebrationHint">در حال بارگذاری گفتگو...</p>
       <p class="note" id="celebrationMembers"></p>
       <div class="thread" id="celebrationThread"></div>
+      <label class="note" for="celebrationMessage" style="display:block;margin-top:8px;font-weight:bold">متن پیام تبریک (قابل ویرایش):</label>
+      <textarea id="celebrationMessage" rows="3" style="width:100%;box-sizing:border-box;font-size:14px;border:1px solid var(--line);border-radius:9px;padding:9px;resize:vertical"></textarea>
       <p class="note" id="celebrationTopic"></p>
       <div class="modal-foot">
-        <button type="button" class="btn-action" id="celebrationJoin" onclick="joinCelebration()">پیوستن به گفتگو</button>
-        <button type="button" class="btn-action" id="celebrationOpenModule" onclick="openChatModule()">باز کردن گفتگو</button>
+        <button type="button" class="btn-action" id="celebrationJoin" onclick="joinCelebration()">ارسال پیام تبریک 🎂</button>
+        <button type="button" class="btn-action" id="celebrationOpenModule" onclick="openChatModule()">باز کردن ماژول گفتگو</button>
         <button type="button" class="btn-action" onclick="closeCelebration()">بستن</button>
       </div>
-      <p class="note" id="celebrationResult">پس از پیوستن، پیام تبریک را داخل خودِ گفتگو بنویسید؛ همین‌جا هم نمایش داده می‌شود.</p>
+      <p class="note" id="celebrationResult">پیام بالا به گفتگوی تبریک ارسال می‌شود و خودِ همکار هم عضو گفتگو می‌شود.</p>
     </div>
   </div>
 </div>
@@ -3083,13 +3506,61 @@ local html_tail = [==[
 <div class="footer">همراه ۱۴۰ — پنل پرسنلی منابع انسانی</div>
 
 <script>
-var RUN_URL = location.pathname;          // برای POSTهای داخلی بات
-var SELF_URL = location.href;             // برای باز کردن همین گزارش در تب جدید (با query کامل)
+// مسیر مطلق و ثابت این بات. نسخهٔ قبلی location.pathname بود که داخل iframe پورتال مسیر صفحهٔ
+// والد («/») را می‌داد و همهٔ XHRها (گفتگوی تبریک و...) به‌جای بات به خود پورتال می‌خورد و
+// HTML برمی‌گشت → «خطا در ارتباط با سرور». مسیر اجرای این استقرار: bot 624.
+var RUN_URL = '/bot/run/443/hr_companion_report?ver=0';
 var celebrationTarget = { name: '', date: '', dialogId: 0 };
 var CELEBRATION_GROUP_ID = __CELEBRATION_GROUP_ID__;
+// دادهٔ تقویم شمسی انتخاب‌گر تاریخ (از report_dimdate، ماه قبل تا ۱۲ ماه بعد)
+var CAL_MONTHS = __CAL_MONTHS__;
+var CAL_TODAY = '__CAL_TODAY__';
+// شناسهٔ پرسنلی کاربرِ واردشده — برای فراخوانی هندلر رسمی لغو (خودش در URLهای رسمی هم هست)
+var REQUEST_PERSONNEL_ID = __REQ_PERSONNEL_ID__;
+// اقلام فیش‌های حقوقی (سمت سرور از hr_payslip_payment_detail ساخته شده)
+var PAYSLIPS_DATA = __PAYSLIPS_DATA__;
+
+function openPayslip(payslipId) {
+  var ps = null;
+  for (var i = 0; i < PAYSLIPS_DATA.length; i++) {
+    if (PAYSLIPS_DATA[i].id === payslipId) { ps = PAYSLIPS_DATA[i]; break; }
+  }
+  if (!ps) return;
+  document.getElementById('payslipTitle').textContent =
+    'اقلام فیش حقوقی ' + ps.from_j + ' تا ' + ps.to_j;
+  var items = Array.isArray(ps.items) ? ps.items : [];
+  // گروه‌بندی طبق pd.TYPE (کامنت سرور): ۲=اضافات، ۱=کسورات، ۰=اطلاعات پایه
+  function money(v) { return Number(v || 0).toLocaleString('en-US'); }
+  var groups = [
+    { t: 2, title: 'اضافات و پرداختی‌ها', sumLabel: 'جمع اضافات', sum: ps.adds },
+    { t: 1, title: 'کسورات', sumLabel: 'جمع کسورات', sum: ps.deds },
+    { t: 0, title: 'اطلاعات پایه', sumLabel: null }
+  ];
+  var rows = '';
+  groups.forEach(function (g) {
+    var subset = items.filter(function (it) { return (it.t || 0) === g.t; });
+    if (!subset.length) return;
+    rows += '<tr class="ps-group"><td colspan="2">' + g.title + '</td></tr>';
+    subset.forEach(function (it) {
+      rows += '<tr><td>' + String(it.n).replace(/</g, '&lt;') + '</td>' +
+        '<td dir="ltr">' + money(it.v) + '</td></tr>';
+    });
+    if (g.sumLabel && typeof g.sum === 'number') {
+      rows += '<tr class="ps-sum"><td>' + g.sumLabel + '</td>' +
+        '<td dir="ltr">' + money(g.sum) + '</td></tr>';
+    }
+  });
+  if (typeof ps.net === 'number') {
+    rows += '<tr class="ps-net"><td>جمع حقوق (خالص پرداختی)</td>' +
+      '<td dir="ltr">' + money(ps.net) + '</td></tr>';
+  }
+  if (!rows) rows = '<tr><td colspan="2">قلم قابل نمایشی در این فیش ثبت نشده است</td></tr>';
+  document.getElementById('payslipItems').innerHTML = rows;
+  document.getElementById('payslipOverlay').classList.add('open');
+}
+function closePayslip() { document.getElementById('payslipOverlay').classList.remove('open'); }
 var CELEBRATION_ENABLED = __CELEBRATION_ENABLED__;
 var CHAT_MODULE_URL = '__CHAT_MODULE_URL__';
-var CHAT_DIALOG_URL_TEMPLATE = '__CHAT_DIALOG_URL_TEMPLATE__';
 
 document.querySelectorAll('.nav button').forEach(function (btn) {
   btn.addEventListener('click', function () { goToPage(btn.dataset.page); });
@@ -3104,6 +3575,9 @@ function goToPage(page) {
   });
   var target = document.getElementById(page);
   if (target) target.classList.add('active');
+  // دکمهٔ «بازگشت به نمای کلی» فقط در صفحه‌های داخلی دیده می‌شود
+  var backBtn = document.getElementById('btnBackHome');
+  if (backBtn) backBtn.style.display = (page === 'overview') ? 'none' : '';
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
@@ -3130,23 +3604,74 @@ document.querySelectorAll('[data-reqfilter]').forEach(function (btn) {
   });
 });
 
-// این گزارش داخل iframe پنل تیم‌یار اجرا می‌شود و position:fixed نسبت به همان iframe محاسبه
-// می‌شود، نه پنجرهٔ مرورگر — یعنی کلاس CSS فقط داخل قاب کوچک پخش می‌شد و عملاً تمام‌صفحه نمی‌شد.
-// (تاییدشده روی بات ۶۲۲.) پس وقتی داخل iframe هستیم، همین گزارش را در تب جدید باز می‌کنیم که
-// واقعاً تمام‌صفحه است و نه به iframe وابسته است نه به Fullscreen API که روی این پلتفرم
-// غیرقابل‌اتکا بودنش قبلاً ثبت شده. اگر مستقیم (بدون iframe) باز شده باشد، همان کلاس CSS کافی است.
-function isInsideFrame() {
-  try { return window.self !== window.top; } catch (e) { return true; }
+// پورتال خروجی بات HTML را داخل یک iframe هم‌مبدأ می‌گذارد (core_callbot_command_view — تایید از
+// سورس 000_top.js: iframhtml با height_auto قد iframe را برابر قد محتوا نگه می‌دارد و یک
+// MutationObserver مدام آن را بازتنظیم می‌کند). پس position:fixed داخل iframe فقط همان قاب بلند
+// را پر می‌کند، نه صفحهٔ کاربر را — «تمام صفحه» به نظر خراب/بی‌اثر می‌آید.
+// راه‌حل بدون Fullscreen API (قانون پروژه): چون iframe هم‌مبدأ است، خود عنصر iframe در سند والد
+// با یک کلاس تمام‌صفحه می‌شود. قاعدهٔ CSS با !important در stylesheet والد تزریق می‌شود تا از
+// ارتفاع inline ای که MutationObserver پلتفرم مدام می‌نویسد (بدون !important) همیشه جلو بزند.
+// اجرای مستقل (بدون والد) یا هر خطای دسترسی → همان حالت کلاس داخلی که قبلاً درست بود.
+var FS_PARENT_STYLE_ID = 'hr140FsStyle';
+function ensureParentFsStyle(parentDoc) {
+  if (parentDoc.getElementById(FS_PARENT_STYLE_ID)) return;
+  var st = parentDoc.createElement('style');
+  st.id = FS_PARENT_STYLE_ID;
+  // حالت عادی داخل پورتال: iframe به‌جای هم‌قدشدن با کل محتوا (height_auto پلتفرم)، هم‌قد
+  // فضای دیدِ باقی‌مانده می‌شود تا گزارش اسکرول «داخلی» بگیرد — لازمهٔ کارکردن sticky
+  // (سربرگ، سایدبار، هدر جدول‌ها) و نرفتن سربرگ زیر هدر نیمه‌شفاف پورتال. !important این
+  // stylesheet از ارتفاع inline ای که MutationObserver پلتفرم مدام می‌نویسد جلو می‌زند.
+  // قاعدهٔ تمام‌صفحه عمداً بعد از قاعدهٔ قاب آمده (specificity برابر → قاعدهٔ آخر برنده) تا
+  // height:100vh تمام‌صفحه روی height:calc قاب بنشیند.
+  st.textContent = 'iframe.hr140-frame{height:calc(100vh - var(--hr140-top, 110px)) !important;}' +
+    'iframe.hr140-fs{position:fixed !important;top:0 !important;left:0 !important;' +
+    'width:100vw !important;height:100vh !important;max-height:100vh !important;' +
+    'z-index:2147483000 !important;background:#fff !important;border:0 !important;margin:0 !important;}';
+  parentDoc.head.appendChild(st);
 }
+
+// داخل iframe هم‌مبدأ پورتال: قاب را هم‌قد فضای دید کن و با جابه‌جایی/تغییر اندازهٔ صفحهٔ والد
+// همگام نگه دار. اجرای مستقل frameElement ندارد و این بلوک بی‌اثر می‌ماند.
+(function () {
+  try {
+    var fe = window.frameElement;
+    if (!fe) return;
+    ensureParentFsStyle(fe.ownerDocument);
+    fe.classList.add('hr140-frame');
+    var syncFrameTop = function () {
+      try {
+        if (fe.classList.contains('hr140-fs')) return; // در تمام‌صفحه ارتفاع را دست نزن
+        var top = fe.getBoundingClientRect().top;
+        if (top < 0) top = 0;
+        fe.style.setProperty('--hr140-top', Math.round(top) + 'px');
+      } catch (e) {}
+    };
+    syncFrameTop();
+    var pwin = fe.ownerDocument.defaultView;
+    pwin.addEventListener('resize', syncFrameTop);
+    pwin.addEventListener('scroll', syncFrameTop, true);
+  } catch (e) { /* والد غیرهم‌مبدأ: رفتار قبلی حفظ می‌شود */ }
+})();
+// دکمهٔ تمام صفحه به خواست کاربر (1405/06/09) از نوارابزار حذف شد؛ تابع برای سازگاری مانده
 function toggleFullScreen() {
-  if (isInsideFrame()) {
-    window.open(SELF_URL, '_blank');
-    return;
-  }
   var root = document.getElementById('reportRoot');
   var btn = document.getElementById('btnFullscreen');
   var isFull = root.classList.toggle('fullscreen');
-  btn.innerText = isFull ? 'خروج از تمام صفحه' : 'تمام صفحه';
+  if (btn) btn.innerText = isFull ? 'خروج از تمام صفحه' : 'تمام صفحه';
+  try {
+    var fe = window.frameElement; // فقط برای iframe هم‌مبدأ مقدار دارد
+    if (fe) {
+      ensureParentFsStyle(fe.ownerDocument);
+      fe.classList.toggle('hr140-fs', isFull);
+      var parentBody = fe.ownerDocument.body;
+      if (isFull) {
+        parentBody.setAttribute('data-hr140-prev-overflow', parentBody.style.overflow || '');
+        parentBody.style.overflow = 'hidden';
+      } else {
+        parentBody.style.overflow = parentBody.getAttribute('data-hr140-prev-overflow') || '';
+      }
+    }
+  } catch (e) { /* والد غیرهم‌مبدأ یا در دسترس نیست — حالت داخل‌قاب به‌تنهایی کار می‌کند */ }
 }
 
 function csvEscapeCell(text) {
@@ -3272,11 +3797,11 @@ function setCelebrationState(res) {
   var joinBtn = document.getElementById('celebrationJoin');
   celebrationTarget.dialogId = (res && res.dialog_id) ? res.dialog_id : 0;
   if (res && res.exists === false && !res.created) {
-    hint.textContent = 'هنوز گفتگویی برای این تولد باز نشده؛ با زدن دکمه، تو آن را باز می‌کنی و بقیه به همان می‌پیوندند.';
-    joinBtn.textContent = 'باز کردن گفتگو و پیوستن';
-  } else {
-    hint.textContent = 'گفتگو باز است؛ با زدن دکمه به همان گفتگو می‌پیوندی.';
-    joinBtn.textContent = 'پیوستن به گفتگو';
+    hint.textContent = 'هنوز گفتگویی برای این تولد باز نشده؛ با ارسال تبریک، گفتگو ساخته می‌شود و بقیه هم به همان می‌پیوندند.';
+    joinBtn.textContent = 'ارسال پیام تبریک 🎂';
+  } else if (!res || !res.message_sent) {
+    hint.textContent = 'گفتگو باز است؛ پیامت به همین گفتگو ارسال می‌شود.';
+    joinBtn.textContent = 'ارسال پیام تبریک 🎂';
   }
   joinBtn.disabled = !CELEBRATION_ENABLED;
   if (!CELEBRATION_ENABLED) {
@@ -3285,16 +3810,9 @@ function setCelebrationState(res) {
   }
   var topicBox = document.getElementById('celebrationTopic');
   if (celebrationTarget.dialogId) {
-    var openBtn = document.getElementById('celebrationOpenModule');
-    if (CHAT_DIALOG_URL_TEMPLATE) {
-      openBtn.textContent = 'باز کردن گفتگو';
-      topicBox.textContent = 'عنوان این گفتگو: «تبریک تولد ' + celebrationTarget.name +
-        ' — ' + celebrationTarget.date + '» (شناسه ' + celebrationTarget.dialogId + ').';
-    } else {
-      openBtn.textContent = 'باز کردن ماژول گفتگو';
-      topicBox.textContent = 'این گفتگو در ماژول گفتگو با همین عنوان پیدا می‌شود: «تبریک تولد ' +
-        celebrationTarget.name + ' — ' + celebrationTarget.date + '».';
-    }
+    topicBox.textContent = 'این گفتگو در ماژول گفتگو با همین عنوان پیدا می‌شود: «تبریک تولد ' +
+      celebrationTarget.name + ' — ' + celebrationTarget.date +
+      '». گفتگوها پاپ‌آپ باز می‌شوند و لینک مستقیم به یک گفتگو ندارند.';
   } else {
     topicBox.textContent = '';
   }
@@ -3305,14 +3823,21 @@ function setCelebrationState(res) {
   renderThread(res ? res.messages : []);
 }
 
-function openCelebration(name, dateLabel) {
-  celebrationTarget = { name: name, date: dateLabel, dialogId: 0 };
+// فقط کاراکترهای BMP (ایموجی ۴بایتی مثل 🎂 در ذخیره‌سازی گفتگو بریده می‌شود — کامنت سرور را ببینید)
+function defaultCongratsText(name) {
+  return '✨ ' + name + ' عزیز، تولدت مبارک! ' +
+    'امیدواریم سالِ پیشِ رو برایت پر از سلامتی، شادی و موفقیت باشد. ✨';
+}
+
+function openCelebration(name, dateLabel, profileId) {
+  celebrationTarget = { name: name, date: dateLabel, dialogId: 0, profileId: profileId || 0 };
   document.getElementById('celebrationTitle').textContent = 'گفتگوی تبریک تولد ' + name;
   document.getElementById('celebrationThread').innerHTML = '';
   document.getElementById('celebrationMembers').textContent = '';
   document.getElementById('celebrationHint').textContent = 'در حال بارگذاری گفتگو...';
+  document.getElementById('celebrationMessage').value = defaultCongratsText(name);
   document.getElementById('celebrationResult').textContent =
-    'پس از پیوستن، پیام تبریک را داخل خودِ گفتگو بنویسید؛ همین‌جا هم نمایش داده می‌شود.';
+    'پیام بالا به گفتگوی تبریک ارسال می‌شود و خودِ همکار هم عضو گفتگو می‌شود.';
   document.getElementById('celebrationJoin').disabled = true;
   document.getElementById('celebrationOverlay').classList.add('open');
 
@@ -3331,11 +3856,7 @@ function openCelebration(name, dateLabel) {
 }
 
 function openChatModule() {
-  var url = CHAT_MODULE_URL;
-  if (celebrationTarget.dialogId && CHAT_DIALOG_URL_TEMPLATE) {
-    url = CHAT_DIALOG_URL_TEMPLATE.replace('{id}', String(celebrationTarget.dialogId));
-  }
-  window.open(url, '_blank');
+  window.open(CHAT_MODULE_URL, '_blank');
 }
 
 function closeCelebration() {
@@ -3345,43 +3866,270 @@ function closeCelebration() {
 function joinCelebration() {
   var joinBtn = document.getElementById('celebrationJoin');
   var result = document.getElementById('celebrationResult');
+  var messageBox = document.getElementById('celebrationMessage');
   joinBtn.disabled = true;
-  result.textContent = 'در حال پیوستن...';
+  result.textContent = 'در حال ارسال تبریک...';
   botRequest({
     type: 'celebrate',
     person_name: celebrationTarget.name,
-    person_date: celebrationTarget.date
+    person_date: celebrationTarget.date,
+    person_profile_id: celebrationTarget.profileId || 0,
+    message: messageBox ? messageBox.value : ''
   }, function (res) {
     if (!res || !res.ok) {
       joinBtn.disabled = false;
-      result.textContent = (res && res.error) ? res.error : 'پیوستن به گفتگو انجام نشد.';
+      result.textContent = (res && res.error) ? res.error : 'ارسال تبریک انجام نشد.';
       return;
     }
-    result.textContent = res.created
-      ? 'گفتگو ساخته شد و تو عضو آن شدی. حالا پیام تبریکت را داخل گفتگو بنویس.'
-      : 'به گفتگو پیوستی. پیام تبریکت را داخل گفتگو بنویس.';
+    if (res.message_sent) {
+      result.textContent = 'پیام تبریک ارسال شد 🎉 — ' + celebrationTarget.name +
+        ' آن را در ماژول گفتگو می‌بیند.';
+      joinBtn.textContent = 'تبریک ارسال شد ✓';
+    } else {
+      result.textContent = 'به گفتگو پیوستی ولی ارسال پیام انجام نشد' +
+        (res.message_err ? (': ' + res.message_err) : '.') +
+        ' می‌توانی پیام را داخل خود گفتگو بنویسی.';
+      joinBtn.disabled = false;
+    }
     setCelebrationState({ exists: true, created: res.created, dialog_id: res.dialog_id,
                           members: res.members, messages: res.messages });
-    joinBtn.textContent = 'عضو این گفتگو هستی';
-    joinBtn.disabled = true;
+    if (res.message_sent) { joinBtn.textContent = 'تبریک ارسال شد ✓'; joinBtn.disabled = true; }
   }, function () {
     joinBtn.disabled = false;
     result.textContent = 'خطا در ارتباط با سرور.';
   });
 }
 
+// ── انتخاب‌گر تاریخ شمسی (دادهٔ ماه‌ها سمت سرور از report_dimdate ساخته شده) ──
+var calState = { target: null, y: 0, m: 0 };
+var calPop = null;
+
+function calEnsurePop() {
+  if (calPop) return calPop;
+  calPop = document.createElement('div');
+  calPop.className = 'cal-pop';
+  calPop.id = 'calPop';
+  document.addEventListener('click', function (e) {
+    if (!calPop || calPop.style.display === 'none') return;
+    if (calPop.contains(e.target)) return;
+    if (calState.target && e.target.id === calState.target) return;
+    calPop.style.display = 'none';
+  });
+  return calPop;
+}
+
+function calFind(y, m) {
+  for (var i = 0; i < CAL_MONTHS.length; i++) {
+    if (CAL_MONTHS[i].y === y && CAL_MONTHS[i].m === m) return i;
+  }
+  return -1;
+}
+
+function openCal(inputId) {
+  if (!CAL_MONTHS || !CAL_MONTHS.length) return;
+  var pop = calEnsurePop();
+  calState.target = inputId;
+  var t = (CAL_TODAY || '').split('/').map(Number);
+  var y = t[0] || CAL_MONTHS[0].y, m = t[1] || CAL_MONTHS[0].m;
+  var v = document.getElementById(inputId).value;
+  var mm = v.match(/^\s*(\d{4})\s*\/\s*(\d{1,2})/);
+  if (mm && calFind(+mm[1], +mm[2]) >= 0) { y = +mm[1]; m = +mm[2]; }
+  calState.y = y; calState.m = m;
+  var input = document.getElementById(inputId);
+  input.parentNode.appendChild(pop);
+  renderCal();
+  pop.style.display = 'block';
+}
+
+function calShift(step) {
+  var i = calFind(calState.y, calState.m);
+  var next = CAL_MONTHS[i + step];
+  if (!next) return;
+  calState.y = next.y; calState.m = next.m;
+  renderCal();
+}
+
+function calPick(day) {
+  var mm = ('0' + calState.m).slice(-2), dd = ('0' + day).slice(-2);
+  var input = document.getElementById(calState.target);
+  if (input) input.value = calState.y + '/' + mm + '/' + dd;
+  if (calPop) calPop.style.display = 'none';
+}
+
+function renderCal() {
+  var i = calFind(calState.y, calState.m);
+  if (i < 0) return;
+  var mo = CAL_MONTHS[i];
+  var weekends = Array.isArray(mo.w) ? mo.w : [];
+  var t = (CAL_TODAY || '').split('/').map(Number);
+  var html = '<div class="cal-head">' +
+    '<button type="button" class="cal-nav" onclick="calShift(-1)"' + (CAL_MONTHS[i-1] ? '' : ' disabled') + '>&rsaquo;</button>' +
+    '<b>' + mo.n + ' ' + mo.y + '</b>' +
+    '<button type="button" class="cal-nav" onclick="calShift(1)"' + (CAL_MONTHS[i+1] ? '' : ' disabled') + '>&lsaquo;</button>' +
+    '</div><div class="cal-grid">';
+  var names = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+  for (var h = 0; h < 7; h++) html += '<span>' + names[h] + '</span>';
+  for (var b = 0; b < (mo.s || 0); b++) html += '<div class="cal-day blank"></div>';
+  for (var d = 1; d <= mo.d; d++) {
+    var cls = 'cal-day';
+    if (weekends.indexOf(d) >= 0) cls += ' weekend';
+    if (t[0] === mo.y && t[1] === mo.m && t[2] === d) cls += ' today';
+    html += '<div class="' + cls + '" onclick="calPick(' + d + ')">' + d + '</div>';
+  }
+  html += '</div>';
+  calPop.innerHTML = html;
+}
+
+// به‌روزکردن گزارش پس از ثبت موفق. داخل پورتال، گزارش در iframe ای است که با document.write پر
+// شده و آدرس ندارد — location.reload() آن را «سفید» می‌کرد (باگ زندهٔ 1405/06/09). به‌جایش HTML
+// تازه از خود بات گرفته و همان‌جا بازنویسی می‌شود؛ اجرای مستقل همان reload عادی را دارد.
+function reloadReport() {
+  if (!window.frameElement) { location.reload(); return; }
+  var form = new FormData();
+  form.append('customform', JSON.stringify({}));
+  fetch(RUN_URL, { method: 'POST', body: form })
+    .then(function (res) { return res.text(); })
+    .then(function (html) {
+      document.open();
+      document.write(html);
+      document.close();
+    })
+    .catch(function () { /* در بدترین حالت، صفحه همان می‌ماند — کاربر دستی رفرش می‌کند */ });
+}
+
+// لغو درخواستِ در انتظارِ خود کاربر — مستقیم از مرورگر به هندلر رسمی پلتفرم
+// (GET /hr/vacation/delete — همان مسیری که پنجرهٔ پروندهٔ پرسنلی خود تیمیار استفاده می‌کند؛
+// تاییدشدهٔ زنده 1405/06/09 با حذف واقعی رکورد 5687). لایهٔ /api endpoint حذف ندارد
+// (هر ۵ نام محتمل «invaid api path»)، بنابراین سرورِ بات نمی‌تواند لغو کند — ولی کلاینت با
+// نشست خود کاربر می‌تواند، و مجوز مالکیت را خودِ هندلر پلتفرم اعمال می‌کند.
+// پاسخ خالی = موفق؛ هر متن دیگر = پیام خطا (قرارداد همان UI رسمی: if (text != '') → خطا).
+// مکانیزم: iframe مخفیِ هم‌مبدأ به‌جای fetch — بعضی محیط‌ها (افزونه/فیلتر مرورگر) fetch را
+// می‌بندند ولی ناوبری قاب همیشه با کوکی‌های نشست انجام می‌شود؛ پاسخ هم چون هم‌مبدأ است خواندنی است.
+function cancelRequest(requestId, btn, kindFlag) {
+  if (!window.confirm('این درخواست لغو شود؟ این کار قابل بازگشت نیست.')) return;
+  btn.disabled = true;
+  btn.textContent = 'در حال لغو...';
+  var basePath = (kindFlag === 'm') ? '/hr/mission/delete' : '/hr/vacation/delete';
+  var fr = document.createElement('iframe');
+  fr.style.display = 'none';
+  var finished = false;
+  function finish(text) {
+    if (finished) return;
+    finished = true;
+    if (fr.parentNode) fr.parentNode.removeChild(fr);
+    if (text === '') {
+      btn.textContent = 'لغو شد ✓';
+      setTimeout(reloadReport, 900);
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'لغو ✕';
+      window.alert('لغو انجام نشد: ' + text.substring(0, 200));
+    }
+  }
+  fr.onload = function () {
+    var text = '';
+    try {
+      text = (fr.contentDocument && fr.contentDocument.body)
+        ? fr.contentDocument.body.innerText.trim() : '';
+    } catch (e) { text = 'پاسخ سامانه قابل خواندن نبود'; }
+    finish(text);
+  };
+  setTimeout(function () { finish('پاسخی از سامانه نیامد'); }, 15000);
+  fr.src = basePath + '?id=' + encodeURIComponent(requestId) +
+    '&personnel_id=' + encodeURIComponent(REQUEST_PERSONNEL_ID);
+  document.body.appendChild(fr);
+}
+
+function reqShapeChanged() {
+  var shape = document.getElementById('reqShape').value;
+  var hourly = (shape === '1' || shape === '3');
+  var mission = (shape === '3' || shape === '4');
+  document.querySelectorAll('.req-hourly').forEach(function (x) {
+    x.style.display = hourly ? '' : 'none';
+  });
+  document.getElementById('reqDateToWrap').style.display = hourly ? 'none' : '';
+  document.getElementById('reqKindWrap').style.display = mission ? 'none' : '';
+  document.getElementById('reqCityWrap').style.display = mission ? '' : 'none';
+}
+
+function submitRequest() {
+  var btn = document.getElementById('reqSubmit');
+  var result = document.getElementById('reqResult');
+  var shape = document.getElementById('reqShape').value;
+  var hourly = (shape === '1' || shape === '3');
+  var payload = {
+    type: 'request_add',
+    req_shape: shape,
+    req_kind: document.getElementById('reqKind').value,
+    req_city_type: document.getElementById('reqCityType').value,
+    req_date_from: document.getElementById('reqDateFrom').value,
+    req_date_to: hourly ? '' : document.getElementById('reqDateTo').value,
+    req_hour_from: pickedTime('reqHourFromH', 'reqHourFromM'),
+    req_hour_to: pickedTime('reqHourToH', 'reqHourToM'),
+    req_description: document.getElementById('reqDescription').value
+  };
+  if (!payload.req_date_from) { result.textContent = 'تاریخ را وارد کنید.'; return; }
+  if (hourly && (!payload.req_hour_from || !payload.req_hour_to)) {
+    result.textContent = 'ساعت شروع و پایان را وارد کنید.'; return;
+  }
+  btn.disabled = true;
+  result.textContent = 'در حال ثبت درخواست...';
+  botRequest(payload, function (res) {
+    if (!res || !res.ok) {
+      btn.disabled = false;
+      result.textContent = (res && res.error) ? res.error : 'ثبت درخواست انجام نشد.';
+      return;
+    }
+    result.textContent = 'درخواست ثبت شد ✓ (شماره ' + (res.request_id || '—') +
+      ') — چند لحظه دیگر صفحه به‌روز می‌شود.';
+    setTimeout(reloadReport, 1600);
+  }, function () {
+    btn.disabled = false;
+    result.textContent = 'خطا در ارتباط با سرور.';
+  });
+}
+// پرکردن کشوهای ساعت (۰۰–۲۳) و دقیقه (گام ۵تایی) با پیش‌فرض ۰۹:۰۰ تا ۱۰:۰۰
+(function () {
+  function fill(id, max, step, selectedValue) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    for (var v = 0; v < max; v += step) {
+      var txt = ('0' + v).slice(-2);
+      var opt = document.createElement('option');
+      opt.value = txt; opt.textContent = txt;
+      if (v === selectedValue) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+  fill('reqHourFromH', 24, 1, 9);
+  fill('reqHourFromM', 60, 5, 0);
+  fill('reqHourToH', 24, 1, 10);
+  fill('reqHourToM', 60, 5, 0);
+})();
+
+function pickedTime(hId, mId) {
+  var h = document.getElementById(hId), m = document.getElementById(mId);
+  if (!h || !m) return '';
+  return h.value + ':' + m.value;
+}
+
+reqShapeChanged();
+
 function openHelp() { document.getElementById('helpOverlay').classList.add('open'); }
 function closeHelp() { document.getElementById('helpOverlay').classList.remove('open'); }
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') { closeHelp(); closeCelebration(); }
+  if (e.key === 'Escape') { closeHelp(); closeCelebration(); closePayslip(); }
 });
 initSortableTables();
 </script>
 </body>
 </html>]==]
 
+-- زیر نام در سایدبار، سمت واقعی نمایش داده می‌شود («مدیر سیستم ها و روش ها»)، نه صرفاً نام واحد
 local person_unit = ""
-if employment.unit_name ~= nil then
+if employment.position_title ~= nil then
+    person_unit = escape_html(employment.position_title)
+elseif employment.unit_name ~= nil then
     person_unit = escape_html(employment.unit_name)
 end
 
@@ -3399,11 +4147,58 @@ html_tail = replace_token(html_tail, "__CELEBRATION_GROUP_ID__",
 html_tail = replace_token(html_tail, "__CELEBRATION_ENABLED__",
     celebration_enabled and "true" or "false")
 html_tail = replace_token(html_tail, "__CHAT_MODULE_URL__", js_str(chat_module_url))
-html_tail = replace_token(html_tail, "__CHAT_DIALOG_URL_TEMPLATE__", js_str(chat_dialog_url_template))
+
+-- دادهٔ ماه‌های تقویم برای انتخاب‌گر تاریخ فرم درخواست — مرز و نام ماه‌ها از report_dimdate،
+-- روز شروع هفته از WEEKDAY (شنبه=۷ → ایندکس ستون = MOD(WEEKDAY,7))، جمعه‌ها از JWEEKEND
+local calendar_months_json = "[]"
+do
+    local ok_cal = pcall(function()
+        local rows = fetch_rows([[
+SELECT rd.JYEAR, rd.JMONTH, MAX(rd.JTMONTH), MAX(rd.JMDAY),
+       MIN(CASE WHEN rd.JMDAY = 1 THEN MOD(rd.WEEKDAY, 7) END),
+       COALESCE(GROUP_CONCAT(CASE WHEN rd.JWEEKEND = 1 THEN rd.JMDAY END ORDER BY rd.JMDAY), '')
+FROM report_dimdate rd
+JOIN report_dimdate today ON today.DATEKEY = ?
+WHERE (rd.JYEAR * 12 + rd.JMONTH) BETWEEN (today.JYEAR * 12 + today.JMONTH - 1)
+  AND (today.JYEAR * 12 + today.JMONTH + 12)
+GROUP BY rd.JYEAR, rd.JMONTH
+ORDER BY rd.JYEAR, rd.JMONTH
+]], { today_ft }, 6)
+        if rows == nil or #rows == 0 then return end
+        local months = {}
+        for _, r in ipairs(rows) do
+            local weekend_days = {}
+            for token in tostring(r[6] or ""):gmatch("[^,]+") do
+                local n = tonumber(token)
+                if n ~= nil then table.insert(weekend_days, n) end
+            end
+            table.insert(months, {
+                y = tonumber(r[1]) or 0,
+                m = tonumber(r[2]) or 0,
+                n = tostring(r[3] or ""),
+                d = tonumber(r[4]) or 30,
+                s = tonumber(r[5]) or 0,
+                w = weekend_days
+            })
+        end
+        calendar_months_json = json.encode(months)
+    end)
+    if not ok_cal then calendar_months_json = "[]" end
+end
+html_tail = replace_token(html_tail, "__CAL_MONTHS__", calendar_months_json)
+html_tail = replace_token(html_tail, "__CAL_TODAY__",
+    js_str(today_meta.jdate ~= "—" and today_meta.jdate or ""))
+html_tail = replace_token(html_tail, "__REQ_PERSONNEL_ID__",
+    tostring(tonumber(personnel.personnel_id) or 0))
+do
+    local payslips_json = "[]"
+    pcall(function() payslips_json = json.encode(payslips) end)
+    html_tail = replace_token(html_tail, "__PAYSLIPS_DATA__", payslips_json)
+end
 
 local html = html_head .. topbar_html .. error_html ..
-    section_overview .. section_attendance .. section_requests .. section_profile ..
-    celebration_html .. html_tail
+    section_overview .. section_attendance .. section_requests .. section_payslip ..
+    section_profile .. celebration_html .. html_tail
 
 return html
 end)
