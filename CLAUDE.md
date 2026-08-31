@@ -189,6 +189,41 @@ Copy structure, naming, error handling, and helpers from that file.
   **Scope: new bots only**, same as the `escape_html` rule above — do not retrofit into existing/already-working
   HTML bots.
 
+## Calling another bot from a bot's own menu/sidebar (mandatory pattern)
+
+Established live on bot 598 (`2/moadian_index_m_1`) on 1405/06/09 after two failed approaches.
+When a bot's page must open **another** bot inside itself (sidebar/menu item), use an **iframe**:
+
+| Target bot | iframe `src` | Why |
+|---|---|---|
+| Depends on the portal (RES bots, `$.Teamyar`, jQuery, platform CSS) — e.g. 574 `send_group_moadian_m`, 572 `tax_client_st_m` | **the bot's portal page**: `/?page=/bot/run/<run_path>` | renders exactly as when opened from the portal menu |
+| Self-contained (own `<!DOCTYPE html>`, embedded font, no jQuery/`$.Teamyar`) — e.g. 627 `443/vat_quarterly_dashboard` | **the raw fragment**: `/bot/run/<run_path>` | no nested portal chrome at all |
+
+Rules:
+- Lazy-load: set `src` from `data-src` on first click, never on page load.
+- Same-origin (`X-Frame-Options: SAMEORIGIN`), so for the portal-page variant you may hide the nested
+  portal chrome after `load`: poll `frame.contentDocument` for `[id^="widget-report-"], #myDiv,
+  section[data-name]`, then walk up to `<body>` hiding every sibling and clearing each ancestor's
+  background/border/shadow/padding. **If the target never appears, leave the page untouched** — the
+  fallback must be "cluttered", never "blank".
+- Always give each embed view an «باز کردن در تب جدید» link plus a per-frame `data-timeout` note.
+- The target does **not** need to be in `related`/«دستورات مرتبط» for iframing (that list only gates
+  `teamyar.run_command`).
+
+**Two approaches that DO NOT work — do not retry them:**
+1. `<iframe src="/bot/run/<run_path>">` for a portal-dependent bot → blank page. That response is only
+   an HTML fragment; outside the shell there is no jQuery/`$.Teamyar`/platform CSS.
+2. `teamyar.run_command("<run_path>", {})` server-side → returning `{ok=true, html=...}` → injecting it
+   with `innerHTML` and re-creating the `<script>` tags. The call itself works and returns correct HTML,
+   and even a fully sequential script loader did not bring a RES bot up: it depends on its own page
+   context, not merely on its scripts existing in the right order.
+
+**Still true for any HTML injection on this platform:** scripts inserted via `innerHTML` are inert and
+must be re-created **sequentially** — each `src` script awaited (`onload`/`onerror`) before the next
+runs. `s.async = false` alone is NOT enough: it only orders external scripts relative to each other,
+not relative to inline ones, so inline scripts run before the libraries they depend on and die with
+`ReferenceError`.
+
 ## Step 4 — Deploy to Teamyar (mandatory on "build bot")
 
 Base domain: **`erp.bimehland.com`** (see Domain Rule above — never `team.tsco.ir`).
