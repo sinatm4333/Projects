@@ -1,5 +1,5 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/09 20:30
+-- Last Edit = 1405/06/09 21:10
 
 -- botName = action_module  («ماژول اقدام»)
 -- بازطراحی ماژول «اقدام» (BPMN/گردش‌کار سازمانی) — یک بات HTML یکپارچه با ساید‌بار داخلی
@@ -1492,14 +1492,25 @@ local function build_js()
   };
 
   /* ---------------- transport ---------------- */
+  /* AMP با fromCharCode ساخته می‌شود: رشتهٔ literal «امپرسند + حروف» هنگام ذخیرهٔ
+     command توسط Teamyar به Entity تبدیل/مخدوش می‌شود (Quirk تاییدشدهٔ زنده). */
+  var AMP = String.fromCharCode(38);
+
   function callBot(payload, onSuccess, onError) {
-    var body = { customform: JSON.stringify(payload) };
+    /* action از سه مسیر همزمان فرستاده می‌شود، چون پلتفرم بسته به declare بودن فیلد در
+       bot_customform ممکن است بعضی فیلدها را بی‌صدا حذف کند: بدنهٔ customform، فیلد
+       مستقیم action، و query string با نام am_action. سمت Lua هر سه خوانده می‌شود. */
+    var act = payload.action || '';
+    var body = { customform: JSON.stringify(payload), action: act };
+    var sep = (RUN_URL.indexOf('?') === -1) ? '?' : AMP;
+    var url = RUN_URL + sep + 'am_action=' + encodeURIComponent(act);
+
     if (window.jQuery && window.jQuery.Teamyar && window.jQuery.Teamyar.ajax) {
       window.jQuery.Teamyar.ajax({
-        block_holder: '#amRoot',
+        block_holder: 'body',
         options: {
-          block_holder: '#amRoot',
-          url: RUN_URL, type: 'POST', dataType: 'json', async: true, data: body
+          block_holder: 'body',
+          url: url, type: 'POST', dataType: 'json', async: true, data: body
         },
         events: {
           success: function (res) { handleResponse(res, onSuccess, onError); },
@@ -1510,19 +1521,42 @@ local function build_js()
     }
     var form = new URLSearchParams();
     form.append('customform', body.customform);
-    fetch(RUN_URL, {
+    form.append('action', act);
+    fetch(url, {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
       body: form.toString()
-    }).then(function (r) { return r.json(); })
-      .then(function (res) { handleResponse(res, onSuccess, onError); })
+    }).then(function (r) { return r.text(); })
+      .then(function (raw) {
+        var parsed = null;
+        try { parsed = JSON.parse(raw); } catch (e) { parsed = null; }
+        if (parsed === null) {
+          /* پاسخ JSON نبود (معمولاً یعنی سرور کل صفحهٔ HTML را برگردانده) — به‌هیچ‌وجه
+             این محتوا را داخل صفحه تزریق نمی‌کنیم؛ فقط یک خطای خوانا نشان می‌دهیم. */
+          if (window.console) { console.error('[action_module] پاسخ غیر JSON:', String(raw).slice(0, 300)); }
+          onError('پاسخ سرور JSON نبود (احتمالاً کل صفحه برگشته). جزئیات در Console مرورگر.');
+          return;
+        }
+        handleResponse(parsed, onSuccess, onError);
+      })
       .catch(function () { onError('ارتباط با سرور برقرار نشد.'); });
   }
 
   function handleResponse(res, onSuccess, onError) {
     if (!res) { onError('پاسخ خالی از سرور دریافت شد.'); return; }
-    if (res.ok === false) { onError(res.error || 'خطای نامشخص.'); return; }
+    if (typeof res === 'string') {
+      if (window.console) { console.error('[action_module] پاسخ رشته‌ای:', res.slice(0, 300)); }
+      onError('پاسخ سرور JSON نبود. جزئیات در Console مرورگر.');
+      return;
+    }
+    if (res.ok === false) {
+      if (res.received_keys && window.console) {
+        console.error('[action_module] action به بات نرسید. کلیدهای دریافتی سرور:', res.received_keys);
+      }
+      onError(res.error || 'خطای نامشخص.');
+      return;
+    }
     onSuccess(res);
   }
 
@@ -2021,16 +2055,69 @@ end
 -- MAIN
 -- ============================================================
 
-local function main()
-    local input = teamyar.get_input() or {}
-
-    -- ورودی‌های AJAX این بات با کلید customform (JSON) می‌آیند — الگوی تاییدشدهٔ بات‌های [Module]
-    if input["customform"] ~= nil and trim(input["customform"]) ~= "" then
-        local ok, decoded = pcall(function() return json.decode(input["customform"]) end)
-        if ok and type(decoded) == "table" then
-            for k, v in pairs(decoded) do input[k] = v end
+-- ورودی‌های AJAX ممکن است از سه مسیر برسند و پلتفرم بسته به declare بودن فیلد در bot_customform
+-- ممکن است بعضی‌شان را بی‌صدا حذف کند (پیتفال مستند در CLAUDE.md). هر سه مسیر خوانده می‌شود:
+--   ۱) کلید مستقیم `action` (اگر پلتفرم فیلد را عبور دهد)
+--   ۲) `am_action` روی query string (معمولاً از فیلتر فیلدها عبور می‌کند)
+--   ۳) `customform` (رشتهٔ JSON یا جدول از قبل decode‌شده توسط پلتفرم)
+local function merge_customform(input)
+    local raw = input["customform"]
+    if raw == nil then return end
+    if type(raw) == "table" then
+        for k, v in pairs(raw) do
+            if input[k] == nil then input[k] = v end
+        end
+        return
+    end
+    if trim(raw) == "" then return end
+    local ok, decoded = pcall(function() return json.decode(raw) end)
+    if ok and type(decoded) == "table" then
+        for k, v in pairs(decoded) do
+            if input[k] == nil then input[k] = v end
         end
     end
+end
+
+local KNOWN_ACTIONS = {
+    list = true, summary = true, create = true, whoami = true, state_probe = true,
+}
+
+local function resolve_action(input)
+    -- توجه: از ipairs روی جدولِ کاندیداها استفاده نمی‌شود — اگر خانهٔ اول nil باشد
+    -- (یعنی پلتفرم فیلد action را حذف کرده) ipairs همان‌جا متوقف می‌شود و بقیهٔ
+    -- مسیرها هرگز بررسی نمی‌شوند. بررسی صریح و به‌ترتیب اولویت:
+    local direct = trim(input["action"])
+    if direct ~= "" then return direct end
+    local from_query = trim(input["am_action"])
+    if from_query ~= "" then return from_query end
+    return ""
+end
+
+-- آیا این درخواست یک فراخوانی AJAX است؟ اگر بله، هرگز نباید صفحهٔ کامل HTML برگردد —
+-- برگرداندن ۲۴۰ کیلوبایت HTML به یک فراخوانی AJAX همان چیزی است که ظاهر صفحه را می‌پاشاند.
+local function looks_like_ajax(input)
+    if input["customform"] ~= nil then return true end
+    if trim(input["am_action"]) ~= "" then return true end
+    if trim(input["action"]) ~= "" then return true end
+    return false
+end
+
+-- در حالت خطای تشخیص، کلیدهای واقعاً دریافت‌شده برگردانده می‌شوند تا مشخص شود پلتفرم
+-- کدام فیلدها را عبور داده و کدام را حذف کرده است (به‌جای حدس زدن).
+local function received_keys(input)
+    local keys = {}
+    for k, v in pairs(input) do
+        local t = type(v)
+        local preview = (t == "string") and tostring(v):sub(1, 60) or t
+        table.insert(keys, tostring(k) .. "=" .. tostring(preview))
+    end
+    table.sort(keys)
+    return keys
+end
+
+local function main()
+    local input = teamyar.get_input() or {}
+    merge_customform(input)
 
     -- مسیر اجرای بات برای فراخوانی‌های AJAX داخلی؛ قابل بازنویسی از تب «پیکربندی» بات
     -- (بدون نیاز به دیپلوی مجدد، اگر run_path تغییر کرد یا بات کپی شد)
@@ -2041,7 +2128,7 @@ local function main()
         if configured ~= "" then run_path_fallback = configured end
     end
 
-    local action = trim(input["action"])
+    local action = resolve_action(input)
 
     if action == "whoami" then
         respond(handle_whoami(input))
@@ -2073,6 +2160,18 @@ local function main()
             local result = create_action(input)
             respond(result)
         end
+        return
+    end
+
+    -- گارد حیاتی: اگر درخواست AJAX است ولی action شناخته نشد، به‌هیچ‌وجه صفحهٔ کامل برنگردان.
+    -- (این دقیقاً همان حالتی است که باعث می‌شد با هر کلیک منو، کل HTML صفحه دوباره تزریق شود.)
+    if looks_like_ajax(input) and not KNOWN_ACTIONS[action] then
+        respond({
+            ok = false,
+            error = "درخواست AJAX شناسایی شد ولی «action» به بات نرسید (احتمالاً فیلد توسط پلتفرم فیلتر شده).",
+            received_action = action,
+            received_keys = received_keys(input),
+        })
         return
     end
 
