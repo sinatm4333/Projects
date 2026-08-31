@@ -1,15 +1,8 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  ⚠️ DO NOT USE — این اسکریپت روی erp.bimehland.com همیشه 502 Bad Gateway می‌گیرد
-  (تست ایزوله ۱۴۰۵/۰۶/۰۹: حتی no-op روی بات سادهٔ تازه‌ساختهٔ 630 هم 502 داد؛ همان بات با
-  deploy_teamyar_bot.ps1 با HTTP 200 آپدیت شد — مشکل از شکل POST این اسکریپت است، نه فیلدها).
-  به‌جای آن deploy_teamyar_bot.ps1 را با پارامترهای echo بزن:
-  -Categories/-SubsystemValue/-SubsystemName/-PublicAccess/-ShowInWidget/-OpenSource/-BotConfigJson
-  (دستورالعمل کامل: CLAUDE.md بخش «Update existing bot»)
-
-  Original purpose: Update ONLY the command (Lua source) of an existing Teamyar bot, echoing
-  every other field back from the live /bot/command/view response.
+  Update ONLY the command (Lua source) of an existing Teamyar bot, echoing every other
+  field back from the live /bot/command/view response.
 
 .DESCRIPTION
   scripts/deploy_teamyar_bot.ps1 is unsafe for widget/RES bots: it hardcodes
@@ -34,7 +27,11 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ScriptPath,
 
-    [string]$Sid = $env:TEAMYAR_SID
+    [string]$Sid = $env:TEAMYAR_SID,
+
+    # Optional: directory whose files are uploaded as new bot attachments
+    # (multipart "attachments" file fields on the same update POST, like the editor).
+    [string]$AttachDir = ''
 )
 
 Set-StrictMode -Version Latest
@@ -66,19 +63,6 @@ function Get-BotEdit {
 
 $view = Get-BotEdit -Id $BotId
 if (-not $view.id -or [int]$view.id -ne $BotId) { throw "Edit form returned wrong bot (got '$($view.id)')" }
-
-# subsystem_value must echo the live subsystem's id (edit form "subsystem" list carries
-# {id,name}); always posting '' for a bot that HAS a subsystem (e.g. 478 = SALES_VIEW/23_2)
-# makes the save die with a 502 from the backend.
-$subsystemName = ''
-$subsystemValue = ''
-if ($view.PSObject.Properties.Name -contains 'subsystem' -and $null -ne $view.subsystem) {
-    $subsystemRows = @($view.subsystem)
-    if ($subsystemRows.Count -gt 0 -and $subsystemRows[0].PSObject.Properties.Name -contains 'id') {
-        $subsystemValue = [string]$subsystemRows[0].id
-        $subsystemName = [string]$subsystemRows[0].name
-    }
-}
 
 $catId = [int]$view.cat_id
 
@@ -144,8 +128,8 @@ $statusValue = if ("$($view.status)" -match '^(True|1)$') { '1' } else { '0' }
 # مقادیر ساده — عیناً از view
 $simple = [ordered]@{
     'status'                = $statusValue
-    'subsystem_value'       = $subsystemValue
-    'subsystem'             = $subsystemName
+    'subsystem_value'       = ''
+    'subsystem'             = Get-FieldOrEmpty $view 'subsystem'
     'not_showing_in_iframe' = [string]([int]$view.not_showing_in_iframe)
     'icon'                  = Get-FieldOrEmpty $view 'icon'
     'color'                 = Get-FieldOrEmpty $view 'color'
@@ -201,6 +185,25 @@ Add-FormFromValue $curlArgs 'help_content' (Get-FieldOrEmpty $view 'help_content
 
 $curlArgs.Add('--form') | Out-Null
 $curlArgs.Add("command=<$($resolvedScript -replace '\\', '/')") | Out-Null
+
+if ($AttachDir) {
+    if (-not (Test-Path -LiteralPath $AttachDir)) { throw "AttachDir not found: $AttachDir" }
+    $mimeMap = @{
+        '.js'   = 'application/x-javascript'
+        '.css'  = 'text/css'
+        '.html' = 'text/html'
+        '.txt'  = 'text/plain'
+        '.json' = 'application/json'
+    }
+    $attachFiles = @(Get-ChildItem -LiteralPath $AttachDir -File)
+    foreach ($file in $attachFiles) {
+        $mime = $mimeMap[$file.Extension.ToLowerInvariant()]
+        if (-not $mime) { $mime = 'application/octet-stream' }
+        $curlArgs.Add('--form') | Out-Null
+        $curlArgs.Add("attachments=@$($file.FullName -replace '\\', '/');type=$mime") | Out-Null
+    }
+    Write-Host "  attachments: $($attachFiles.Count) file(s) from $AttachDir"
+}
 
 Write-Host "Updating bot $BotId ($($view.name)) — command-only, metadata echoed from live"
 Write-Host "  run_path: $($view.run_path)  cat: $categories  result_type: $($view.result_type)  show_in_widget: $($view.show_in_widget)"

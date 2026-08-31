@@ -10,3 +10,6 @@ scratchpad/
 
 # فایل‌های موقت پراکنده در ریشهٔ پروژه
 tmp_bot948.html
+
+# node dependencies (fengari for local Lua syntax checks) - only package.json stays in Git
+node_modules/

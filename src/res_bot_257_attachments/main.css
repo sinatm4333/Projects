@@ -1,0 +1,13 @@
+.bot_holder{
+    padding:var(--standard_padding);
+  background-color:#fff;
+}
+.bot_title_main_chart{
+	font-size: 16px;
+   font-weight:bold;
+  
+}
+.bot_description_main_chart{
+   font-weight:normal;
+  margin-top:10px;
+}

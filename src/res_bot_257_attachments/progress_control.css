@@ -1,0 +1,48 @@
+		.botControlProgress_holder_each_percent{
+
+            position: relative;
+		}
+
+		.botControlProgress_holder_each_percent::before {
+                display: block;
+                padding-top: 100%;
+                content: " ";
+		}
+        .botControlProgress_holder_each_percent_absolute{
+    		position:absolute;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+      	}
+    
+    	.botControlProgress_holder_title{
+          width: 100%;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          position: absolute;
+          display: flex;
+          align-items: center;
+          flex-direction: column;
+		}
+    
+		.botControlProgress_title{
+			font-size:2dvw;
+		}
+
+		@media (max-width: 1368px) {
+			.botControlProgress_title{
+				font-size:1.35dvw;
+			}
+		}
+
+		@media (max-width: 990px) {
+			.botControlProgress_title{
+				font-size:3.5dvw;
+			}
+		}
+
+    
+    
+    
