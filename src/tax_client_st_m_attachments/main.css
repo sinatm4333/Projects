@@ -139,6 +139,19 @@
   line-height: 1.9;
 }
 #err_msg:empty { padding-bottom: 12px; }
+/* دکمهٔ کپی جلوی مقدار «نام تجاری» - افزوده شده با جاوااسکریپت روی جعبهٔ نتیجهٔ سرور مبدأ */
+.mv140-copy-btn {
+  margin: 0 8px;
+  padding: 2px 10px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #16509D;
+  background: white;
+  border: 1px solid #16509D;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.mv140-copy-btn:hover { background: #f5f5f5; }
 
 /* ===== فوتر برند ===== */
 .mv140-footer {
