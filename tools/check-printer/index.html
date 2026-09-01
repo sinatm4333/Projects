@@ -1,0 +1,1305 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>میزکار چک</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* ============================== Tokens ============================== */
+:root{
+  --bg:#F6F3EC;
+  --surface:#FFFFFF;
+  --surface-2:#EFEAE0;
+  --border:#DED6C4;
+  --border-strong:#C9BFA8;
+  --text:#26231D;
+  --text-muted:#786F5E;
+  --accent:#1D5C63;
+  --accent-strong:#123C41;
+  --accent-soft:#DCEBEA;
+  --accent-contrast:#FFFFFF;
+  --danger:#B0402A;
+  --danger-bg:#F7E4DE;
+  --success:#3E7D53;
+  --success-bg:#E4EFE3;
+  --focus:#1D5C63;
+  --shadow: 0 1px 2px rgba(38,35,29,.06), 0 6px 20px -8px rgba(38,35,29,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#17150F;
+    --surface:#211E17;
+    --surface-2:#2A261C;
+    --border:#3B3626;
+    --border-strong:#4C4630;
+    --text:#EFE8D8;
+    --text-muted:#A99E86;
+    --accent:#59B6AE;
+    --accent-strong:#8AD1C8;
+    --accent-soft:#233330;
+    --accent-contrast:#0B1414;
+    --danger:#E38468;
+    --danger-bg:#3A2419;
+    --success:#84C495;
+    --success-bg:#1F3324;
+    --focus:#8AD1C8;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 26px -10px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#17150F;
+  --surface:#211E17;
+  --surface-2:#2A261C;
+  --border:#3B3626;
+  --border-strong:#4C4630;
+  --text:#EFE8D8;
+  --text-muted:#A99E86;
+  --accent:#59B6AE;
+  --accent-strong:#8AD1C8;
+  --accent-soft:#233330;
+  --accent-contrast:#0B1414;
+  --danger:#E38468;
+  --danger-bg:#3A2419;
+  --success:#84C495;
+  --success-bg:#1F3324;
+  --focus:#8AD1C8;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 26px -10px rgba(0,0,0,.55);
+}
+
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:"Vazirmatn","Tahoma","Arial",sans-serif;
+  font-size:14px;
+  line-height:1.6;
+}
+.mono{font-family:"JetBrains Mono","Vazirmatn",ui-monospace,monospace; font-variant-numeric:tabular-nums;}
+h1,h2,h3{text-wrap:balance; margin:0;}
+button{font-family:inherit;}
+input,select,textarea{font-family:inherit; color:inherit;}
+:focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+
+/* ============================== App shell ============================== */
+.app{
+  display:grid;
+  grid-template-columns:260px 1fr;
+  min-height:100%;
+}
+@media (max-width:860px){
+  .app{grid-template-columns:1fr;}
+  .sidebar{position:sticky; top:0; z-index:20;}
+}
+
+.sidebar{
+  background:var(--surface);
+  border-left:1px solid var(--border);
+  padding:18px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+.brand{
+  display:flex; align-items:center; gap:10px;
+}
+.brand-mark{
+  width:34px; height:34px; border-radius:9px;
+  background:linear-gradient(155deg, var(--accent), var(--accent-strong));
+  display:flex; align-items:center; justify-content:center;
+  color:var(--accent-contrast); font-weight:700; font-size:15px; flex:none;
+}
+.brand-text h1{font-size:15px; font-weight:700;}
+.brand-text p{margin:2px 0 0; font-size:11.5px; color:var(--text-muted);}
+
+.section-label{
+  font-size:11px; font-weight:600; color:var(--text-muted);
+  letter-spacing:.04em; text-transform:uppercase; padding:0 2px;
+}
+
+.tpl-list{display:flex; flex-direction:column; gap:6px;}
+.tpl-card{
+  border:1px solid var(--border); background:var(--surface-2);
+  border-radius:10px; padding:10px 12px; cursor:pointer; text-align:right;
+  display:flex; flex-direction:column; gap:4px;
+}
+.tpl-card:hover{border-color:var(--border-strong);}
+.tpl-card.active{
+  border-color:var(--accent); background:var(--accent-soft);
+  box-shadow:inset 0 0 0 1px var(--accent);
+}
+.tpl-card .name{font-weight:600; font-size:13.5px;}
+.tpl-card .meta{font-size:11px; color:var(--text-muted); display:flex; gap:8px;}
+.chip{
+  display:inline-flex; align-items:center; gap:4px;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:99px; padding:1px 8px; font-size:10.5px; color:var(--text-muted);
+}
+
+.btn{
+  appearance:none; border:1px solid var(--border-strong);
+  background:var(--surface); color:var(--text);
+  border-radius:9px; padding:9px 14px; font-size:13px; font-weight:600;
+  cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  transition:background .12s, border-color .12s, transform .05s;
+}
+.btn:hover{border-color:var(--accent);}
+.btn:active{transform:translateY(1px);}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:var(--accent-contrast);}
+.btn.primary:hover{background:var(--accent-strong); border-color:var(--accent-strong);}
+.btn.ghost{background:transparent; border-color:transparent;}
+.btn.ghost:hover{background:var(--surface-2); border-color:var(--border);}
+.btn.danger{color:var(--danger); border-color:var(--danger);}
+.btn.danger:hover{background:var(--danger-bg);}
+.btn.small{padding:5px 10px; font-size:12px; border-radius:7px;}
+.btn.block{width:100%;}
+.btn:disabled{opacity:.45; cursor:not-allowed;}
+
+.sidebar-foot{margin-top:auto; display:flex; flex-direction:column; gap:8px;}
+.storage-note{font-size:10.5px; color:var(--text-muted); line-height:1.5;}
+
+/* ============================== Main ============================== */
+.main{padding:20px 26px 60px; display:flex; flex-direction:column; gap:18px; min-width:0;}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+.tabs{display:inline-flex; background:var(--surface-2); border:1px solid var(--border); border-radius:11px; padding:3px; gap:2px;}
+.tab-btn{
+  border:0; background:transparent; padding:8px 18px; border-radius:8px;
+  font-size:13.5px; font-weight:600; color:var(--text-muted); cursor:pointer;
+}
+.tab-btn.active{background:var(--surface); color:var(--accent-strong); box-shadow:var(--shadow);}
+.topbar-actions{display:flex; gap:8px;}
+
+.view{display:none;}
+.view.active{display:block;}
+
+.card{
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:14px; padding:16px; box-shadow:var(--shadow);
+}
+.card h2{font-size:13.5px; font-weight:700; margin-bottom:2px;}
+.card .hint{font-size:11.5px; color:var(--text-muted); margin-bottom:12px;}
+
+.field-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px 12px;}
+.field-grid.cols-3{grid-template-columns:1fr 1fr 1fr;}
+.form-row{display:flex; flex-direction:column; gap:5px;}
+.form-row label{font-size:11.5px; color:var(--text-muted); font-weight:600;}
+.form-row input[type=text], .form-row input[type=number], .form-row select, .form-row textarea{
+  border:1px solid var(--border-strong); background:var(--bg); color:var(--text);
+  border-radius:8px; padding:8px 10px; font-size:13px; width:100%;
+}
+.form-row textarea{resize:vertical; min-height:56px;}
+.checkbox-row{flex-direction:row; align-items:center; gap:7px;}
+.checkbox-row input{width:16px; height:16px;}
+
+/* ---- design layout ---- */
+.design-layout{display:grid; grid-template-columns:280px 1fr 300px; gap:16px; align-items:start;}
+@media (max-width:1180px){ .design-layout{grid-template-columns:1fr;} }
+
+.canvas-wrap{
+  position:relative; border-radius:14px; overflow:hidden;
+  border:1px solid var(--border); box-shadow:var(--shadow); background:var(--surface);
+  padding:10px;
+}
+.canvas-origin-note{
+  font-size:10.5px; color:var(--text-muted); display:flex; align-items:center; gap:6px; margin-bottom:8px;
+}
+.canvas{
+  position:relative; width:100%; direction:ltr; user-select:none;
+  border:1px dashed var(--border-strong); border-radius:6px; overflow:hidden;
+  background-color:var(--surface-2);
+  background-repeat:no-repeat; background-position:center; background-size:cover;
+  cursor:crosshair;
+}
+.canvas.has-img{background-color:var(--surface);}
+.canvas .empty-state{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  text-align:center; color:var(--text-muted); font-size:12.5px; padding:20px; direction:rtl;
+}
+.marker{
+  position:absolute; transform:translate(-50%,-50%);
+  display:flex; align-items:center; gap:5px; cursor:grab;
+  direction:rtl;
+}
+.marker .dot{
+  width:11px; height:11px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--accent-contrast); box-shadow:0 0 0 1.5px var(--accent);
+  flex:none;
+}
+.marker .tag{
+  background:var(--accent); color:var(--accent-contrast);
+  font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:99px;
+  white-space:nowrap; box-shadow:var(--shadow);
+}
+.marker.selected .dot{background:var(--danger); box-shadow:0 0 0 1.5px var(--danger);}
+.marker.selected .tag{background:var(--danger);}
+.marker:active{cursor:grabbing;}
+
+.quick-add{display:flex; flex-wrap:wrap; gap:6px;}
+.preset-chip{
+  border:1px dashed var(--border-strong); background:var(--surface-2);
+  border-radius:99px; padding:6px 12px; font-size:12px; cursor:pointer; color:var(--text);
+}
+.preset-chip:hover{border-color:var(--accent); color:var(--accent-strong);}
+
+.field-list{display:flex; flex-direction:column; gap:8px; max-height:520px; overflow-y:auto; padding-left:2px;}
+.field-row{border:1px solid var(--border); border-radius:10px; background:var(--surface-2);}
+.field-row.selected{border-color:var(--accent);}
+.field-row-head{display:flex; align-items:center; gap:8px; padding:9px 10px; cursor:pointer;}
+.field-row-head .name{font-size:13px; font-weight:600; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.field-row-head .xy{font-size:10.5px; color:var(--text-muted);}
+.field-row-body{padding:0 10px 12px; display:none; flex-direction:column; gap:10px;}
+.field-row.open .field-row-body{display:flex;}
+.field-row-body .field-grid{grid-template-columns:1fr 1fr;}
+.kind-badge{
+  font-size:10px; font-weight:600; border-radius:99px; padding:2px 8px;
+  background:var(--accent-soft); color:var(--accent-strong); flex:none;
+}
+.empty-hint{color:var(--text-muted); font-size:12.5px; text-align:center; padding:22px 10px;}
+
+/* ---- print layout ---- */
+.print-layout{display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start;}
+@media (max-width:1000px){ .print-layout{grid-template-columns:1fr;} }
+.entry-field{display:flex; flex-direction:column; gap:5px;}
+.entry-field .row{display:flex; gap:8px;}
+.entry-field label{font-size:12px; font-weight:600; color:var(--text-muted);}
+.entry-field input{
+  border:1px solid var(--border-strong); background:var(--bg); color:var(--text);
+  border-radius:8px; padding:9px 11px; font-size:13.5px; width:100%;
+}
+
+.preview-canvas{
+  position:relative; width:100%; direction:ltr;
+  border:1px solid var(--border); border-radius:6px; overflow:hidden;
+  background-color:var(--surface-2); background-repeat:no-repeat; background-position:center; background-size:cover;
+}
+.preview-field{
+  position:absolute; white-space:nowrap; color:#1a1a1a;
+  transform:translateY(-50%);
+}
+
+.history-list{display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto;}
+.history-item{
+  border:1px solid var(--border); background:var(--surface-2); border-radius:9px;
+  padding:8px 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px;
+}
+.history-item .t{color:var(--text-muted); font-size:10.5px;}
+
+.divider{height:1px; background:var(--border); margin:14px 0;}
+
+/* ============================== Print output (screen: hidden) ============================== */
+#printArea{position:absolute; left:-99999px; top:0;}
+@media print{
+  body > *:not(#printArea){display:none !important;}
+  #printArea{position:fixed !important; inset:0 !important; left:0 !important; background:#fff !important;}
+  html,body{background:#fff !important;}
+}
+.print-field{position:absolute; white-space:nowrap; color:#000;}
+
+/* ============================== Misc ============================== */
+dialog{
+  border:1px solid var(--border); border-radius:14px; padding:0; color:var(--text);
+  background:var(--surface); box-shadow:var(--shadow); max-width:560px; width:92vw;
+}
+dialog::backdrop{background:rgba(20,18,12,.45);}
+.dialog-inner{padding:18px 20px;}
+.dialog-inner h3{font-size:15px; margin-bottom:10px;}
+.dialog-inner p{font-size:13px; color:var(--text-muted); margin:6px 0;}
+.dialog-inner ol{margin:8px 0; padding-inline-start:20px; font-size:13px;}
+.dialog-inner li{margin-bottom:6px;}
+.dialog-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:14px;}
+textarea.json-box{
+  width:100%; min-height:140px; border:1px solid var(--border-strong); background:var(--bg);
+  color:var(--text); border-radius:8px; padding:10px; font-family:"JetBrains Mono",monospace; font-size:11.5px;
+  direction:ltr; text-align:left;
+}
+.toast{
+  position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+  background:var(--accent-strong); color:var(--accent-contrast); padding:10px 18px;
+  border-radius:99px; font-size:12.5px; font-weight:600; box-shadow:var(--shadow);
+  opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:100;
+}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
+
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important; animation:none !important;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ============================== Sidebar ============================== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">چک</div>
+      <div class="brand-text">
+        <h1>میزکار چک</h1>
+        <p>چاپ دقیق روی برگه‌ی چک</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label" style="margin-bottom:8px;">قالب‌های چک</div>
+      <div class="tpl-list" id="tplList"></div>
+      <button class="btn block" style="margin-top:8px;" id="btnNewTpl">+ قالب جدید</button>
+    </div>
+
+    <div class="sidebar-foot">
+      <button class="btn ghost small" id="btnHelp">؟ راهنمای استفاده</button>
+      <button class="btn ghost small" id="btnBackup">درون‌ریزی / برون‌بری قالب‌ها</button>
+      <div class="storage-note">اطلاعات فقط روی همین مرورگر ذخیره می‌شود (localStorage). برای انتقال به سیستم دیگر از «درون‌ریزی/برون‌بری» استفاده کنید.</div>
+    </div>
+  </aside>
+
+  <!-- ============================== Main ============================== -->
+  <main class="main">
+    <div class="topbar">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="design">طراحی قالب</button>
+        <button class="tab-btn" data-tab="print">چاپ چک</button>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn small ghost" id="btnRenameTpl">تغییر نام قالب</button>
+        <button class="btn small ghost" id="btnDupTpl">تکثیر قالب</button>
+        <button class="btn small danger" id="btnDelTpl">حذف قالب</button>
+      </div>
+    </div>
+
+    <!-- -------- Design view -------- -->
+    <section class="view active" id="view-design">
+      <div class="design-layout">
+
+        <!-- template settings -->
+        <div class="card">
+          <h2>مشخصات برگه</h2>
+          <div class="hint">ابعاد واقعی برگه‌ی چک (به میلی‌متر) — دقت چاپ کاملاً به همین عدد وابسته است.</div>
+          <div class="field-grid">
+            <div class="form-row">
+              <label>نام قالب</label>
+              <input type="text" id="tplName" />
+            </div>
+            <div class="form-row">
+              <label>واحد پول</label>
+              <select id="tplCurrency">
+                <option value="ریال">ریال</option>
+                <option value="تومان">تومان</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>عرض برگه (mm)</label>
+              <input type="number" id="tplW" min="30" max="500" step="0.5" />
+            </div>
+            <div class="form-row">
+              <label>ارتفاع برگه (mm)</label>
+              <input type="number" id="tplH" min="30" max="500" step="0.5" />
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <h2>تصویر مرجع (فقط برای کالیبراسیون)</h2>
+          <div class="hint">عکس/اسکن صاف و تا لبه‌ی چک را بارگذاری کنید. این تصویر هرگز چاپ نمی‌شود — فقط برای جای‌گذاری دقیق فیلدهاست.</div>
+          <input type="file" accept="image/*" id="tplImgInput" style="display:none" />
+          <div style="display:flex; gap:8px;">
+            <button class="btn small block" id="btnUploadImg">بارگذاری تصویر</button>
+            <button class="btn small ghost" id="btnClearImg">حذف تصویر</button>
+          </div>
+
+          <div class="divider"></div>
+
+          <h2>افزودن سریع فیلد</h2>
+          <div class="hint">روی برچسب کلیک کنید تا فیلد در وسط برگه اضافه شود، سپس آن را روی نقطه‌ی درست بکشید.</div>
+          <div class="quick-add" id="quickAdd"></div>
+          <button class="btn small ghost block" style="margin-top:8px;" id="btnCustomField">+ فیلد سفارشی (کلیک روی تصویر)</button>
+        </div>
+
+        <!-- canvas -->
+        <div>
+          <div class="canvas-wrap">
+            <div class="canvas-origin-note">مبدأ مختصات: گوشه‌ی بالا-چپ برگه — برای افزودن فیلد جدید، روی نقطه‌ی موردنظر کلیک کنید.</div>
+            <div class="canvas" id="canvas"></div>
+          </div>
+        </div>
+
+        <!-- field list -->
+        <div class="card">
+          <h2>فیلدهای این قالب</h2>
+          <div class="hint" id="fieldCountHint"></div>
+          <div class="field-list" id="fieldList"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- -------- Print view -------- -->
+    <section class="view" id="view-print">
+      <div class="print-layout">
+
+        <div class="card">
+          <h2>مقادیر چک</h2>
+          <div class="hint">فقط قسمت‌هایی که در قالب مشخص کرده‌اید پر و چاپ می‌شوند.</div>
+          <div id="entryForm" style="display:flex; flex-direction:column; gap:12px;"></div>
+          <div class="divider"></div>
+          <button class="btn primary block" id="btnPrint">🖨 چاپ روی برگه‌ی چک</button>
+          <div class="hint" style="margin-top:8px;">برگه‌ی چک را دقیقاً هم‌راستا در پرینتر قرار دهید. در پنجره‌ی چاپ، اندازه‌ی کاغذ به‌صورت خودکار برابر ابعاد قالب («<span id="printSizeHint" class="mono"></span>») تنظیم می‌شود؛ در صورت نیاز اندازه‌ی سفارشی را در پرینتر هم انتخاب کنید.</div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h2>پیش‌نمایش</h2>
+            <div class="hint">فقط برای اطمینان از جانمایی — نسبت به برگه‌ی واقعی مقیاس‌شده است.</div>
+            <div class="preview-canvas" id="previewCanvas"></div>
+          </div>
+          <div class="card" style="margin-top:16px;">
+            <h2>چاپ‌های اخیر این قالب</h2>
+            <div class="history-list" id="historyList"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ============================== Print target ============================== -->
+<div id="printArea"></div>
+<style id="printPageSize"></style>
+
+<!-- ============================== Dialogs ============================== -->
+<dialog id="helpDialog">
+  <div class="dialog-inner">
+    <h3>راهنمای استفاده</h3>
+    <ol>
+      <li>در «طراحی قالب»، ابعاد واقعی برگه‌ی چک را به میلی‌متر وارد کنید و عکسی صاف و تا لبه از چک بارگذاری کنید (این عکس چاپ نمی‌شود، فقط راهنماست).</li>
+      <li>از «افزودن سریع فیلد» برچسب موردنظر را انتخاب یا «فیلد سفارشی» بزنید، سپس روی نقطه‌ی درست در تصویر کلیک/درگ کنید.</li>
+      <li>برای فیلدهایی که در برگه به‌صورت خانه‌های جدا هستند (مثل تاریخ یا مبلغ در چک‌های رسالت)، از «فاصله‌ی حروف» در ویرایش فیلد استفاده کنید تا نوشته با خانه‌ها هم‌تراز شود.</li>
+      <li>به تب «چاپ چک» بروید، مقادیر را وارد کنید. برای فیلدهای «مبلغ به حروف» و «تاریخ به حروف» دکمه‌ی تبدیل خودکار در کنار فیلد عددی وجود دارد.</li>
+      <li>برگه‌ی چک را در پرینتر بگذارید و «چاپ» را بزنید. فقط نوشته‌ها چاپ می‌شوند، نه طرح یا تصویر چک.</li>
+    </ol>
+    <div class="dialog-actions"><button class="btn primary" id="closeHelp">متوجه شدم</button></div>
+  </div>
+</dialog>
+
+<dialog id="promptDialog">
+  <div class="dialog-inner">
+    <h3 id="promptTitle">عنوان</h3>
+    <input type="text" id="promptInput" style="width:100%; border:1px solid var(--border-strong); background:var(--bg); color:var(--text); border-radius:8px; padding:9px 11px; font-size:13.5px;" />
+    <div class="dialog-actions">
+      <button class="btn ghost" id="promptCancel">انصراف</button>
+      <button class="btn primary" id="promptOk">تایید</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="confirmDialog">
+  <div class="dialog-inner">
+    <h3 id="confirmTitle">آیا مطمئن هستید؟</h3>
+    <p id="confirmBody"></p>
+    <div class="dialog-actions">
+      <button class="btn ghost" id="confirmCancel">انصراف</button>
+      <button class="btn danger" id="confirmOk">حذف</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="backupDialog">
+  <div class="dialog-inner">
+    <h3>درون‌ریزی / برون‌بری قالب‌ها</h3>
+    <p>برای پشتیبان‌گیری یا انتقال به سیستم دیگر، متن زیر را کپی و در جای امنی نگه دارید.</p>
+    <textarea class="json-box" id="exportBox" readonly></textarea>
+    <button class="btn small" id="btnCopyExport" style="margin-top:8px;">کپی متن</button>
+    <div class="divider"></div>
+    <p>برای بازیابی، متن پشتیبان را اینجا جای‌گذاری و «بارگذاری» را بزنید (جایگزین قالب‌های فعلی می‌شود).</p>
+    <textarea class="json-box" id="importBox" placeholder="متن پشتیبان را اینجا جای‌گذاری کنید..."></textarea>
+    <div class="dialog-actions">
+      <button class="btn ghost" id="closeBackup">بستن</button>
+      <button class="btn primary" id="btnDoImport">بارگذاری</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   Persian number / date helpers
+   ============================================================ */
+var YEKAN=['','یک','دو','سه','چهار','پنج','شش','هفت','هشت','نه'];
+var DAHYEK=['ده','یازده','دوازده','سیزده','چهارده','پانزده','شانزده','هفده','هجده','نوزده'];
+var DAHGAN=['','ده','بیست','سی','چهل','پنجاه','شصت','هفتاد','هشتاد','نود'];
+var SADGAN=['','یکصد','دویست','سیصد','چهارصد','پانصد','ششصد','هفتصد','هشتصد','نهصد'];
+var SCALE=['','هزار','میلیون','میلیارد','تریلیون','کوادریلیون'];
+var ORDINALS=['','اول','دوم','سوم','چهارم','پنجم','ششم','هفتم','هشتم','نهم','دهم','یازدهم','دوازدهم','سیزدهم','چهاردهم','پانزدهم','شانزدهم','هفدهم','هجدهم','نوزدهم','بیستم','بیست و یکم','بیست و دوم','بیست و سوم','بیست و چهارم','بیست و پنجم','بیست و ششم','بیست و هفتم','بیست و هشتم','بیست و نهم','سی‌ام','سی و یکم'];
+var JMONTHS=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+
+function toEnglishDigits(str){
+  if(str==null) return '';
+  var fa='۰۱۲۳۴۵۶۷۸۹', ar='٠١٢٣٤٥٦٧٨٩';
+  return String(str).replace(/[۰-۹٠-٩]/g,function(ch){
+    var i=fa.indexOf(ch); if(i>-1) return String(i);
+    i=ar.indexOf(ch); if(i>-1) return String(i);
+    return ch;
+  });
+}
+
+function threeDigitWords(n){
+  var s=Math.floor(n/100), r=n%100, parts=[];
+  if(s>0) parts.push(SADGAN[s]);
+  if(r>0){
+    if(r<10) parts.push(YEKAN[r]);
+    else if(r<20) parts.push(DAHYEK[r-10]);
+    else{
+      var d=Math.floor(r/10), y=r%10;
+      parts.push(y===0 ? DAHGAN[d] : DAHGAN[d]+' و '+YEKAN[y]);
+    }
+  }
+  return parts.join(' و ');
+}
+
+function numberToWords(num){
+  num=Math.floor(Math.abs(Number(num)||0));
+  if(num===0) return 'صفر';
+  var groups=[];
+  while(num>0){ groups.unshift(num%1000); num=Math.floor(num/1000); }
+  var parts=[];
+  for(var i=0;i<groups.length;i++){
+    var g=groups[i], scaleIdx=groups.length-1-i;
+    if(g===0) continue;
+    var w=threeDigitWords(g);
+    if(scaleIdx>0) w+=' '+SCALE[scaleIdx];
+    parts.push(w);
+  }
+  return parts.join(' و ');
+}
+
+function amountToWords(num,currency){
+  var n=Math.floor(Math.abs(Number(num)||0));
+  return numberToWords(n)+' '+(currency||'ریال');
+}
+
+function gregorianToJalali(gy,gm,gd){
+  var g_d_m=[0,31,59,90,120,151,181,212,243,273,304,334];
+  var jy=(gy<=1600)?0:979;
+  gy-= (gy<=1600)?621:1600;
+  var gy2=(gm>2)?(gy+1):gy;
+  var days=(365*gy)+parseInt((gy2+3)/4)-parseInt((gy2+99)/100)+parseInt((gy2+399)/400)-80+gd+g_d_m[gm-1];
+  jy+=33*parseInt(days/12053); days%=12053;
+  jy+=4*parseInt(days/1461); days%=1461;
+  if(days>365){ jy+=parseInt((days-1)/365); days=(days-1)%365; }
+  var jm,jd;
+  if(days<186){ jm=1+parseInt(days/31); jd=1+(days%31); }
+  else { jm=7+parseInt((days-186)/30); jd=1+((days-186)%30); }
+  return [jy,jm,jd];
+}
+
+function parseJalaliDateStr(str){
+  var s=toEnglishDigits(str).trim();
+  var m=s.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  if(!m) return null;
+  var y=parseInt(m[1],10), mo=parseInt(m[2],10), d=parseInt(m[3],10);
+  if(mo<1||mo>12||d<1||d>31) return null;
+  return {y:y,m:mo,d:d};
+}
+
+function dateToWords(y,m,d){
+  if(m<1||m>12||d<1||d>31) return '';
+  return ORDINALS[d]+' '+JMONTHS[m-1]+' ماه '+numberToWords(y);
+}
+
+function pad2(n){ return (n<10?'0':'')+n; }
+
+/* ============================================================
+   State
+   ============================================================ */
+var STORAGE_KEY='checkWorkbenchState_v1';
+var state=null;
+var saveTimer=null;
+
+function uid(){ return 'f'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
+
+function defaultTemplate(name){
+  return {
+    id: uid(),
+    name: name || 'قالب بدون‌نام',
+    paperW: 200,
+    paperH: 90,
+    currency: 'ریال',
+    image: null,
+    fields: [],
+    draft: {},
+    history: []
+  };
+}
+
+function loadState(){
+  try{
+    var raw=localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      var parsed=JSON.parse(raw);
+      if(parsed && Array.isArray(parsed.templates) && parsed.templates.length){
+        return parsed;
+      }
+    }
+  }catch(e){ /* ignore corrupt storage */ }
+  var t=defaultTemplate('چک نمونه (رسالت)');
+  t.paperW=200; t.paperH=90;
+  return { templates:[t], activeId:t.id };
+}
+
+function persist(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch(e){ showToast('ذخیره‌سازی ناموفق بود (فضای مرورگر پر است)'); }
+  }, 250);
+}
+
+function activeTpl(){
+  var t=state.templates.filter(function(x){ return x.id===state.activeId; })[0];
+  return t || state.templates[0];
+}
+
+/* ============================================================
+   Small UI helpers
+   ============================================================ */
+function $(sel,root){ return (root||document).querySelector(sel); }
+function $all(sel,root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+function el(tag,attrs,children){
+  var e=document.createElement(tag);
+  if(attrs) for(var k in attrs){
+    if(k==='class') e.className=attrs[k];
+    else if(k==='text') e.textContent=attrs[k];
+    else if(k.indexOf('on')===0 && typeof attrs[k]==='function') e.addEventListener(k.slice(2), attrs[k]);
+    else e.setAttribute(k, attrs[k]);
+  }
+  (children||[]).forEach(function(c){ if(c) e.appendChild(c); });
+  return e;
+}
+function showToast(msg){
+  var t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(showToast._tm);
+  showToast._tm=setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+
+function askConfirm(title, body){
+  return new Promise(function(resolve){
+    var dlg=$('#confirmDialog');
+    $('#confirmTitle').textContent=title;
+    $('#confirmBody').textContent=body||'';
+    dlg.showModal();
+    function onOk(){ cleanup(); resolve(true); }
+    function onCancel(){ cleanup(); resolve(false); }
+    function cleanup(){
+      dlg.close();
+      $('#confirmOk').removeEventListener('click', onOk);
+      $('#confirmCancel').removeEventListener('click', onCancel);
+    }
+    $('#confirmOk').addEventListener('click', onOk);
+    $('#confirmCancel').addEventListener('click', onCancel);
+  });
+}
+function askPrompt(title, def){
+  return new Promise(function(resolve){
+    var dlg=$('#promptDialog');
+    $('#promptTitle').textContent=title;
+    var input=$('#promptInput'); input.value=def||'';
+    dlg.showModal();
+    setTimeout(function(){ input.focus(); input.select(); },30);
+    function onOk(){ cleanup(); resolve(input.value.trim()); }
+    function onCancel(){ cleanup(); resolve(null); }
+    function cleanup(){
+      dlg.close();
+      $('#promptOk').removeEventListener('click', onOk);
+      $('#promptCancel').removeEventListener('click', onCancel);
+    }
+    $('#promptOk').addEventListener('click', onOk);
+    $('#promptCancel').addEventListener('click', onCancel);
+  });
+}
+
+/* ============================================================
+   Field presets
+   ============================================================ */
+var PRESETS=[
+  {label:'مبلغ به عدد', kind:'amount_number'},
+  {label:'مبلغ به حروف', kind:'amount_words'},
+  {label:'در وجه (گیرنده)', kind:'text'},
+  {label:'تاریخ (عدد)', kind:'date_number'},
+  {label:'تاریخ (حروف)', kind:'date_words'},
+  {label:'شماره حساب / شناسه چک', kind:'text'},
+  {label:'کد ملی / شناسه', kind:'text'},
+  {label:'شهر', kind:'text'},
+  {label:'بابت', kind:'text'}
+];
+var KIND_LABELS={
+  text:'متن آزاد', amount_number:'مبلغ (عدد)', amount_words:'مبلغ (حروف)',
+  date_number:'تاریخ (عدد)', date_words:'تاریخ (حروف)'
+};
+
+/* ============================================================
+   Rendering: sidebar template list
+   ============================================================ */
+function renderTplList(){
+  var box=$('#tplList'); box.innerHTML='';
+  state.templates.forEach(function(t){
+    var card=el('div',{class:'tpl-card'+(t.id===state.activeId?' active':''), onclick:function(){
+      state.activeId=t.id; persist(); renderAll();
+    }},[
+      el('div',{class:'name', text:t.name}),
+      el('div',{class:'meta'},[
+        el('span',{class:'chip mono', text:t.paperW+'×'+t.paperH+'mm'}),
+        el('span',{class:'chip', text:t.fields.length+' فیلد'})
+      ])
+    ]);
+    box.appendChild(card);
+  });
+}
+
+/* ============================================================
+   Rendering: design view
+   ============================================================ */
+var selectedFieldId=null;
+var dragCtx=null;
+
+function renderDesign(){
+  var t=activeTpl();
+  $('#tplName').value=t.name;
+  $('#tplCurrency').value=t.currency;
+  $('#tplW').value=t.paperW;
+  $('#tplH').value=t.paperH;
+
+  var canvas=$('#canvas');
+  canvas.style.aspectRatio=t.paperW+' / '+t.paperH;
+  if(t.image){
+    canvas.style.backgroundImage='url("'+t.image+'")';
+    canvas.classList.add('has-img');
+  } else {
+    canvas.style.backgroundImage='';
+    canvas.classList.remove('has-img');
+  }
+  // precision grid: 10mm minor / 50mm major
+  var minorX=(10/t.paperW*100), minorY=(10/t.paperH*100);
+  var majorX=(50/t.paperW*100), majorY=(50/t.paperH*100);
+  canvas.style.backgroundImage = (t.image?'url("'+t.image+'"), ':'') +
+    'repeating-linear-gradient(90deg, rgba(29,92,99,.14) 0, rgba(29,92,99,.14) 1px, transparent 1px, transparent '+majorX+'%),'+
+    'repeating-linear-gradient(0deg, rgba(29,92,99,.14) 0, rgba(29,92,99,.14) 1px, transparent 1px, transparent '+majorY+'%),'+
+    'repeating-linear-gradient(90deg, rgba(29,92,99,.06) 0, rgba(29,92,99,.06) 1px, transparent 1px, transparent '+minorX+'%),'+
+    'repeating-linear-gradient(0deg, rgba(29,92,99,.06) 0, rgba(29,92,99,.06) 1px, transparent 1px, transparent '+minorY+'%)';
+  canvas.style.backgroundSize = (t.image?'cover, ':'') + '100% 100%, 100% 100%, 100% 100%, 100% 100%';
+
+  canvas.innerHTML='';
+  if(!t.image && t.fields.length===0){
+    canvas.appendChild(el('div',{class:'empty-state', text:'تصویر مرجع بارگذاری کنید یا مستقیم روی این ناحیه کلیک کنید تا فیلد اضافه شود.'}));
+  }
+  t.fields.forEach(function(f){
+    var m=el('div',{class:'marker'+(f.id===selectedFieldId?' selected':''), style:'left:'+(f.x/t.paperW*100)+'%; top:'+(f.y/t.paperH*100)+'%;'},[
+      el('div',{class:'dot'}),
+      el('div',{class:'tag', text:f.label||'فیلد'})
+    ]);
+    m.dataset.fieldId=f.id;
+    m.addEventListener('pointerdown', function(ev){ startDrag(ev, f.id); });
+    m.addEventListener('click', function(ev){ ev.stopPropagation(); selectField(f.id); });
+    canvas.appendChild(m);
+  });
+
+  // quick add chips
+  var qa=$('#quickAdd'); qa.innerHTML='';
+  PRESETS.forEach(function(p){
+    qa.appendChild(el('button',{class:'preset-chip', text:p.label, onclick:function(){ addField(p.label, p.kind); }}));
+  });
+
+  renderFieldList();
+  $('#fieldCountHint').textContent = t.fields.length+' فیلد در این قالب — روی هر فیلد کلیک کنید تا ویرایش شود.';
+}
+
+function selectField(id){
+  selectedFieldId=id;
+  renderDesign();
+  var row=$('.field-row[data-id="'+id+'"]');
+  if(row){ row.classList.add('open'); row.scrollIntoView({block:'nearest'}); }
+}
+
+function addField(label, kind, xPct, yPct){
+  var t=activeTpl();
+  var f={
+    id: uid(),
+    label: label || 'فیلد جدید',
+    kind: kind || 'text',
+    x: Math.round((xPct!=null?xPct:50)/100 * t.paperW * 10)/10,
+    y: Math.round((yPct!=null?yPct:50)/100 * t.paperH * 10)/10,
+    fontSize: 12,
+    bold: false,
+    align: 'right',
+    direction: (kind==='amount_number'||kind==='date_number') ? 'ltr' : 'rtl',
+    letterSpacing: 0,
+    sample: ''
+  };
+  t.fields.push(f);
+  persist();
+  selectField(f.id);
+}
+
+function startDrag(ev, fieldId){
+  ev.preventDefault(); ev.stopPropagation();
+  var canvas=$('#canvas');
+  var rect=canvas.getBoundingClientRect();
+  var t=activeTpl();
+  dragCtx={ fieldId:fieldId, rect:rect };
+  function move(e){
+    var xPct=Math.min(100,Math.max(0,(e.clientX-rect.left)/rect.width*100));
+    var yPct=Math.min(100,Math.max(0,(e.clientY-rect.top)/rect.height*100));
+    var f=t.fields.filter(function(x){return x.id===fieldId;})[0];
+    if(!f) return;
+    f.x=Math.round(xPct/100*t.paperW*10)/10;
+    f.y=Math.round(yPct/100*t.paperH*10)/10;
+    var marker=canvas.querySelector('.marker[data-field-id="'+fieldId+'"]');
+    if(marker){ marker.style.left=xPct+'%'; marker.style.top=yPct+'%'; }
+    var xi=$('.field-row[data-id="'+fieldId+'"] .inp-x');
+    var yi=$('.field-row[data-id="'+fieldId+'"] .inp-y');
+    if(xi) xi.value=f.x;
+    if(yi) yi.value=f.y;
+  }
+  function up(){
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    persist();
+    selectField(fieldId);
+  }
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+  selectField(fieldId);
+}
+
+$('#canvas').addEventListener('click', function(ev){
+  if(ev.target.closest('.marker')) return;
+  var rect=this.getBoundingClientRect();
+  var xPct=(ev.clientX-rect.left)/rect.width*100;
+  var yPct=(ev.clientY-rect.top)/rect.height*100;
+  addField('فیلد جدید','text',xPct,yPct);
+  setTimeout(function(){
+    var row=$('.field-row[data-id="'+selectedFieldId+'"] .inp-label');
+    if(row){ row.focus(); row.select(); }
+  },30);
+});
+
+function renderFieldList(){
+  var t=activeTpl();
+  var box=$('#fieldList'); box.innerHTML='';
+  if(t.fields.length===0){
+    box.appendChild(el('div',{class:'empty-hint', text:'هنوز فیلدی اضافه نشده. از «افزودن سریع فیلد» یا کلیک روی تصویر استفاده کنید.'}));
+    return;
+  }
+  t.fields.forEach(function(f){
+    var open = f.id===selectedFieldId;
+    var row=el('div',{class:'field-row'+(open?' open':'')+(f.id===selectedFieldId?' selected':''), 'data-id':f.id});
+
+    var head=el('div',{class:'field-row-head', onclick:function(){
+      selectedFieldId = (selectedFieldId===f.id) ? null : f.id;
+      renderDesign();
+    }},[
+      el('span',{class:'kind-badge', text:KIND_LABELS[f.kind]||'متن'}),
+      el('span',{class:'name', text:f.label}),
+      el('span',{class:'xy mono', text:f.x+','+f.y})
+    ]);
+    row.appendChild(head);
+
+    var body=el('div',{class:'field-row-body'});
+    var grid=el('div',{class:'field-grid'});
+
+    function mkRow(labelText, inputEl){
+      return el('div',{class:'form-row'},[ el('label',{text:labelText}), inputEl ]);
+    }
+
+    var labelInput=el('input',{type:'text', class:'inp-label', value:f.label});
+    labelInput.value=f.label;
+    labelInput.addEventListener('input', function(){ f.label=this.value; persist(); var mk=$('.marker[data-field-id="'+f.id+'"] .tag'); if(mk) mk.textContent=f.label; head.querySelector('.name').textContent=f.label; });
+    grid.appendChild(mkRow('برچسب', labelInput));
+
+    var kindSel=el('select',{});
+    Object.keys(KIND_LABELS).forEach(function(k){
+      var o=el('option',{value:k, text:KIND_LABELS[k]});
+      if(k===f.kind) o.setAttribute('selected','selected');
+      kindSel.appendChild(o);
+    });
+    kindSel.addEventListener('change', function(){ f.kind=this.value; persist(); renderFieldList(); });
+    grid.appendChild(mkRow('نوع فیلد', kindSel));
+
+    var xInput=el('input',{type:'number', class:'inp-x', step:'0.5', value:f.x});
+    xInput.value=f.x;
+    xInput.addEventListener('input', function(){ f.x=parseFloat(this.value)||0; persist(); syncMarker(f); });
+    grid.appendChild(mkRow('x (mm از چپ)', xInput));
+
+    var yInput=el('input',{type:'number', class:'inp-y', step:'0.5', value:f.y});
+    yInput.value=f.y;
+    yInput.addEventListener('input', function(){ f.y=parseFloat(this.value)||0; persist(); syncMarker(f); });
+    grid.appendChild(mkRow('y (mm از بالا)', yInput));
+
+    var fsInput=el('input',{type:'number', class:'inp-fs', step:'0.5', min:'6', value:f.fontSize});
+    fsInput.value=f.fontSize;
+    fsInput.addEventListener('input', function(){ f.fontSize=parseFloat(this.value)||12; persist(); });
+    grid.appendChild(mkRow('اندازه‌ی قلم (pt)', fsInput));
+
+    var lsInput=el('input',{type:'number', class:'inp-ls', step:'0.1', value:f.letterSpacing});
+    lsInput.value=f.letterSpacing;
+    lsInput.addEventListener('input', function(){ f.letterSpacing=parseFloat(this.value)||0; persist(); });
+    grid.appendChild(mkRow('فاصله‌ی حروف (mm)', lsInput));
+
+    var alignSel=el('select',{});
+    [['right','راست'],['center','وسط'],['left','چپ']].forEach(function(p){
+      var o=el('option',{value:p[0], text:p[1]});
+      if(p[0]===f.align) o.setAttribute('selected','selected');
+      alignSel.appendChild(o);
+    });
+    alignSel.addEventListener('change', function(){ f.align=this.value; persist(); });
+    grid.appendChild(mkRow('چینش متن', alignSel));
+
+    var dirSel=el('select',{});
+    [['rtl','راست‌به‌چپ'],['ltr','چپ‌به‌راست']].forEach(function(p){
+      var o=el('option',{value:p[0], text:p[1]});
+      if(p[0]===f.direction) o.setAttribute('selected','selected');
+      dirSel.appendChild(o);
+    });
+    dirSel.addEventListener('change', function(){ f.direction=this.value; persist(); });
+    grid.appendChild(mkRow('جهت متن', dirSel));
+
+    var boldRow=el('div',{class:'form-row checkbox-row'});
+    var boldChk=el('input',{type:'checkbox'});
+    boldChk.checked=!!f.bold;
+    boldChk.addEventListener('change', function(){ f.bold=this.checked; persist(); });
+    boldRow.appendChild(boldChk);
+    boldRow.appendChild(el('label',{text:'ضخیم (Bold)'}));
+    grid.appendChild(boldRow);
+
+    body.appendChild(grid);
+
+    var delBtn=el('button',{class:'btn danger small', text:'حذف این فیلد', onclick: async function(){
+      var ok=await askConfirm('حذف فیلد', 'فیلد «'+f.label+'» حذف شود؟');
+      if(!ok) return;
+      t.fields=t.fields.filter(function(x){return x.id!==f.id;});
+      if(selectedFieldId===f.id) selectedFieldId=null;
+      persist(); renderDesign();
+    }});
+    body.appendChild(delBtn);
+
+    row.appendChild(body);
+    box.appendChild(row);
+  });
+}
+
+function syncMarker(f){
+  var t=activeTpl();
+  var marker=$('.marker[data-field-id="'+f.id+'"]');
+  if(marker){ marker.style.left=(f.x/t.paperW*100)+'%'; marker.style.top=(f.y/t.paperH*100)+'%'; }
+}
+
+/* ============================================================
+   Rendering: print view
+   ============================================================ */
+function renderPrint(){
+  var t=activeTpl();
+  $('#printSizeHint').textContent=t.paperW+'mm × '+t.paperH+'mm';
+
+  var form=$('#entryForm'); form.innerHTML='';
+  if(t.fields.length===0){
+    form.appendChild(el('div',{class:'empty-hint', text:'ابتدا در تب «طراحی قالب» فیلد اضافه کنید.'}));
+  }
+  t.fields.forEach(function(f){
+    var wrap=el('div',{class:'entry-field'});
+    wrap.appendChild(el('label',{text:f.label}));
+    var rowDiv=el('div',{class:'row'});
+    var input=el('input',{type:'text', dir: f.direction==='ltr'?'ltr':'rtl'});
+    input.value=t.draft[f.id]!=null?t.draft[f.id]:'';
+    input.addEventListener('input', function(){
+      t.draft[f.id]=this.value; persist(); renderPreview();
+    });
+    rowDiv.appendChild(input);
+
+    if(f.kind==='amount_number'){
+      var btn=el('button',{class:'btn small ghost', text:'⇢ حروف', onclick:function(){
+        var wordsField=t.fields.filter(function(x){return x.kind==='amount_words';})[0];
+        if(!wordsField){ showToast('فیلدی از نوع «مبلغ به حروف» در این قالب نیست'); return; }
+        var num=parseFloat(toEnglishDigits(input.value).replace(/[^\d.]/g,''));
+        if(isNaN(num)){ showToast('عدد معتبر وارد کنید'); return; }
+        t.draft[wordsField.id]=amountToWords(num, t.currency);
+        persist(); renderPrint();
+      }});
+      rowDiv.appendChild(btn);
+    }
+    if(f.kind==='date_number'){
+      var btnW=el('button',{class:'btn small ghost', text:'⇢ حروف', onclick:function(){
+        var wordsField=t.fields.filter(function(x){return x.kind==='date_words';})[0];
+        if(!wordsField){ showToast('فیلدی از نوع «تاریخ به حروف» در این قالب نیست'); return; }
+        var d=parseJalaliDateStr(input.value);
+        if(!d){ showToast('تاریخ را به شکل ۱۴۰۵/۰۵/۱۰ وارد کنید'); return; }
+        t.draft[wordsField.id]=dateToWords(d.y,d.m,d.d);
+        persist(); renderPrint();
+      }});
+      var btnToday=el('button',{class:'btn small ghost', text:'امروز', onclick:function(){
+        var now=new Date();
+        var j=gregorianToJalali(now.getFullYear(), now.getMonth()+1, now.getDate());
+        input.value=j[0]+'/'+pad2(j[1])+'/'+pad2(j[2]);
+        t.draft[f.id]=input.value; persist(); renderPreview();
+      }});
+      rowDiv.appendChild(btnToday);
+      rowDiv.appendChild(btnW);
+    }
+    wrap.appendChild(rowDiv);
+    form.appendChild(wrap);
+  });
+
+  renderPreview();
+  renderHistory();
+}
+
+function renderPreview(){
+  var t=activeTpl();
+  var pc=$('#previewCanvas');
+  pc.style.aspectRatio=t.paperW+' / '+t.paperH;
+  pc.style.backgroundImage = t.image ? 'url("'+t.image+'")' : '';
+  pc.innerHTML='';
+  t.fields.forEach(function(f){
+    var val=t.draft[f.id]||'';
+    if(!val) return;
+    var span=el('div',{class:'preview-field', text:val});
+    span.style.left=(f.x/t.paperW*100)+'%';
+    span.style.top=(f.y/t.paperH*100)+'%';
+    span.style.fontSize=(f.fontSize*0.72)+'px';
+    span.style.fontWeight=f.bold?'700':'400';
+    span.style.direction=f.direction;
+    span.style.textAlign=f.align;
+    span.style.letterSpacing=(f.letterSpacing*2.4)+'px';
+    if(f.align==='right') span.style.transform='translate(-100%,-50%)';
+    else if(f.align==='center') span.style.transform='translate(-50%,-50%)';
+    else span.style.transform='translate(0,-50%)';
+    pc.appendChild(span);
+  });
+}
+
+function renderHistory(){
+  var t=activeTpl();
+  var box=$('#historyList'); box.innerHTML='';
+  if(!t.history || t.history.length===0){
+    box.appendChild(el('div',{class:'empty-hint', text:'هنوز چاپی ثبت نشده.'}));
+    return;
+  }
+  t.history.slice().reverse().slice(0,20).forEach(function(h){
+    var item=el('div',{class:'history-item'},[
+      el('div',{},[
+        el('div',{text:h.summary||'—'}),
+        el('div',{class:'t', text:h.time})
+      ]),
+      el('button',{class:'btn small ghost', text:'بارگذاری', onclick:function(){
+        t.draft=Object.assign({}, h.values);
+        persist(); renderPrint();
+        showToast('مقادیر بارگذاری شد');
+      }})
+    ]);
+    box.appendChild(item);
+  });
+}
+
+/* ============================================================
+   Print action
+   ============================================================ */
+function doPrint(){
+  var t=activeTpl();
+  if(!t.fields.length){ showToast('این قالب فیلدی ندارد'); return; }
+  var missing = t.fields.filter(function(f){ return !(t.draft[f.id]||'').trim(); });
+  var area=$('#printArea');
+  area.innerHTML='';
+  area.style.width=t.paperW+'mm';
+  area.style.height=t.paperH+'mm';
+  area.style.position='relative';
+
+  t.fields.forEach(function(f){
+    var val=t.draft[f.id]||'';
+    if(!val) return;
+    var span=el('div',{class:'print-field', text:val});
+    span.style.left=f.x+'mm';
+    span.style.top=f.y+'mm';
+    span.style.fontSize=f.fontSize+'pt';
+    span.style.fontWeight=f.bold?'700':'400';
+    span.style.direction=f.direction;
+    span.style.textAlign=f.align;
+    span.style.letterSpacing=f.letterSpacing+'mm';
+    span.style.fontFamily='"Vazirmatn","Tahoma","Arial",sans-serif';
+    if(f.align==='right') span.style.transform='translate(-100%,-50%)';
+    else if(f.align==='center') span.style.transform='translate(-50%,-50%)';
+    else span.style.transform='translate(0,-50%)';
+    area.appendChild(span);
+  });
+
+  $('#printPageSize').textContent='@page{ size:'+t.paperW+'mm '+t.paperH+'mm; margin:0; }';
+
+  var doPrintNow=function(){
+    window.print();
+    var summary=(t.draft[t.fields[0].id]||'').slice(0,26);
+    var amountField=t.fields.filter(function(f){return f.kind==='amount_number';})[0];
+    var payeeField=t.fields.filter(function(f){return /وجه/.test(f.label);})[0];
+    if(payeeField && t.draft[payeeField.id]) summary=t.draft[payeeField.id];
+    if(amountField && t.draft[amountField.id]) summary += (summary?' — ':'')+t.draft[amountField.id];
+    t.history = t.history || [];
+    t.history.push({ time:new Date().toLocaleString('fa-IR'), values:Object.assign({},t.draft), summary:summary||'چاپ چک' });
+    persist(); renderHistory();
+  };
+
+  if(missing.length){
+    askConfirm('برخی فیلدها خالی‌اند', missing.map(function(f){return f.label;}).join('، ')+' پر نشده. ادامه بدهیم؟').then(function(ok){
+      if(ok) doPrintNow();
+    });
+  } else {
+    doPrintNow();
+  }
+}
+
+/* ============================================================
+   Image upload (downscaled to keep localStorage small)
+   ============================================================ */
+function handleImageFile(file){
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var MAXW=1100;
+      var scale=Math.min(1, MAXW/img.width);
+      var cw=Math.round(img.width*scale), ch=Math.round(img.height*scale);
+      var cvs=document.createElement('canvas');
+      cvs.width=cw; cvs.height=ch;
+      var ctx=cvs.getContext('2d');
+      ctx.drawImage(img,0,0,cw,ch);
+      var dataUrl=cvs.toDataURL('image/jpeg',0.85);
+      var t=activeTpl();
+      t.image=dataUrl;
+      persist(); renderDesign(); renderPrint();
+      showToast('تصویر بارگذاری شد');
+    };
+    img.onerror=function(){ showToast('بارگذاری تصویر ناموفق بود'); };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   Wiring
+   ============================================================ */
+function renderAll(){
+  renderTplList();
+  renderDesign();
+  renderPrint();
+}
+
+$all('.tab-btn').forEach(function(b){
+  b.addEventListener('click', function(){
+    $all('.tab-btn').forEach(function(x){x.classList.remove('active');});
+    $all('.view').forEach(function(x){x.classList.remove('active');});
+    b.classList.add('active');
+    $('#view-'+b.dataset.tab).classList.add('active');
+    if(b.dataset.tab==='print') renderPrint();
+  });
+});
+
+$('#btnNewTpl').addEventListener('click', async function(){
+  var name=await askPrompt('نام قالب جدید','قالب جدید');
+  if(name===null) return;
+  var t=defaultTemplate(name||'قالب جدید');
+  state.templates.push(t);
+  state.activeId=t.id;
+  persist(); renderAll();
+});
+
+$('#btnRenameTpl').addEventListener('click', async function(){
+  var t=activeTpl();
+  var name=await askPrompt('نام جدید قالب', t.name);
+  if(name===null || !name) return;
+  t.name=name; persist(); renderTplList();
+});
+
+$('#btnDupTpl').addEventListener('click', function(){
+  var t=activeTpl();
+  var copy=JSON.parse(JSON.stringify(t));
+  copy.id=uid(); copy.name=t.name+' (کپی)'; copy.history=[];
+  state.templates.push(copy); state.activeId=copy.id;
+  persist(); renderAll();
+});
+
+$('#btnDelTpl').addEventListener('click', async function(){
+  if(state.templates.length<=1){ showToast('حداقل یک قالب باید باقی بماند'); return; }
+  var t=activeTpl();
+  var ok=await askConfirm('حذف قالب', '«'+t.name+'» و همه‌ی فیلدهای آن برای همیشه حذف شود؟');
+  if(!ok) return;
+  state.templates=state.templates.filter(function(x){return x.id!==t.id;});
+  state.activeId=state.templates[0].id;
+  persist(); renderAll();
+});
+
+$('#tplName').addEventListener('input', function(){ activeTpl().name=this.value; persist(); renderTplList(); });
+$('#tplCurrency').addEventListener('change', function(){ activeTpl().currency=this.value; persist(); });
+$('#tplW').addEventListener('input', function(){ activeTpl().paperW=parseFloat(this.value)||1; persist(); renderDesign(); renderPrint(); });
+$('#tplH').addEventListener('input', function(){ activeTpl().paperH=parseFloat(this.value)||1; persist(); renderDesign(); renderPrint(); });
+
+$('#btnUploadImg').addEventListener('click', function(){ $('#tplImgInput').click(); });
+$('#tplImgInput').addEventListener('change', function(){ handleImageFile(this.files[0]); this.value=''; });
+$('#btnClearImg').addEventListener('click', async function(){
+  var ok=await askConfirm('حذف تصویر مرجع','تصویر کالیبراسیون حذف شود؟ (فیلدها حذف نمی‌شوند)');
+  if(!ok) return;
+  activeTpl().image=null; persist(); renderDesign(); renderPrint();
+});
+
+$('#btnCustomField').addEventListener('click', function(){
+  showToast('روی نقطه‌ی موردنظر در تصویر کلیک کنید');
+});
+
+$('#btnPrint').addEventListener('click', doPrint);
+
+$('#btnHelp').addEventListener('click', function(){ $('#helpDialog').showModal(); });
+$('#closeHelp').addEventListener('click', function(){ $('#helpDialog').close(); });
+
+$('#btnBackup').addEventListener('click', function(){
+  $('#exportBox').value=JSON.stringify(state, null, 2);
+  $('#importBox').value='';
+  $('#backupDialog').showModal();
+});
+$('#closeBackup').addEventListener('click', function(){ $('#backupDialog').close(); });
+$('#btnCopyExport').addEventListener('click', async function(){
+  try{
+    await navigator.clipboard.writeText($('#exportBox').value);
+    showToast('متن کپی شد');
+  }catch(e){
+    $('#exportBox').select();
+    showToast('برای کپی، Ctrl+C را بزنید');
+  }
+});
+$('#btnDoImport').addEventListener('click', async function(){
+  var txt=$('#importBox').value.trim();
+  if(!txt) return;
+  var parsed;
+  try{ parsed=JSON.parse(txt); }
+  catch(e){ showToast('متن معتبر JSON نیست'); return; }
+  if(!parsed || !Array.isArray(parsed.templates) || !parsed.templates.length){
+    showToast('ساختار پشتیبان معتبر نیست'); return;
+  }
+  var ok=await askConfirm('جایگزینی قالب‌ها','قالب‌های فعلی با نسخه‌ی بارگذاری‌شده جایگزین شود؟');
+  if(!ok) return;
+  state=parsed;
+  if(!state.activeId) state.activeId=state.templates[0].id;
+  persist(); renderAll();
+  $('#backupDialog').close();
+  showToast('بازیابی انجام شد');
+});
+
+/* ============================================================
+   Boot
+   ============================================================ */
+state=loadState();
+renderAll();
+
+})();
+</script>
+</body>
+</html>
