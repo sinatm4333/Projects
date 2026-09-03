@@ -1,6 +1,6 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/12 12:16
--- version= 1.0 (انتشار اولیه روی تیم‌یار — ادغام شاخهٔ finance-activity-dashboard در master)
+-- Last Edit = 1405/06/12 13:05
+-- version= 2.0 (تحلیل زمانی ماهانه/روز هفته/تعطیلات + سنجه‌های سرانهٔ کاربر و نرخ اصلاحی + بخش اعضای بدون فعالیت)
 
 -- Bot: داشبورد عملکرد کاربران واحد مالی (finance_activity_dashboard_v01)
 -- گروه هدف: GROUP_ID = 36390 (واحد مالی)
@@ -354,13 +354,30 @@ local function fetch_event_details(group_id, from_key, day_after_to)
         events_params(group_id, from_key, day_after_to))
 end
 
--- روند روزانهٔ کل عملیات واحد (Chart شمارهٔ ۴) — GROUP BY روز، برچسب شمسی از report_dimdate
-local function fetch_daily_trend(group_id, from_key, day_after_to)
+-- فعالیت «کاربر × روز» — جایگزین کوئری قدیمی fetch_daily_trend، با همان هزینه (یک Query روی همان
+-- Dataset) ولی دانه‌بندی ریزتر. تمام تحلیل‌های زمانی و سرانهٔ کاربر از همین یک نتیجه در Lua مشتق
+-- می‌شوند و هیچ Query اضافه‌ای نمی‌خواهند:
+--   روند روزانه / روند ماهانه / توزیع روز هفته / کار در تعطیلات / روزهای فعال هر کاربر /
+--   میانگین عملیات در روزِ فعال / آخرین روز فعالیت هر کاربر
+-- حجم خروجی: حداکثر (تعداد اعضا × تعداد روزهای بازه) ردیف — برای ۲۰ نفر و یک سال ~۷٬۳۰۰ ردیف.
+--
+-- ستون‌های تقویمی همگی روی دادهٔ زنده اثبات شدند (1405/06/12، بات ۵۸۹ schema_probe_v2):
+--   JWEEKEND = 1 فقط برای پنج‌شنبه و جمعه (۱۰۴ روز از ۳۶۵ روزِ ۱۴۰۵)
+--   WEEKDAY  = 1..7 با نگاشت 1=یکشنبه ... 6=جمعه، 7=شنبه (پس ترتیب هفتهٔ ایرانی = 7,1,2,3,4,5,6)
+--   JTMONTH  = نام فارسی ماه شمسی
+-- کلید ماه به‌صورت (JYEAR*100 + JMONTH) ساخته می‌شود — یک عدد صحیح کوچک؛ عمداً از JMONTHKEY استفاده
+-- نمی‌شود چون آن هم مقیاس FILETIME دارد (~1.34e17) و طبق قانون FILETIME پروژه نباید به‌عنوان عدد
+-- وارد Lua/JSON شود (خطای دقت double).
+local function fetch_user_day_activity(group_id, from_key, day_after_to)
     return fetch_rows(
-        "SELECT rd.JNDATE AS jdate, rd.DATEKEY AS day_key, COUNT(*) AS cnt " ..
+        "SELECT e.user_id, rd.JNDATE AS jdate, (rd.JYEAR * 100 + rd.JMONTH) AS month_key, " ..
+        "rd.JTMONTH AS month_name, rd.WEEKDAY AS weekday_num, rd.JTDAY AS weekday_name, " ..
+        "rd.JWEEKEND AS is_weekend, COUNT(*) AS cnt " ..
         "FROM (" .. EVENTS_UNION_SQL .. ") e " ..
         "LEFT JOIN report_dimdate rd ON rd.DATEKEY = (e.event_date - MOD(e.event_date, " .. CONFIG.DAY_TICKS .. ")) " ..
-        "GROUP BY rd.JNDATE, rd.DATEKEY ORDER BY rd.DATEKEY",
+        "GROUP BY e.user_id, rd.JNDATE, (rd.JYEAR * 100 + rd.JMONTH), rd.JTMONTH, " ..
+        "rd.WEEKDAY, rd.JTDAY, rd.JWEEKEND " ..
+        "ORDER BY (rd.JYEAR * 100 + rd.JMONTH), rd.JNDATE",
         events_params(group_id, from_key, day_after_to))
 end
 
@@ -368,7 +385,25 @@ end
 -- شکل‌دهی دادهٔ Dashboard در Lua — فقط پردازش روی نتایج از قبل واکشی‌شده (بدون Query تازه)
 -- ============================================================
 
-local function build_dashboard_data(members, aggregate_rows, detail_rows, trend_rows)
+-- ترتیب هفتهٔ ایرانی روی ستون WEEKDAY جدول report_dimdate (اثبات‌شده روی دادهٔ زنده — بالا).
+-- برچسب‌ها اینجا نوشته می‌شوند و نه از JTDAY خوانده، چون مقدار زندهٔ JTDAY برای سه‌شنبه غلط املایی
+-- دارد ("سه سنبه") و چهارشنبه/پنج‌شنبه با فاصلهٔ اضافه ذخیره شده‌اند.
+local WEEKDAY_ORDER = {
+    { num = 7, label = "شنبه" },
+    { num = 1, label = "یکشنبه" },
+    { num = 2, label = "دوشنبه" },
+    { num = 3, label = "سه‌شنبه" },
+    { num = 4, label = "چهارشنبه" },
+    { num = 5, label = "پنج‌شنبه" },
+    { num = 6, label = "جمعه" },
+}
+
+-- «عملیات اصلاحی» = هر عملیاتی که روی سندی از قبل موجود انجام شده (ویرایش/ابطال/حذف/رد)، در برابر
+-- «ایجاد» و «تایید» که رو به جلو هستند. نسبت این‌ها به کل، نشانهٔ حجم بازکاری روی اسناد است — نه
+-- سنجهٔ کیفیت کار افراد (در راهنمای بات صریحاً همین‌طور توضیح داده شده).
+local REWORK_OPERATIONS = { edit = true, cancel = true, delete = true, reject = true }
+
+local function build_dashboard_data(members, aggregate_rows, detail_rows, day_rows)
     local user_by_id = {}
     local user_order = {}
     for _, m in ipairs(members) do
@@ -377,6 +412,7 @@ local function build_dashboard_data(members, aggregate_rows, detail_rows, trend_
             user_id = m[1],
             name = m[2],
             sales = 0, purchase = 0, accounting = 0, total = 0,
+            rework = 0, active_days = 0, weekend_ops = 0, friday_ops = 0, last_activity = nil,
             ops = {}, -- ops[module][operation] = cnt
         }
         table.insert(user_order, uid)
@@ -385,6 +421,7 @@ local function build_dashboard_data(members, aggregate_rows, detail_rows, trend_
     local module_totals = { sales = 0, purchase = 0, accounting = 0 }
     local op_totals = {}
     local grand_total = 0
+    local rework_total = 0
 
     for _, r in ipairs(aggregate_rows) do
         local uid = tostring(r[1])
@@ -395,7 +432,8 @@ local function build_dashboard_data(members, aggregate_rows, detail_rows, trend_
         if u == nil then
             -- کاربری که در Activity Dataset هست ولی دیگر عضو گروه ۳۶۳۹۰ نیست (ممکن است در گذشته عضو بوده)
             u = { user_id = r[1], name = "نامشخص (خارج از گروه فعلی)",
-                sales = 0, purchase = 0, accounting = 0, total = 0, ops = {} }
+                sales = 0, purchase = 0, accounting = 0, total = 0,
+                rework = 0, active_days = 0, weekend_ops = 0, friday_ops = 0, last_activity = nil, ops = {} }
             user_by_id[uid] = u
             table.insert(user_order, uid)
         end
@@ -403,11 +441,96 @@ local function build_dashboard_data(members, aggregate_rows, detail_rows, trend_
         u.total = u.total + cnt
         u.ops[mod_key] = u.ops[mod_key] or {}
         u.ops[mod_key][op_key] = (u.ops[mod_key][op_key] or 0) + cnt
+        if REWORK_OPERATIONS[op_key] then
+            u.rework = u.rework + cnt
+            rework_total = rework_total + cnt
+        end
 
         module_totals[mod_key] = (module_totals[mod_key] or 0) + cnt
         op_totals[op_key] = (op_totals[op_key] or 0) + cnt
         grand_total = grand_total + cnt
     end
+
+    -- ---- تحلیل زمانی: همه از day_rows (کاربر × روز) مشتق می‌شود، بدون Query اضافه ----
+    local day_totals = {}      -- jdate -> cnt (کل واحد)
+    local day_order = {}
+    local month_totals = {}    -- month_key -> { label, cnt }
+    local month_order = {}
+    local weekday_totals = {}  -- weekday_num -> cnt
+    local weekend_ops_total = 0
+    local friday_ops_total = 0
+    local thursday_ops_total = 0
+
+    for _, r in ipairs(day_rows) do
+        local uid = tostring(r[1])
+        local jdate = r[2]
+        local month_key = tonumber(r[3])
+        local month_name = safe_str(r[4], "")
+        local weekday_num = tonumber(r[5])
+        local is_weekend = tonumber(r[7]) == 1
+        local cnt = tonumber(r[8]) or 0
+
+        if jdate ~= nil then
+            if day_totals[jdate] == nil then
+                day_totals[jdate] = 0
+                table.insert(day_order, jdate)
+            end
+            day_totals[jdate] = day_totals[jdate] + cnt
+        end
+
+        if month_key ~= nil then
+            if month_totals[month_key] == nil then
+                month_totals[month_key] = { label = month_name, cnt = 0 }
+                table.insert(month_order, month_key)
+            end
+            month_totals[month_key].cnt = month_totals[month_key].cnt + cnt
+        end
+
+        if weekday_num ~= nil then
+            weekday_totals[weekday_num] = (weekday_totals[weekday_num] or 0) + cnt
+        end
+
+        if is_weekend then weekend_ops_total = weekend_ops_total + cnt end
+        if weekday_num == 6 then friday_ops_total = friday_ops_total + cnt end
+        if weekday_num == 5 then thursday_ops_total = thursday_ops_total + cnt end
+
+        local u = user_by_id[uid]
+        if u ~= nil then
+            u.active_days = u.active_days + 1
+            if is_weekend then u.weekend_ops = u.weekend_ops + cnt end
+            if weekday_num == 6 then u.friday_ops = u.friday_ops + cnt end
+            -- day_rows بر اساس (ماه، تاریخ) صعودی مرتب است، پس آخرین مقدارِ دیده‌شده بزرگ‌ترین است
+            if jdate ~= nil then u.last_activity = jdate end
+        end
+    end
+
+    table.sort(day_order)
+    local trend_json = {}
+    for _, jdate in ipairs(day_order) do
+        table.insert(trend_json, { jdate = jdate, cnt = day_totals[jdate] })
+    end
+
+    table.sort(month_order)
+    local monthly_json = {}
+    for _, mk in ipairs(month_order) do
+        local m = month_totals[mk]
+        table.insert(monthly_json, {
+            month_key = mk, label = m.label, cnt = m.cnt,
+            pct = fmt_pct(m.cnt, grand_total),
+        })
+    end
+
+    local weekday_json = {}
+    for _, wd in ipairs(WEEKDAY_ORDER) do
+        local cnt = weekday_totals[wd.num] or 0
+        table.insert(weekday_json, {
+            weekday_num = wd.num, label = wd.label, cnt = cnt,
+            pct = fmt_pct(cnt, grand_total),
+            is_weekend = (wd.num == 5 or wd.num == 6),
+        })
+    end
+
+    local unit_active_days = #day_order
 
     local users = {}
     for _, uid in ipairs(user_order) do table.insert(users, user_by_id[uid]) end
@@ -424,12 +547,53 @@ local function build_dashboard_data(members, aggregate_rows, detail_rows, trend_
             table.sort(op_list, function(a, b) return a.cnt > b.cnt end)
             ops_json[mod_key] = op_list
         end
+        local avg_per_active_day = 0
+        if u.active_days > 0 then avg_per_active_day = u.total / u.active_days end
         table.insert(users_json, {
             user_id = u.user_id, name = u.name,
             sales = u.sales, purchase = u.purchase, accounting = u.accounting, total = u.total,
             share_pct = fmt_pct(u.total, grand_total),
+            rework = u.rework,
+            rework_pct = fmt_pct(u.rework, u.total),
+            active_days = u.active_days,
+            avg_per_active_day = avg_per_active_day,
+            weekend_ops = u.weekend_ops,
+            weekend_pct = fmt_pct(u.weekend_ops, u.total),
+            friday_ops = u.friday_ops,
+            last_activity = u.last_activity or "—",
             ops = ops_json,
         })
+    end
+
+    -- تفکیک «فعال / بدون فعالیت» — یکی از سیگنال‌های واقعی همین گروه: روی دادهٔ زندهٔ ۱۴۰۵/۰۱/۰۱ تا
+    -- ۱۴۰۵/۰۶/۱۲ چهار نفر از ۲۰ عضو هیچ عملیات ثبت‌شده‌ای نداشتند.
+    local active_users_json = {}
+    local idle_users_json = {}
+    for _, u in ipairs(users_json) do
+        if u.total > 0 then table.insert(active_users_json, u) else table.insert(idle_users_json, u) end
+    end
+
+    -- تمرکز بار کاری: سهم سه نفر پرکارتر از کل عملیات واحد (users_json نزولی مرتب است)
+    local top3_ops = 0
+    for i = 1, math.min(3, #active_users_json) do top3_ops = top3_ops + active_users_json[i].total end
+
+    -- «فعالیت متوقف‌شده»: کسانی که در بازه فعالیت داشته‌اند ولی در آخرین ماهِ موجودِ همین بازه هیچ
+    -- عملیاتی ثبت نکرده‌اند. مقایسه فقط روی پیشوند «سال/ماه» رشتهٔ تاریخ شمسی انجام می‌شود (رشتهٔ
+    -- JNDATE با قالب ثابت YYYY/MM/DD) — نه محاسبهٔ اختلاف تاریخ، تا هیچ عملیات ریاضی روی FILETIME
+    -- لازم نشود. روی دادهٔ زنده این فهرست موارد واقعی مهمی را نشان داد (مثلاً سومین فرد پرکار واحد
+    -- که بیش از یک ماه هیچ عملیاتی ثبت نکرده بود).
+    local latest_month_key = nil
+    if #month_order > 0 then latest_month_key = month_order[#month_order] end
+    local stale_users_json = {}
+    if latest_month_key ~= nil then
+        local latest_prefix = string.format("%d/%02d", math.floor(latest_month_key / 100), latest_month_key % 100)
+        for _, u in ipairs(active_users_json) do
+            local la = u.last_activity
+            if _G.type(la) == "string" and #la >= 7 and string.sub(la, 1, 7) < latest_prefix then
+                table.insert(stale_users_json, u)
+            end
+        end
+        table.sort(stale_users_json, function(a, b) return a.last_activity < b.last_activity end)
     end
 
     local op_totals_json = {}
@@ -454,22 +618,36 @@ local function build_dashboard_data(members, aggregate_rows, detail_rows, trend_
     end
     if #events_json >= CONFIG.DETAIL_LIMIT then truncated = true end
 
-    local trend_json = {}
-    for _, r in ipairs(trend_rows) do
-        if r[1] ~= nil then
-            table.insert(trend_json, { jdate = r[1], cnt = tonumber(r[3]) or 0 })
-        end
-    end
+    local avg_unit_per_active_day = 0
+    if unit_active_days > 0 then avg_unit_per_active_day = grand_total / unit_active_days end
 
     return {
         users = users_json,
+        active_users = active_users_json,
+        idle_users = idle_users_json,
+        stale_users = stale_users_json,
         module_totals = module_totals_json,
         op_totals = op_totals_json,
         events = events_json,
         events_truncated = truncated,
+        events_limit = CONFIG.DETAIL_LIMIT,
         trend = trend_json,
+        monthly = monthly_json,
+        weekday = weekday_json,
         grand_total = grand_total,
         member_count = #members,
+        active_member_count = #active_users_json,
+        idle_member_count = #idle_users_json,
+        rework_total = rework_total,
+        rework_pct = fmt_pct(rework_total, grand_total),
+        weekend_ops = weekend_ops_total,
+        weekend_pct = fmt_pct(weekend_ops_total, grand_total),
+        friday_ops = friday_ops_total,
+        friday_pct = fmt_pct(friday_ops_total, grand_total),
+        thursday_ops = thursday_ops_total,
+        unit_active_days = unit_active_days,
+        avg_per_active_day = avg_unit_per_active_day,
+        top3_pct = fmt_pct(top3_ops, grand_total),
     }
 end
 
@@ -534,6 +712,11 @@ header.hero .brand140-logo{ position:absolute; top:18px; left:22px; height:34px;
 .card h3{ font-size:15px; font-weight:bold; margin:0 0 4px; }
 .card .desc{ font-size:14px; color:var(--muted); margin-bottom:10px; }
 .chart-box{ position:relative; width:100%; }
+.empty-chart{ font-size:14px; color:var(--muted); text-align:center; padding:18px 0; margin:0; }
+.chip-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+.chip{ display:inline-block; font-size:14px; background:var(--accent); color:#fff; border-radius:14px; padding:5px 12px; }
+.note-muted{ font-size:14px; color:var(--muted); margin:0; }
+.note-ok{ font-size:14px; color:#000; margin:0; }
 table.data-table{ width:auto; min-width:100%; border-collapse:collapse; }
 table.data-table th, table.data-table td{ padding:8px 10px; border-bottom:1px solid var(--border); text-align:right; font-size:14px; white-space:nowrap; width:1%; }
 table.data-table thead th{ background:var(--zebra); font-weight:bold; font-size:15px; cursor:pointer; user-select:none; position:sticky; top:0; }
@@ -621,7 +804,10 @@ function renderBarChart(containerId, items, opts){
   opts = opts || {};
   var valueKey = opts.valueKey || 'value', labelKey = opts.labelKey || 'label';
   var color = opts.color || 'var(--accent)', onClick = opts.onClick;
+  var suffix = opts.suffix || '', decimals = opts.decimals || 0;
+  var fmtVal = function(v){ return (decimals > 0 ? fmtDec1(v) : fmtNum(v)) + suffix; };
   var el = document.getElementById(containerId); if (!el) return;
+  if (!items || !items.length) { el.innerHTML = '<p class="empty-chart">داده‌ای برای نمایش وجود ندارد</p>'; return; }
   var max = 0;
   for (var i = 0; i < items.length; i++) { if (items[i][valueKey] > max) max = items[i][valueKey]; }
   if (max <= 0) max = 1;
@@ -631,13 +817,17 @@ function renderBarChart(containerId, items, opts){
     html.push('<div class="bar-row" data-idx="' + j + '">' +
       '<div class="bar-label">' + escapeHtml(it[labelKey]) + '</div>' +
       '<div class="bar-track"><div class="bar-fill" style="width:' + pct.toFixed(1) + '%;background:' + color + '"></div></div>' +
-      '<div class="bar-value">' + fmtNum(it[valueKey]) + '</div></div>');
+      '<div class="bar-value">' + fmtVal(it[valueKey]) + '</div></div>');
   }
   html.push('</div>');
   el.innerHTML = html.join('');
   el.querySelectorAll('.bar-row').forEach(function(row){
     var idx = Number(row.getAttribute('data-idx')); var it = items[idx];
-    row.addEventListener('mousemove', function(e){ showTip(e, it[labelKey] + ': ' + fmtNum(it[valueKey])); });
+    row.addEventListener('mousemove', function(e){
+      var tip = it[labelKey] + ': ' + fmtVal(it[valueKey]);
+      if (it.rework !== undefined) tip += ' (' + fmtNum(it.rework) + ' از ' + fmtNum(it.total) + ' عملیات)';
+      showTip(e, tip);
+    });
     row.addEventListener('mouseleave', hideTip);
     if (onClick) row.addEventListener('click', function(){ onClick(it); });
   });
@@ -807,6 +997,16 @@ document.addEventListener('DOMContentLoaded', function(){
   renderDonutChart('moduleDonutChart', DASH.module_totals);
   renderBarChart('trendChart', DASH.trend, { valueKey: 'cnt', labelKey: 'jdate', color: 'var(--accent-light)' });
   renderBarChart('opBreakdownChart', DASH.op_totals, { valueKey: 'cnt', labelKey: 'label', color: 'var(--accent)' });
+  renderBarChart('monthlyChart', DASH.monthly, { valueKey: 'cnt', labelKey: 'label', color: 'var(--accent)' });
+  renderBarChart('weekdayChart', DASH.weekday, { valueKey: 'cnt', labelKey: 'label', color: 'var(--accent-light)' });
+  /* نرخ اصلاحی: فقط افرادی که فعالیت دارند، نزولی بر اساس نرخ — یک نفر با ۳ عملیات و نرخ ۱۰۰٪
+     نباید بالای فهرست بنشیند، پس زیر آستانهٔ حداقلی کنار گذاشته می‌شود (در راهنما توضیح داده شده). */
+  var REWORK_MIN_OPS = 20;
+  var reworkItems = DASH.users
+    .filter(function(u){ return u.total >= REWORK_MIN_OPS; })
+    .map(function(u){ return { name: u.name, value: u.rework_pct, rework: u.rework, total: u.total }; })
+    .sort(function(a, b){ return b.value - a.value; });
+  renderBarChart('reworkChart', reworkItems, { valueKey: 'value', labelKey: 'name', color: 'var(--accent)', suffix: '٪', decimals: 1 });
   initSortableTables(document);
   document.querySelectorAll('#mainTbody td.clickable').forEach(function(td){
     td.addEventListener('click', function(){
@@ -825,11 +1025,61 @@ local function render_kpi_cards(data, date_from_label, date_to_label)
     local html = {}
     table.insert(html, '<div class="kpi-card"><div class="label">بازهٔ زمانی</div><div class="value" style="font-size:15px;">' ..
         escape_html(date_from_label) .. ' تا ' .. escape_html(date_to_label) .. '</div></div>')
-    table.insert(html, '<div class="kpi-card"><div class="label">تعداد کارکنان واحد مالی</div><div class="value">' .. fmt_num(data.member_count) .. '</div></div>')
-    table.insert(html, '<div class="kpi-card"><div class="label">کل عملیات</div><div class="value">' .. fmt_num(data.grand_total) .. '</div></div>')
+    table.insert(html, '<div class="kpi-card"><div class="label">کارکنان دارای فعالیت</div><div class="value">' ..
+        fmt_num(data.active_member_count) .. ' از ' .. fmt_num(data.member_count) .. '</div><div class="sub">' ..
+        fmt_num(data.idle_member_count) .. ' نفر بدون هیچ عملیات ثبت‌شده</div></div>')
+    table.insert(html, '<div class="kpi-card"><div class="label">کل عملیات</div><div class="value">' .. fmt_num(data.grand_total) .. '</div><div class="sub">در ' ..
+        fmt_num(data.unit_active_days) .. ' روزِ دارای فعالیت</div></div>')
+    table.insert(html, '<div class="kpi-card"><div class="label">میانگین عملیات در روز</div><div class="value">' ..
+        fmt_dec1(data.avg_per_active_day) .. '</div><div class="sub">فقط روزهای دارای فعالیت</div></div>')
+    table.insert(html, '<div class="kpi-card"><div class="label">تمرکز بار کاری</div><div class="value">' ..
+        fmt_dec1(data.top3_pct) .. '٪</div><div class="sub">سهم ۳ نفر پرکارتر از کل عملیات</div></div>')
+    table.insert(html, '<div class="kpi-card"><div class="label">عملیات اصلاحی</div><div class="value">' ..
+        fmt_dec1(data.rework_pct) .. '٪</div><div class="sub">' .. fmt_num(data.rework_total) ..
+        ' مورد ویرایش/ابطال/حذف/رد</div></div>')
+    -- عمداً «جمعه» جدا از پرچم تعطیلی تقویم گزارش می‌شود: روی دادهٔ زنده پنج‌شنبه پرکارتر از چهارشنبه
+    -- است (۲٬۶۶۴ در برابر ۲٬۰۰۱)، یعنی عملاً روز کاری این سازمان است — پس گزارش کردن مجموع
+    -- پنج‌شنبه+جمعه به‌عنوان «کار در تعطیلات» عدد را گمراه‌کننده بزرگ نشان می‌دهد.
+    table.insert(html, '<div class="kpi-card"><div class="label">فعالیت روز جمعه</div><div class="value">' ..
+        fmt_num(data.friday_ops) .. '</div><div class="sub">' .. fmt_dec1(data.friday_pct) ..
+        '٪ از کل — پنج‌شنبه: ' .. fmt_num(data.thursday_ops) .. ' عملیات</div></div>')
+    table.insert(html, '<div class="kpi-card"><div class="label">فعالیت متوقف‌شده</div><div class="value">' ..
+        fmt_num(#data.stale_users) .. ' نفر</div><div class="sub">در آخرین ماهِ بازه عملیاتی ثبت نکرده‌اند</div></div>')
     for _, mt in ipairs(data.module_totals) do
         table.insert(html, '<div class="kpi-card"><div class="label">عملیات ' .. escape_html(mt.label) .. '</div><div class="value">' ..
             fmt_num(mt.cnt) .. '</div><div class="sub">' .. fmt_dec1(mt.pct) .. '٪ از کل</div></div>')
+    end
+    return table.concat(html)
+end
+
+-- فهرست اعضای بدون هیچ عملیات ثبت‌شده در بازه — عمداً به‌عنوان «سؤال برای بررسی» ارائه می‌شود و نه
+-- به‌عنوان نتیجه‌گیری: نبودِ عملیات در این سه ماژول می‌تواند به معنی نقش شغلی متفاوت، مرخصی، یا
+-- کار در ماژول‌هایی باشد که این داشبورد اصلاً آن‌ها را پوشش نمی‌دهد.
+local function render_idle_users_html(idle_users)
+    if #idle_users == 0 then
+        return '<p class="note-ok">همهٔ اعضای گروه در این بازه دست‌کم یک عملیات ثبت‌شده دارند.</p>'
+    end
+    local names = {}
+    for _, u in ipairs(idle_users) do table.insert(names, '<span class="chip">' .. escape_html(u.name) .. '</span>') end
+    return '<div class="chip-row">' .. table.concat(names) .. '</div>' ..
+        '<p class="note-muted">این افراد در بازهٔ انتخابی هیچ عملیاتی در سه ماژول فروش/خرید/حسابداری ثبت نکرده‌اند. ' ..
+        'این لزوماً به معنی نبودِ کار نیست — ممکن است نقش شغلی‌شان در ماژول دیگری باشد که این داشبورد آن را پوشش نمی‌دهد.</p>'
+end
+
+-- کسانی که فعالیت داشته‌اند ولی جریانشان در آخرین ماهِ بازه متوقف شده — همان سیگنالی که روی دادهٔ
+-- زنده سومین فرد پرکار واحد را نشان داد (آخرین فعالیت ۱۴۰۵/۰۵/۰۸ در بازه‌ای که تا ۱۴۰۵/۰۶/۱۲ ادامه دارد).
+local function render_stale_users_rows(stale_users)
+    local html = {}
+    for _, u in ipairs(stale_users) do
+        table.insert(html, '<tr>' ..
+            '<td>' .. escape_html(u.name) .. '</td>' ..
+            '<td>' .. escape_html(u.last_activity) .. '</td>' ..
+            '<td>' .. fmt_num(u.total) .. '</td>' ..
+            '<td>' .. fmt_num(u.active_days) .. '</td>' ..
+            '</tr>')
+    end
+    if #stale_users == 0 then
+        table.insert(html, '<tr><td colspan="4" style="text-align:center;color:var(--muted);">همهٔ افراد دارای فعالیت، در آخرین ماهِ بازه هم عملیات ثبت کرده‌اند</td></tr>')
     end
     return table.concat(html)
 end
@@ -848,10 +1098,15 @@ local function render_main_table_rows(users)
             '<td class="clickable" ' .. uid_attr .. ' data-module="purchase">' .. fmt_num(u.purchase) .. '</td>' ..
             '<td class="clickable" ' .. uid_attr .. ' data-module="accounting">' .. fmt_num(u.accounting) .. '</td>' ..
             '<td class="clickable" ' .. uid_attr .. ' data-module="">' .. '<b>' .. fmt_num(u.total) .. '</b></td>' ..
+            '<td>' .. fmt_num(u.active_days) .. '</td>' ..
+            '<td>' .. fmt_dec1(u.avg_per_active_day) .. '</td>' ..
+            '<td>' .. fmt_dec1(u.rework_pct) .. '٪</td>' ..
+            '<td>' .. fmt_num(u.friday_ops) .. '</td>' ..
+            '<td>' .. escape_html(u.last_activity) .. '</td>' ..
             '</tr>')
     end
     if #users == 0 then
-        table.insert(html, '<tr><td colspan="5" style="text-align:center;color:var(--muted);">در این بازه هیچ عملیات قابل‌اثباتی برای اعضای گروه ثبت نشده است</td></tr>')
+        table.insert(html, '<tr><td colspan="10" style="text-align:center;color:var(--muted);">در این بازه هیچ عملیات قابل‌اثباتی برای اعضای گروه ثبت نشده است</td></tr>')
     end
     return table.concat(html)
 end
@@ -870,11 +1125,14 @@ local function render_ranking_rows(users)
                 '<td>' .. fmt_num(u.sales) .. '</td>' ..
                 '<td>' .. fmt_num(u.purchase) .. '</td>' ..
                 '<td>' .. fmt_num(u.accounting) .. '</td>' ..
+                '<td>' .. fmt_num(u.active_days) .. '</td>' ..
+                '<td>' .. fmt_dec1(u.avg_per_active_day) .. '</td>' ..
+                '<td>' .. fmt_dec1(u.rework_pct) .. '٪</td>' ..
                 '</tr>')
         end
     end
     if rank == 0 then
-        table.insert(html, '<tr><td colspan="7" style="text-align:center;color:var(--muted);">داده‌ای برای رتبه‌بندی وجود ندارد</td></tr>')
+        table.insert(html, '<tr><td colspan="10" style="text-align:center;color:var(--muted);">داده‌ای برای رتبه‌بندی وجود ندارد</td></tr>')
     end
     return table.concat(html)
 end
@@ -934,22 +1192,44 @@ local function render_html(args)
   </div>
   <div class="grid-2" style="margin-top:16px;">
     <div class="card"><h3>سهم ماژول‌ها از کل عملیات واحد</h3><div class="desc">فروش / خرید / حسابداری</div><div class="chart-box" id="moduleDonutChart"></div></div>
-    <div class="card"><h3>روند فعالیت روزانهٔ واحد</h3><div class="desc">تعداد کل عملیات هر روز در بازهٔ انتخابی</div><div class="chart-box" id="trendChart"></div></div>
+    <div class="card"><h3>تفکیک نوع عملیات</h3><div class="desc">فقط عملیات‌های اثبات‌شده از دیتابیس (ایجاد/ویرایش/ابطال/حذف/رد/تایید)</div><div class="chart-box" id="opBreakdownChart"></div></div>
   </div>
-  <div class="card" style="margin-top:16px;"><h3>تفکیک نوع عملیات</h3><div class="desc">فقط عملیات‌های اثبات‌شده از دیتابیس (ایجاد/ویرایش/ابطال/حذف/رد/تایید)</div><div class="chart-box" id="opBreakdownChart"></div></div>
+  <div class="card" style="margin-top:16px;"><h3>نرخ عملیات اصلاحی هر کاربر</h3><div class="desc">سهم ویرایش/ابطال/حذف/رد از کل عملیات همان فرد — نشانهٔ حجم بازکاری روی اسناد، نه سنجهٔ کیفیت کار</div><div class="chart-box" id="reworkChart"></div></div>
+</div>
+
+<div class="section" id="timeSection">
+  <div class="section-head"><h2><span class="num">۲</span>الگوی زمانی فعالیت</h2><p>هر سه نمودار از همان دادهٔ بخش قبل مشتق شده‌اند — بدون کوئری اضافه</p></div>
+  <div class="grid-2">
+    <div class="card"><h3>روند ماهانهٔ واحد</h3><div class="desc">مجموع عملیات در هر ماه شمسی — نمای خوانا از کل بازه</div><div class="chart-box" id="monthlyChart"></div></div>
+    <div class="card"><h3>توزیع بر اساس روز هفته</h3><div class="desc">شنبه تا جمعه — پنج‌شنبه و جمعه طبق تقویم سیستم تعطیل محسوب می‌شوند</div><div class="chart-box" id="weekdayChart"></div></div>
+  </div>
+  <div class="card" style="margin-top:16px;"><h3>روند فعالیت روزانهٔ واحد</h3><div class="desc">تعداد کل عملیات هر روز در بازهٔ انتخابی</div><div class="chart-box" id="trendChart"></div></div>
+</div>
+
+<div class="section" id="idleSection">
+  <div class="section-head"><h2><span class="num">۳</span>نقاط نیازمند بررسی</h2><p>این بخش سؤال می‌سازد، نه نتیجه‌گیری</p></div>
+  <div class="card"><h3>اعضای بدون هیچ فعالیت ثبت‌شده در بازه</h3>]] .. args.idle_users_html .. [[</div>
+  <div class="card" style="margin-top:16px;"><h3>افرادی که فعالیتشان متوقف شده</h3>
+    <div class="desc">فعالیت داشته‌اند، اما در آخرین ماهِ بازهٔ انتخابی هیچ عملیاتی ثبت نکرده‌اند</div>
+    <div class="table-scroll"><table class="data-table" id="staleTable"><thead><tr>
+      <th>کاربر</th><th>آخرین فعالیت</th><th>کل عملیات در بازه</th><th>روزهای فعال</th>
+    </tr></thead><tbody>]] .. args.stale_rows_html .. [[</tbody></table></div>
+  </div>
 </div>
 
 <div class="section" id="mainTableSection">
-  <div class="section-head"><h2><span class="num">۲</span>جدول اصلی: عملیات به تفکیک کاربر و ماژول</h2><p>روی هر عدد کلیک کنید تا جزئیات رویدادهای همان بخش باز شود</p></div>
+  <div class="section-head"><h2><span class="num">۴</span>جدول اصلی: عملیات به تفکیک کاربر و ماژول</h2><p>روی هر عدد کلیک کنید تا جزئیات رویدادهای همان بخش باز شود — روی عنوان ستون‌ها برای مرتب‌سازی</p></div>
   <div class="table-scroll"><table class="data-table" id="mainTable"><thead><tr>
     <th>کاربر</th><th>فروش</th><th>خرید</th><th>حسابداری</th><th>کل عملیات</th>
+    <th>روزهای فعال</th><th>میانگین در روز فعال</th><th>نرخ اصلاحی</th><th>جمعه</th><th>آخرین فعالیت</th>
   </tr></thead><tbody id="mainTbody">]] .. args.main_table_rows_html .. [[</tbody></table></div>
 </div>
 
 <div class="section" id="rankingSection">
-  <div class="section-head"><h2><span class="num">۳</span>رتبه‌بندی فعالیت واحد</h2><p>صرفاً برای مرور توزیع فعالیت — نه معیار بهره‌وری یا کیفیت عملکرد</p></div>
+  <div class="section-head"><h2><span class="num">۵</span>رتبه‌بندی فعالیت واحد</h2><p>صرفاً برای مرور توزیع فعالیت — نه معیار بهره‌وری یا کیفیت عملکرد</p></div>
   <div class="table-scroll"><table class="data-table" id="rankingTable"><thead><tr>
     <th>رتبه</th><th>کاربر</th><th>کل عملیات</th><th>سهم از کل</th><th>فروش</th><th>خرید</th><th>حسابداری</th>
+    <th>روزهای فعال</th><th>میانگین در روز فعال</th><th>نرخ اصلاحی</th>
   </tr></thead><tbody>]] .. args.ranking_rows_html .. [[</tbody></table></div>
 </div>
 
@@ -969,14 +1249,35 @@ local function render_html(args)
       <li><b>تایید (فقط حسابداری):</b> ردیف‌های <code>pa_voucher_signs</code> با <code>SIGN=1</code> — تأییدشده با دادهٔ واقعی که تعداد آن برای هر کاربر در بازه معقول و پراکنده است (بر خلاف <code>SIGN=0</code> که صرفاً وضعیت «در انتظار» یک تخصیص است، نه یک رویداد).</li>
       <li>فقط عملیات‌هایی نمایش داده می‌شوند که مستقیماً از ستون‌های خودِ جدول اثبات می‌شوند — هیچ کد عددی حدسی در کار نیست.</li>
     </ul>
+    <h4>ستون‌ها و سنجه‌های جدول (نسخهٔ ۲)</h4>
+    <ul>
+      <li><b>روزهای فعال:</b> تعداد روزهای متمایزی که آن فرد دست‌کم یک عملیات ثبت‌شده داشته است — نه تعداد روزهای کاری تقویمی و نه حضور/غیاب.</li>
+      <li><b>میانگین در روز فعال:</b> کل عملیات فرد تقسیم بر روزهای فعال خودش. عمداً بر کل روزهای بازه تقسیم نمی‌شود تا مرخصی و روزهای بدون کار در این ماژول‌ها، میانگین را مصنوعی پایین نیاورد.</li>
+      <li><b>نرخ اصلاحی:</b> سهم ویرایش/ابطال/حذف/رد از کل عملیات همان فرد. این سنجهٔ <b>حجم بازکاری روی اسناد</b> است، نه سنجهٔ کیفیت کار: ویرایش می‌تواند اصلاح خطای دیگری، تکمیل مرحله‌به‌مرحلهٔ یک سند، یا بخش عادی گردش کار باشد. در نمودار «نرخ عملیات اصلاحی»، افراد با کمتر از ۲۰ عملیات کنار گذاشته می‌شوند تا نرخ‌های بی‌معنی (مثلاً ۱۰۰٪ از ۲ عملیات) بالای فهرست ننشینند.</li>
+      <li><b>جمعه:</b> تعداد عملیات ثبت‌شدهٔ آن فرد در روزهای جمعه. عمداً فقط جمعه شمرده می‌شود و نه مجموع «تعطیلات» تقویم سیستم: تقویم <code>report_dimdate.JWEEKEND</code> هم پنج‌شنبه و هم جمعه را تعطیل علامت می‌زند، اما دادهٔ زندهٔ همین واحد نشان می‌دهد پنج‌شنبه پرکارتر از چهارشنبه است — یعنی عملاً روز کاری است. گزارش‌کردن مجموع آن دو به‌عنوان «کار در تعطیلات» عدد را چند برابر بزرگ‌تر از واقعیت نشان می‌داد. تعداد پنج‌شنبه‌ها جداگانه در کارت KPI و در نمودار روز هفته دیده می‌شود.</li>
+      <li><b>فعالیت متوقف‌شده:</b> افرادی که در بازه فعالیت داشته‌اند ولی در آخرین ماهِ همان بازه هیچ عملیاتی ثبت نکرده‌اند — برای دیدن جریان‌های کاری که وسط راه متوقف شده‌اند.</li>
+      <li><b>آخرین فعالیت:</b> تازه‌ترین روزی که از آن فرد عملیاتی در این سه ماژول ثبت شده است.</li>
+      <li><b>تمرکز بار کاری:</b> سهم سه نفر پرکارتر از کل عملیات واحد — برای دیدن اینکه بار روی چند نفر متمرکز است یا پخش.</li>
+    </ul>
+    <h4>الگوی زمانی</h4>
+    <ul>
+      <li><b>روند ماهانه</b> و <b>توزیع روز هفته</b> و <b>روند روزانه</b> هر سه از یک کوئری مشترک مشتق می‌شوند و هیچ بار اضافه‌ای به دیتابیس تحمیل نمی‌کنند.</li>
+      <li>ترتیب روزهای هفته شنبه→جمعه است و از ستون عددی <code>WEEKDAY</code> می‌آید، نه از متن نام روز.</li>
+    </ul>
+    <h4>اعضای بدون فعالیت</h4>
+    <ul>
+      <li>این فهرست <b>نقطهٔ شروع بررسی است، نه نتیجه‌گیری</b>: نبودِ عملیات در فروش/خرید/حسابداری می‌تواند به معنی نقش شغلی متفاوت، مرخصی، یا کار در ماژول‌هایی باشد که این داشبورد اصلاً آن‌ها را نمی‌بیند.</li>
+    </ul>
     <h4>تعامل‌ها</h4>
     <ul>
       <li>فیلتر «از تاریخ» و «تا تاریخ» (شمسی) کل داشبورد را محدود می‌کند؛ پیش‌فرض از ابتدای سال مالی جاری تا امروز است.</li>
       <li>روی هر عدد در جدول اصلی یا هر ردیف نمودار کلیک کنید تا جزئیات رویدادها (تاریخ، عملیات، ماژول، شماره/شناسهٔ سند، توضیح) باز شود — این جزئیات فقط داخلی است و به صفحهٔ سند در Teamyar لینک نمی‌دهد.</li>
       <li>روی هدر هر جدول کلیک کنید تا صعودی/نزولی مرتب شود. «خروجی Excel» جدول اصلی را به‌صورت CSV دانلود می‌کند.</li>
     </ul>
-    <h4>محدودیت‌های شناخته‌شده (v01)</h4>
+    <h4>محدودیت‌های شناخته‌شده</h4>
     <ul>
+      <li><b>مبلغ ریالی در این داشبورد نیست.</b> بررسی ساختار جدول‌ها روی دادهٔ زنده نشان داد هیچ‌کدام از سه جدول پایه ستون «مبلغ کل سند» ندارند: <code>sales_invoice</code> فقط <code>RECEPTION_AMOUNT</code>/<code>REMAINED_AMOUNT</code> دارد (مبلغ دریافت و مانده، نه مبلغ فاکتور)، <code>purchase_invoice</code> فقط <code>pre_payment_amount</code>، و <code>pa_voucher</code> هیچ ستون مبلغی ندارد. محاسبهٔ مبلغ واقعی نیازمند تجمیع روی <code>sales_invoice_product</code> است که طبق تجربهٔ ثبت‌شدهٔ این پروژه هر بار ~۶ ثانیه هزینه دارد. پس عمداً حدس زده نشده — اگر لازم شد باید جداگانه و با سنجش کارایی اضافه شود.</li>
+      <li>ساعتِ روزِ انجام عملیات محاسبه نمی‌شود؛ محاسبهٔ ساعت نیازمند عملیات ریاضی روی مقادیر FILETIME است که طبق قانون این پروژه در Lua انجام نمی‌شود.</li>
       <li>ریزتر کردن انواع ویرایش بر اساس <code>sales_history</code>/<code>purchase_history.TYPE</code> اضافه نشده — بررسی دادهٔ زندهٔ این گروه نشان داد این دو جدول برای اعضای واحد مالی خالی برمی‌گردند، پس مسیر قابل‌استفاده‌ای برای این گزارش نیست.</li>
       <li>«فعال/غیرفعال بودن کارمند» در این داشبورد وجود ندارد — <code>admin_user.EXPIRATION</code> که ابتدا برای این منظور بررسی شد، طبق تأیید کاربر پروژه در واقع انقضای دورهٔ رمز عبور است، نه وضعیت حساب کاربری.</li>
       <li>این عدد صرفاً «تعداد عملیات ثبت‌شده» است، نه سنجش کیفیت یا بهره‌وری — دو کاربر با نقش متفاوت طبیعتاً تعداد متفاوتی عملیات دارند.</li>
@@ -1061,13 +1362,13 @@ local function main()
         return
     end
 
-    local trend_rows, trend_err = fetch_daily_trend(group_id, from_key, day_after_to)
-    if trend_rows == nil then
-        teamyar.write_result(render_error_html("محاسبهٔ روند روزانه ناموفق بود: " .. tostring(trend_err)))
+    local day_rows, day_err = fetch_user_day_activity(group_id, from_key, day_after_to)
+    if day_rows == nil then
+        teamyar.write_result(render_error_html("محاسبهٔ فعالیت روزانهٔ کاربران ناموفق بود: " .. tostring(day_err)))
         return
     end
 
-    local dash_data = build_dashboard_data(members, aggregate_rows, detail_rows, trend_rows)
+    local dash_data = build_dashboard_data(members, aggregate_rows, detail_rows, day_rows)
 
     if input["format"] == "json" then
         teamyar.write_result(json.encode({ ok = true, dash_data = dash_data, date_from = date_from_label, date_to = date_to_label }))
@@ -1077,6 +1378,8 @@ local function main()
     local kpi_cards_html = render_kpi_cards(dash_data, date_from_label, date_to_label)
     local main_table_rows_html = render_main_table_rows(dash_data.users)
     local ranking_rows_html = render_ranking_rows(dash_data.users)
+    local idle_users_html = render_idle_users_html(dash_data.idle_users)
+    local stale_rows_html = render_stale_users_rows(dash_data.stale_users)
 
     local html = render_html({
         dash_data = dash_data,
@@ -1085,6 +1388,8 @@ local function main()
         kpi_cards_html = kpi_cards_html,
         main_table_rows_html = main_table_rows_html,
         ranking_rows_html = ranking_rows_html,
+        idle_users_html = idle_users_html,
+        stale_rows_html = stale_rows_html,
     })
     teamyar.write_result(html)
 end
