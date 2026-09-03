@@ -1,5 +1,6 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/08 10:15
+-- Last Edit = 1405/06/12 12:16
+-- version= 1.0 (انتشار اولیه روی تیم‌یار — ادغام شاخهٔ finance-activity-dashboard در master)
 
 -- Bot: داشبورد عملکرد کاربران واحد مالی (finance_activity_dashboard_v01)
 -- گروه هدف: GROUP_ID = 36390 (واحد مالی)
@@ -886,13 +887,17 @@ local function render_error_html(message)
     return '<!DOCTYPE html>\n<html dir="rtl" lang="fa">\n<head>\n<meta charset="UTF-8">\n<title>داشبورد فعالیت واحد مالی - خطا</title>\n' ..
         REPORT_CSS ..
         '</head>\n<body>\n<div id="reportRoot" style="max-width:640px;">' ..
-        '<div class="section" style="border-color:#e00;text-align:center;margin-top:60px;">' ..
-        '<h3 style="color:#c00;">خطا در تولید داشبورد</h3><p>' .. escape_html(message) .. '</p></div>' ..
+        '<div class="section" style="border-color:#16509D;text-align:center;margin-top:60px;">' ..
+        '<h3 style="color:#16509D;">خطا در تولید داشبورد</h3><p>' .. escape_html(message) .. '</p></div>' ..
         '</div>\n</body>\n</html>'
 end
 
 local function render_html(args)
-    local dash_json = json.encode(args.dash_data):gsub("</", "<\\/")
+    -- «</» داخل JSON جاسازی‌شده در <script> باید بشکند، ولی توالی بایتی «بک‌اسلش+اسلش» در سورس بات
+    -- باعث HTTP 502 هنگام ذخیرهٔ command می‌شود (حافظهٔ teamyar-escaped-slash-regex-breaks-save)،
+    -- پس بک‌اسلش با string.char(92) ساخته می‌شود تا آن توالی در فایل ظاهر نشود.
+    local script_safe_slash = "<" .. string.char(92) .. "/"
+    local dash_json = json.encode(args.dash_data):gsub("</", script_safe_slash)
     local html = {}
     table.insert(html, '<!DOCTYPE html>\n<html dir="rtl" lang="fa">\n<head>\n<meta charset="UTF-8">\n')
     table.insert(html, '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n')
