@@ -10,3 +10,6 @@ scratchpad/
 
 # فایل‌های موقت پراکنده در ریشهٔ پروژه
 tmp_bot948.html
+.scratch_live/
+.claude/launch.json
+build/

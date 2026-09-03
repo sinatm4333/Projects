@@ -633,7 +633,7 @@
                      "id":  606,
                      "cat_id":  79,
                      "name":  "CRM مشتریان (نمای جدید)",
-                     "description":  "v01 - نمای بازطراحی‌شده ماژول مشتری CRM - Phase 1 Read+Links",
+                     "description":  "v5.2 (1405/06/13) - بازطراحی کامل ماژول مشتری CRM: SPA (app.js/app.css پیوست) + سرور Lua؛ لیست/درخت رده/فیلتر پیشرفته/پروفایل ۳۶۰/عملیات نوشتن از API و مسیرهای بومی",
                      "run_path":  "443/crm_customer_ui_v01",
                      "run_id":  "443",
                      "run_slug":  "crm_customer_ui_v01",
@@ -650,7 +650,12 @@
 
                                        },
                      "command_bytes":  240692,
-                     "synced_at":  "2026-08-14 19:58:19"
+                     "synced_at":  "2026-09-03 20:30:00",
+                     "attachments":  [
+                                         "app.js",
+                                         "app.css"
+                                     ],
+                     "local_attachments":  "src/crm_customer_ui_606_attachments/"
                  },
                  {
                      "id":  609,
@@ -904,6 +909,52 @@
                                        },
                      "command_bytes":  263220,
                      "synced_at":  "2026-09-03 12:33:03"
+                 },
+                 {
+                     "id":  646,
+                     "cat_id":  79,
+                     "name":  "کاوش ساختار جدول (v2)",
+                     "description":  "Deployed from schema_probe_json_bot.lua",
+                     "run_path":  "443/schema_probe_v3",
+                     "run_id":  "443",
+                     "run_slug":  "schema_probe_v3",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/schema_probe_v3?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=646\u0026cat_id=79\u0026tab=0",
+                     "result_type":  0,
+                     "run_count":  0,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/schema_probe_v3_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  5118,
+                     "synced_at":  "2026-09-03 19:55:56"
+                 },
+                 {
+                     "id":  647,
+                     "cat_id":  79,
+                     "name":  "چاپ روی برگهٔ خام چک صیادی",
+                     "description":  "Deployed from pdc_cheque_sayad_print_bot.lua",
+                     "run_path":  "443/pdc_cheque_sayad_print",
+                     "run_id":  "443",
+                     "run_slug":  "pdc_cheque_sayad_print",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/pdc_cheque_sayad_print?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=647\u0026cat_id=79\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  0,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/pdc_cheque_sayad_print_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  249264,
+                     "synced_at":  "2026-09-03 20:05:14"
                  },
                  {
                      "id":  698,
@@ -1236,25 +1287,25 @@
                  {
                      "id":  966,
                      "cat_id":  69,
-                     "name":  "کاوش ساختار جدول",
-                     "description":  "Deployed from schema_probe_json_bot.lua",
-                     "run_path":  "258/db_schema_json",
+                     "name":  "",
+                     "description":  "",
+                     "run_path":  "",
                      "run_id":  "258",
-                     "run_slug":  "db_schema_json",
-                     "run_url":  "https://erp.bimehland.com/bot/run/258/db_schema_json?ver=0",
+                     "run_slug":  "",
+                     "run_url":  "https://erp.bimehland.com/bot/run/258/?ver=0",
                      "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=966\u0026cat_id=69\u0026tab=0",
                      "result_type":  0,
-                     "run_count":  105,
-                     "categories":  "TAT",
-                     "local_src":  "src/schema_probe_json_bot.lua",
+                     "run_count":  0,
+                     "categories":  "",
+                     "local_src":  "src/_bot.lua",
                      "input_fields":  [
 
                                       ],
                      "default_input":  {
 
                                        },
-                     "command_bytes":  5119,
-                     "synced_at":  "2026-07-25 10:53:39"
+                     "command_bytes":  0,
+                     "synced_at":  "2026-09-03 19:54:19"
                  },
                  {
                      "id":  968,

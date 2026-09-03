@@ -615,3 +615,35 @@ No `$env:TEAMYAR_SID` available in this session. Ready-to-run queries against bo
 covering: `pa_client` full columns, `todo_task` columns, `sales_invoice` columns, `chat_dialogs`
 columns, and `%doc%/%mail%/%project%/%event%/%sms%/%survey%/%voice%/%comment%/%note%` table
 search, plus a global scan for columns named `CLIENT_ID`/`REFFERE_ID`/`CRM_ID`/`PA_CLIENT_ID`.
+
+## ⚠️ Round 9 (1405/06/12 = 2026-09-03) — v2 rebuild: the CLIENT_ID mapping for crm_* tables was WRONG
+
+Verified with 100% join counts on live data (`crm_notify` 415,265/415,265, `crm_favorite` 157/157, `crm_history`
+537,725/537,816, `crm_contacts` 1,123/1,156, `crm_address` 187/187, `crm_cross` 81,074/81,074 join to `crm_info.ID`;
+only 58–64% join to `pa_client.ID`): **every `crm_*` table's `CLIENT_ID` is `crm_info.ID` = `profile_main.ID` =
+the URL id** — NOT `pa_client.ID`. Only `sales_invoice`/`purchase_invoice`.`CLIENT_ID` use `pa_client.ID`
+(bridge: `pa_client.REFFERE_ID` = customer id). The round-5 "two-step resolve for every crm table" is superseded.
+
+Other facts established for the v2 bot (see `src/crm_customer_ui_bot.lua` header for the full map):
+- Customer master = `crm_info` (81,057 live, `DELETED` 0/1, `CONFIRM`), name from `profile_main.FULLNAME`,
+  حقیقی/حقوقی from `profile_user_info.USER_TYPE` (3/4). Native list total for Mobile140 (77,727) = `crm_cross`
+  members with `DELETED=0` — matches exactly.
+- رده/بخش: `crm_section` (2 rows) → `crm_classify_person` (7 rows, `PROFILE_ID` is the id used in `crm_cross.REFERE_ID`
+  and in the native `category=` URL param; `crm_classify_person.ID` is what `/api/client/category/add` wants as
+  `category_id`, with `category_profile_id` = `PROFILE_ID`).
+- Cross-module links = `crm_ty_links(SRC_MODULE_ID=14, SRC_LINK_ID=customer) → DST_MODULE_ID` 8 todo, 12 email,
+  7 documents, 20 project, 19 calendar, 23 sales. Todo links can dangle (task deleted) — always join `todo_task`.
+- «توضیحات» = `crm_history.TYPE=1` rows whose `NOTE` is plain text (system audit rows share TYPE=1 but their NOTE is
+  HTML `<table`/`<span`, AUTHOR_ID=3 «TeamYar»). Legacy comments are `.tyhtm` documents linked via module 7
+  (`/crm/history/comment/show_file/?client_id=&file_id=`). `/api/client/add/comment` needs a real `section_id`
+  (0 → `SECTION_ID_NOT_FOUND`) and records the author as user **10001**, not the calling user.
+- «مطلع» (assign) and «مسئول» (responsible) live in no queryable table (`crm_assign` is empty; `crm_notify` is the
+  per-category notification list). Read via `/api/client/assign/get` (`data.assigns[]`) and
+  `/api/client/responsible/get` (`data.responsibles[]`). `/api/client/assign/add` works; `assign/del` and
+  `responsible/add|del` return success but do nothing. The native POST `/crm/client/assign/`
+  (`client_id, type, users=JSON [{id}]`) is replace-semantics: `type=0` مطلع, `type=2` مسئول.
+- Native GET actions reused as-is from the browser: `/crm/index/set_favorite/?id&favorite`, `/crm/index/change/?id`
+  (to trash), `/crm/index/restore/?id&type=restor`, `/crm/index/confirm/?id&type=confirm`, `/crm/index/delete/?id`.
+  Native list JSON: `/crm/index/<all|person|business|favorite|assign|events>/?json=1&from&count&left_id&search`.
+- `/api/client/create` ignores top-level fields (comment/job/company…) — the bot follows up with `update`.
+- Test record created during the single-record write tests: customer **116151** («تست بات ۶۰۶ قابل حذف»).

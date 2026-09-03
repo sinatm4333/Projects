@@ -142,6 +142,16 @@ Copy structure, naming, error handling, and helpers from that file.
   -- Last Edit = 1405/04/25 14:41
   ```
   Fixed format: `YYYY/MM/DD HH:MM` Shamsi. If multiple edits in one session, just replace this line with the latest time.
+- **Version bump (required on every deploy)**: every bot source carries a `-- version= X.Y (...)` line.
+  **Bump it on every single deploy** — never redeploy under the same version number, even for a one-line
+  fix. Which part to bump:
+  | What the deploy is | Bump | Example |
+  |---|---|---|
+  | Fix / edit of existing behavior | **minor** | `1.4` → `1.5` → `1.6` |
+  | New feature or a new request on a new date | **major** | `1.6` → `2.0` |
+  Keep a one-line Persian note of what changed in that version next to the number, and update
+  `-- Last Edit` in the same edit. The version is how a live bot is matched back to a source revision —
+  without it there is no way to tell whether the deployed copy is the fixed one.
 - Parameterized SQL only; always `db.query_free()`
 - JSON: `{ ok, error? }` with Persian messages
 - Reuse `fmt_jalali_datetime`, `format_duration`, `fetch_rows` — do not rewrite
@@ -160,6 +170,16 @@ Copy structure, naming, error handling, and helpers from that file.
   No pink/magenta, green, amber, or other accent colors. Status/alert differentiation comes from
   `#16509D` fill vs. gray fill vs. white — not from new hues.
   (Old accent, retired: `#E5006E`.)
+- **Every table: sortable AND filterable (قانون کاربر، ۱۴۰۵/۰۶/۱۲).** Every table any bot renders — main lists, tab
+  tables, detail tables — must have click-to-sort on every column header and a filter (at least a text filter above the
+  table that narrows the visible rows client-side; server-side sort/filter where the table is paginated). No exceptions
+  for "small" tables. Reference: `enhanceTable()` in `src/crm_customer_ui_606_attachments/app.js` (auto-applied to every
+  `table.grid` through a `MutationObserver`).
+- **Every UI is mobile-first (قانون کاربر، ۱۴۰۵/۰۶/۱۲).** Design for a ~375px phone first, then widen: single-column
+  layouts under 700px, tables switch to a card-per-row view with `data-label` headers (see `.cardable` in
+  `app.css`), touch targets ≥ 36px, toolbars wrap, side panels collapse by default on narrow screens and get an
+  equivalent compact control (e.g. a dropdown instead of a tree). Verify in the browser at the mobile preset before
+  deploying, not only on desktop.
 - **Font size never below 14px.**
 - Titles (report title, column headers `thead th`, summary-strip labels like «تعداد تعویض») → `font-size: 15px; font-weight: bold;`
 - Everything else (body text, table cells, buttons, footer, meta lines) → `font-size: 14px;`
@@ -267,6 +287,67 @@ $env:TEAMYAR_SID = 'YOUR_SID'
   -BotId 941
 ```
 
+## بات‌های نویسندهٔ مالی (حسابداری/فروش) — قانون «اول تکی، بعد گروهی» (mandatory)
+
+هر باتی که در ماژول حسابداری یا فروش **چیزی ثبت می‌کند** (تسویه، سند، فاکتور، ابطال...) —
+نه گزارش‌گیر صرف — باید همیشه با همین ترتیب ساخته و تحویل شود:
+
+1. **اجرای آزمایشی (`_DRY_RUN`)**: صف/داده را می‌سازد و مبلغ‌ها را گزارش می‌دهد، ولی هیچ چیزی ثبت نمی‌کند.
+2. **تست روی یک رکورد**: با یک ثابت مثل `_ONLY_INVOICE_IDS = { <id> }` فقط یک مورد واقعی ثبت می‌شود،
+   و **نتیجه از روی دیتابیس تأیید می‌شود** (ردیف ساخته‌شده، مبلغ، حساب، نوع) — نه فقط از روی پیام موفقیت UI.
+3. **بعد از تأیید کاربر**، حالت گروهی ساخته می‌شود: انتخاب چندتایی + دکمهٔ تکی هر ردیف + دکمهٔ کل لیست،
+   با ستون وضعیت هر رکورد، شمارندهٔ موفق/ناموفق، و دکمهٔ توقف.
+
+قانون کاربر (۱۴۰۵/۰۶/۱۲): «برای بات‌های سمت حسابداری و فروش همیشه از همین روش استفاده کن — تست یک عددی
+بزنیم، وقتی موفق شد گروهی بساز.» دلیلش این است که یک اشتباه در این بات‌ها سند مالی واقعی می‌سازد و
+برگرداندنش دستی و پرهزینه است.
+
+**ولیدیشن مهم‌تر از سرعت است (قانون کاربر، ۱۴۰۵/۰۶/۱۲):** «در عملیات حسابداری، عملیات با ولیدیشن بیشتر
+خیلی بهتر از تسویهٔ فاکتور است.» یعنی در این بات‌ها هزینهٔ کندی قابل قبول است، ولی هزینهٔ یک ثبت اشتباه نه.
+حداقل‌های الزامی برای هر بات نویسندهٔ مالی:
+
+- **محافظ ثبت دوباره، دولایه:** (۱) کوئری صف رکوردهایی را که قبلاً سند دارند نیاورد؛ (۲) **مهم‌تر** —
+  درست قبل از نوشتن، روی خودِ صفحه/داده‌ی زنده دوباره کنترل شود که سند از قبل وجود ندارد و مانده صفر
+  نیست. لایهٔ دوم لازم است چون ممکن است بین ساخت لیست و لحظهٔ اجرا، کاربر دیگری همان رکورد را ثبت کرده باشد.
+  رکورد ردشده باید با وضعیت روشن («رد شد» + دلیل) گزارش شود، نه بی‌صدا.
+- **پنل کنترل سلامت بالای صفحه**، که قبل از هر اجرا وضعیت واقعی دیتابیس را نشان دهد — دست‌کم
+  «رکوردهای دارای بیش از یک سند» و «رکوردهایی که جمع اسناد با مبلغ سند مبنا نمی‌خواند». نمونه: بات ۶۴۲
+  که همین دو کنترل را روی `sales_invoice_settlement` اجرا می‌کند و مورد واقعی «فاکتور ۱۳۸۷۲۰ با دو تسویهٔ
+  یکسان» را نشان داد.
+- هر رکورد قبل از ثبت باید **تک‌تک فیلدهایش کنترل شود**؛ اگر حتی یک فیلد ناقص بود، آن رکورد **اصلاً ثبت
+  نشود** (نه ثبت ناقص).
+
+**هرگز ردیف مالی را مستقیم در دیتابیس INSERT نکنید.** تسویه/سند فقط ردیف در `sales_invoice_settlement`
+نیست؛ سند حسابداری و اثر کیف پول/انبار را خود تیم‌یار می‌سازد و اثر فاکتور برگشت از فروش برعکس فاکتور
+فروش است. اگر API مسیر لازم را نداشت، از فرم خود پرتال استفاده کنید (الگوی بات ۶۴۲ پایین‌تر).
+
+### وقتی API مسیر لازم را ندارد: راندن رابط کاربری در iframe (الگوی بات ۶۴۲)
+
+`/api/sales/create_settlement` فقط فاکتور فروش (`TYPE=1`) را می‌پذیرد و برای برگشت از فروش (`TYPE=3`)
+همیشه «نوع/وضعیت عملیات نامعتبر است.» می‌دهد (آزمایش زندهٔ ۱۴۰۵/۰۶/۱۱). راه‌حل تأییدشده: بات صفحهٔ خود
+فاکتور را در **iframe هم‌مبدأ** باز می‌کند (`/?page=/sales/Invoice/return_invoice_new/{id}`)، ردیف را پر
+می‌کند و دکمهٔ ذخیرهٔ همان صفحه را می‌زند. نکات تأییدشده روی داده زنده:
+
+- **تاریخ‌گزین مقدار را FILETIME عددی می‌گیرد** (`$.Teamyar.DateTimePicker.set(el,'value',<int>)` با
+  `parseInt`)؛ رشتهٔ شمسی → `NaN/NaN/NaN`.
+- **تاریخ تسویه باید بعد از تاریخ فاکتور باشد** (ما +۵ دقیقه می‌گذاریم). تاریخ برابر ⇒ کرش سمت سرور و
+  `502 Bad Gateway` روی `/sales/invoice/update_settlement/{id}`.
+- **مبلغ باید با جداکنندهٔ هزارگان ست شود**؛ بدون کاما ویجت یک رقم آخر را می‌خورد.
+- **`editTable` مقادیر را از مدل داخلی خودش سریالایز می‌کند، نه از input مخفی** — نوشتن مستقیم روی
+  `#<table>_<row>_<col>` بی‌اثر است. فیلدهای معمولی فرم (مثل `total_amount_settlement`) اما مستقیم قابل ست‌اند.
+- **خانهٔ «حساب» هر شکلی بدهیم فقط شناسه را سریالایز می‌کند**، در حالی که سرور آبجکت کامل
+  (`{account_id,force_client,force_floating,force_cost_center,force_revenue_center,force_project,name_value}`)
+  می‌خواهد. راه‌حل نهایی: **هوک `XMLHttpRequest.prototype.send` داخل iframe** و جایگزینی فقط همان فیلد
+  (`settlement_0`) درست قبل از ارسال — بقیهٔ فرم دست‌نخورده و ساختهٔ خود صفحه می‌ماند. همین هوک، پاسخ سرور
+  را هم ثبت می‌کند تا موفق/ناموفق بودن هر رکورد بدون بارگذاری دوباره معلوم شود.
+- **بعد از ست‌کردن `iframe.src` هنوز صفحهٔ قبلی داخل قاب است.** اگر همان را بپذیرید، در اجرای گروهی
+  رکوردها **یک‌درمیان** با خطای ساختاری رد می‌شوند. قبل از هر بارگذاری `src='about:blank'` بگذارید و
+  بعد منتظر بمانید تا `location.href` واقعاً شامل شناسهٔ همین رکورد باشد **و** ساختارهای صفحه
+  (`ty__main[step].COLUMN_RECEP` و ردیف خالی جدول) آماده باشند — نه فقط وجود فرم.
+- بین دو ثبت پشت‌سرهم چند ثانیه فاصله بگذارید تا سرور سند قبلی را کامل ثبت کند.
+- روش عیب‌یابی که جواب داد: **مقایسهٔ «Copy as cURL» درخواست موفق دستی با درخواست ناموفق بات** و رفع
+  فیلدها یکی‌یکی. اگر بات کار نکرد و کاربر دستی موفق شد، اول همین دو درخواست را بگیرید.
+
 ## RES-framework bots (`readyCodes`/`install_res`) — pattern & pitfalls
 
 Some legacy bots (e.g. RFM CRM, id 501/600, `2/crm_rfm*`) bootstrap via a shared RES bot (`2/res_v2`):
@@ -319,6 +400,25 @@ This `{{whereInvoice}}` placeholder sits on the **outermost/final aggregated** S
 Table/date-cell widgets (`$.Teamyar.table`, `$.Teamyar.DateTimePicker`, `$.Teamyar.acl`, ...) are **not** defined in any res_v2/res_v3 attachment (confirmed absent from `tools.js`) — they're core Teamyar platform JS loaded globally, so their exact submitted value formats can't be verified by reading bot-side files alone. Strong circumstantial evidence (this whole platform's `tools_date.lua`, `REPORT_FN_JDATE`, `time.get_filetime` all standardize on raw FILETIME) suggests `$.Teamyar.DateTimePicker` submits raw FILETIME too, matching what `tonumber(datef)` already expects — but this is inferred, not confirmed; verify with real data after deploying any date-searcher change.
 
 **`queryTools.where:addIn(columnName, columnValues)`** (from `tools_query.lua`, confirmed by reading source): expects `columnValues` as an **array of `{id=...}` objects** — i.e. pass the raw ACL-select input (`org`, `cat`, `ctype`, ...) directly, not `org[1].id`. It auto-parameterizes (`IN (?,?,...)`, `?` values pushed to `queryTools.where.params`) — the safe, intended way to build dynamic `IN` filters in RES-based bots. But it only replaces `{{whereInvoice}}` (or whatever pattern is passed to `.run(query, params, pattern)`) at **whatever text position that placeholder sits in the query** — if that placeholder is on the *outer* (post-aggregation) SELECT, as in `query_list_invoice.txt`/crm_factor, `:addIn` can't reach columns that only exist inside an earlier CTE. Only use it where the placeholder is already positioned inside the CTE/scope that has the target column.
+
+## SPA bots with attachments (الگوی بات ۶۰۶، ۱۴۰۵/۰۶/۱۲)
+
+- A bot may keep its UI in its own **attachments** (`app.js`, `app.css`) served from `/bot/run/<run_path>/<name>` (portal
+  CSP allows `'self'`); the Lua `command` then stays a thin server (action dispatch, SQL, `teamyar.call_api`, shell).
+  Attachment files bypass the command save-time entity/slash mangling, and the base64 Peyda font can live in the CSS
+  attachment. Deploy with `scripts/teamyar_update_bot_echo.ps1 -CommandPath ... -UploadFile ... -DeleteAttachmentId <old ids>`
+  (read the ids from `GET /bot/command?cat_id=N&id=M` → `attaches[]`); bump the `?v=` asset version on every change.
+  Reference implementation: `src/crm_customer_ui_bot.lua` + `src/crm_customer_ui_606_attachments/`.
+- **CRM ids (verified live, supersedes older notes):** customer id = `crm_info.ID` = `profile_main.ID`; every `crm_*`
+  table's `CLIENT_ID` is that id. Only `sales_invoice`/`purchase_invoice.CLIENT_ID` = `pa_client.ID`
+  (`pa_client.REFFERE_ID` = customer id). «مطلع»/«مسئول» have no queryable table — read via
+  `/api/client/assign/get` / `responsible/get`, write via the native POST `/crm/client/assign/` (type 0/2, replace list).
+- **Testing from Git Bash mangles arguments:** Persian argv values arrive empty and `/api/...` becomes
+  `C:/Program Files/Git/api/...`. Set `MSYS_NO_PATHCONV=1` and send non-ASCII values from a file (`-F field=<file`) or
+  percent-encoded — before concluding the platform dropped the value.
+- **Editing `TeamyarBotsCatalog.md` programmatically:** locate a row by its **row start** (`| \`file.lua\``), never by
+  `includes(file)` — other rows mention file names in their text (a bot-645 row was overwritten this way and had to be
+  reconstructed from the bot header).
 
 ## Sales query — DO NOT BREAK
 
@@ -399,7 +499,23 @@ Do not index or read `docs/context/DatabaseSchema.md`.
   GROUP BY center_name
   ```
   If `center_extra` is non-empty and ends in a bare `?` (a bound-parameter placeholder — `build_center_clause`'s `= ?` clause did exactly this), the stripped leading newline means the assembled string becomes `...= ?GROUP BY center_name` — **the placeholder glued directly onto the next keyword with zero separating whitespace** — which `db.query()` rejects with the same generic `"sql error"`. Quoted-string clauses (`LIKE '%x%'`) or clauses immediately followed by `)` don't hit this (a closing quote or paren doesn't need a space before the next token), which is why this specific bug only showed up when a user picked a value from the «مرکز درآمد» filter dropdown — every other clause combination in the bot happened to end in something safe. **Confirmed by direct live isolation**: the identical query text, hand-typed with a manual space before `GROUP BY`, succeeded every time; the function-assembled version (relying on the stripped newline as its only separator) failed every time — proven by dumping the exact assembled query text from a temporary debug branch and comparing byte-for-byte. **Fix, applied project-wide going forward: any helper that builds a `WHERE`/`AND` clause fragment for this splice pattern must end its returned string with an explicit trailing space** (`build_center_clause` and `build_channel_clause` in `sales_revenue_center_dashboard_report_bot.lua` now do this) — never rely on the long-bracket string's leading newline as a separator. **Audit any other bot using the `]] .. extra_clause .. [[\nKEYWORD` splice pattern** (this idiom is used throughout `src/`) for the same silent-concatenation risk, especially wherever the spliced fragment can end in a bound placeholder `?`.
-- **Performance finding (1405/05/31, `sales_revenue_center_dashboard_report_bot.lua` bot 609) — `INVOICE_AMOUNT_JOIN`'s inner derived table has no date filter of its own, so every call re-aggregates `sales_invoice_product` across the invoice's entire history (~204k rows, confirmed live: ~6.1s standalone) regardless of how narrow the outer query's date range is.** Bots that call this join only once or twice per request (the original `crm_geo_sales_dashboard_bot.lua` pattern) don't feel it much, but `sales_revenue_center_dashboard_report_bot.lua` calls it 5 times per page load (once per channel-aggregate query) — timed live at ~50-60s combined, occasionally exceeding whatever gateway/browser timeout the user was hitting (symptom: `Unexpected token '<'... not valid JSON`, i.e. an HTML error page came back instead of the bot's JSON). **Fix: `INVOICE_AMOUNT_JOIN` was turned into a function `invoice_amount_join_sql()` that adds `WHERE i2.RUN_DATE >= ? AND i2.RUN_DATE < (? + DAY_TICKS)` inside the derived table**, using the *same* date bound the outer query already filters `si.RUN_DATE` by — safe with zero correctness change (any invoice the inner filter excludes would already fail the outer query's own date filter), confirmed live: cut the same standalone query from 6.1s to 3.1s, and the bot's full default load from ~72s to ~56s (a narrower one-month window dropped to ~23s). Every call site must pass `date_range.from_key, date_range.to_key` as **two extra params positioned exactly where the join's placeholders appear in the query text** (always before the outer `WHERE`'s own date params, since the join is written earlier in the SQL) — get this placeholder-to-param ordering wrong and you're back in `"sql error"` territory. **Any other bot that calls this same `INVOICE_AMOUNT_JOIN`-style pattern more than once or twice per request should get the same fix** — check `crm_geo_sales_dashboard_bot.lua` in particular.
+- **Performance finding (1405/05/31, `sales_revenue_center_dashboard_report_bot.lua` bot 609) — `INVOICE_AMOUNT_JOIN`'s inner derived table has no date filter of its own, so every call re-aggregates `sales_invoice_product` across the invoice's entire history (~204k rows, confirmed live: ~6.1s standalone) regardless of how narrow the outer query's date range is.** Bots that call this join only once or twice per request don't feel it much, but `sales_revenue_center_dashboard_report_bot.lua` calls it 5 times per page load (once per channel-aggregate query) — timed live at ~50-60s combined, occasionally exceeding whatever gateway/browser timeout the user was hitting (symptom: `Unexpected token '<'... not valid JSON`, i.e. an HTML error page came back instead of the bot's JSON). **Fix: `INVOICE_AMOUNT_JOIN` was turned into a function `invoice_amount_join_sql()` that adds `WHERE i2.RUN_DATE >= ? AND i2.RUN_DATE < (? + DAY_TICKS)` inside the derived table**, using the *same* date bound the outer query already filters `si.RUN_DATE` by — safe with zero correctness change (any invoice the inner filter excludes would already fail the outer query's own date filter), confirmed live: cut the same standalone query from 6.1s to 3.1s, and the bot's full default load from ~72s to ~56s (a narrower one-month window dropped to ~23s). Every call site must pass `date_range.from_key, date_range.to_key` as **two extra params positioned exactly where the join's placeholders appear in the query text** (always before the outer `WHERE`'s own date params, since the join is written earlier in the SQL) — get this placeholder-to-param ordering wrong and you're back in `"sql error"` territory.
+  **Update (1405/06/12) — same fix applied to `crm_geo_sales_dashboard_bot.lua` (bot 604, v04.2).** The earlier assessment above ("original `crm_geo_sales_dashboard_bot.lua` pattern doesn't feel it much") was wrong by the time v04 landed: `build_channel_view` (the initial page load) calls `INVOICE_AMOUNT_JOIN`/`INVOICE_QUANTITY_JOIN` through **6-7 fetch_\* functions** (`fetch_sales_kpi`, `fetch_state_aggregation`, `fetch_city_aggregation`, `fetch_top_customers`, `fetch_new_customers_stats` ×2, plus `fetch_center_comparison` on the "همه" tab). The literal `INVOICE_AMOUNT_JOIN`/`INVOICE_QUANTITY_JOIN` string constants (not functions, unlike bot 609) got `AND i2.RUN_DATE >= ? AND i2.RUN_DATE < ?` / `i3.RUN_DATE ...` added directly, and all **9 call sites** were threaded with the extra date params — since every call site's join and outer `si.RUN_DATE` filter always use the *identical* `date_from_key`/`date_to_key` pair, the two duplicate values can safely be inserted at the join's text position without having to re-derive a different value, which simplified the threading. **Any other bot using this join pattern 3+ times per request should get the same audit.**
+  **This v04.2 fix was real but was NOT the cause of the user's "the bot doesn't even execute" follow-up report** — see the next bullet for the actual root cause found by isolating every one of the bot's queries individually via `schema_probe_v2`, not by guessing from the code.
+- **Confirmed live (1405/06/12, `crm_geo_sales_dashboard_bot.lua` bot 604, v04.3) — a correlated subquery in a `SELECT` list re-executes once per pre-`GROUP BY` row, and at this data volume that turned a query that never finished into one.** `fetch_new_customers_stats`'s "customer's real first-ever invoice date" calculation was
+  `(SELECT MIN(si_all.RUN_DATE) FROM sales_invoice si_all INNER JOIN pa_client pc_all ON pc_all.ID = si_all.CLIENT_ID WHERE pc_all.REFFERE_ID = ci.ID AND ...) AS global_first_run_date`
+  sitting in the `SELECT` list of a query already joining `crm_info`/`pa_client`/`sales_invoice` (tens of thousands of rows in-window) — MySQL evaluates a correlated subquery like this **per row of the surrounding join, before `GROUP BY` collapses them**, not once per group. Isolated directly on `schema_probe_v2` (not guessed): this single query alone returned **zero bytes after 100+ seconds** (`curl: (28) Operation timed out ... 0 bytes received`) — this, not the v04.2 join, was the actual cause of the user's "the bot doesn't even execute" report. Every *other* query in the bot (`fetch_state_aggregation` 6.9s, the fixed `INVOICE_AMOUNT_JOIN` alone 3.6s, etc.) was fine in isolation — the only way to find which one of 6-7 queries was the real problem was timing each independently via the probe, not reading the code and guessing.
+  **Fix**: replaced the correlated subquery with a non-correlated join to a pre-aggregated derived table computed once —
+  ```sql
+  INNER JOIN (
+      SELECT pc2.REFFERE_ID AS crm_id, MIN(si2.RUN_DATE) AS global_first_run_date
+      FROM sales_invoice si2
+      INNER JOIN pa_client pc2 ON pc2.ID = si2.CLIENT_ID
+      WHERE si2.DELETED = 0 AND si2.CANCELED = 0 AND si2.PRE_INVOICE = 0
+      GROUP BY pc2.REFFERE_ID
+  ) gf ON gf.crm_id = ci.ID
+  ```
+  (named `GLOBAL_FIRST_INVOICE_JOIN` in the bot, alongside `INVOICE_AMOUNT_JOIN`) — semantically identical (same "first invoice ever, all-time, unbounded" definition required by the v04 new-customer bugfix), just computed once via `GROUP BY` instead of re-scanned per outer row. Confirmed live: the same query that never returned now completes in **~11s**, and the bot's full initial page load (previously: infinite hang, zero bytes) now completes in **~43s**. **Audit any other bot with a correlated subquery in a `SELECT` list (not just a `WHERE ... EXISTS`) that sits inside a multi-way join over a table with more than a few thousand rows** — the failure mode isn't "slow", it's "never returns," and it will not show up by reading the query, only by timing it in isolation.
 
 ---
 

@@ -1,111 +1,173 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/05/23 16:40
+-- Last Edit = 1405/06/13 00:45
+-- version= 5.2 (اعتبار لاگین سایت = ۲ روز (نشست mobile140) و ذخیره در localStorage — بات ۳۹۸ فقط بعد از انقضا یا با «ورود مجدد» دوباره اجرا می‌شود)
+-- version= 5.1 (پیشنهاد کاربر: اجرای خودکار بات ۳۹۸ (لاگین سایت) در پس‌زمینه هنگام باز شدن ماژول و پیش از «نمایش در سایت» + دکمهٔ ورود مجدد)
+-- version= 5.0 (درخواست کاربر: اجرای بات ۴۸۶ «نمایش مشتری در سایت» از هدر پروفایل، عملیات ردیف، منوی ⋯ و تب ابزارها — در پنجرهٔ هم‌مبدأ با گزینهٔ تب جدید)
+-- version= 4.1 (ستون‌های اضافی فقط در صورت انتخاب محاسبه می‌شوند (cols)، سورت سروری فقط ستون‌های مستقیم — رفع کندی ۵ ثانیه‌ای و Timeout سورت)
+-- version= 4.0 (درخواست کاربر: انتخابگر ستون کامل — همهٔ فیلدهای جزئیات مشتری (شناسنامه‌ای، تماس، آدرس، حقوقی، حسابداری، آمار فروش/اقدام/رویداد، آخرین توضیح) به‌عنوان ستون لیست + پنهان‌کردن ستون روی هر جدول)
+-- version= 3.0 (بازخورد کاربر: ناوبری مستقل از hash (رفع باز نشدن جزئیات مشتری در پرتال)، کلیک روی کل ردیف، درخت رده جمع‌شونده + دراپ‌داون رده، قانون جدید: همهٔ جدول‌ها سورت + فیلتر، ظاهر موبایل‌محور با نمای کارتی)
+-- version= 2.4 (پس از تست بصری: شمارش توضیحات = یادداشت‌ها + فایل‌های قدیمی، KPI/تب مطلعین از فهرست API، حذف شمارندهٔ گمراه‌کنندهٔ تب «مطلع» لیست)
+-- version= 2.3 (مطلع/مسئول: خواندن از API با شکل واقعی پاسخ assigns/responsibles، نوشتن با POST هم‌مبدأ ماژول بومی (type 0/2)؛ حذف اکشن‌های بی‌اثر API)
+-- version= 2.2 (تست نوشتن زنده: توضیحات = crm_history متن ساده + بخش الزامی، رده با ID/PROFILE_ID، مطلع/مسئول فقط از API، create + update تکمیلی، ترجمهٔ خطاهای API)
+-- version= 2.1 (رفع پس از تست زنده: پارامتر section/tab لینک‌های پرتال، شمارش اقدام فقط لینک‌های معتبر، نرمال‌سازی آرایه‌های خالی در UI)
+-- version= 2.0 (بازطراحی کامل ماژول مشتری: لیست با درخت بخش/رده، فیلتر پیشرفته، پروفایل ۳۶۰ با همهٔ تب‌ها، عملیات نوشتن از طریق API رسمی CRM)
 
--- Bot: CRM Customer 360 UI
--- Version: v01 (Phase 1 = Read + Links, per docs/context/CrmCustomerUiDiscovery.md)
+-- Bot 606 — CRM Customer 360 UI  (run_path: 443/crm_customer_ui_v01)
 --
--- این بات جایگزین UI ماژول مشتری TeamYar است — نه یک CRM جدید. تمام Route/ID/Table های
--- استفاده‌شده در این فایل از Discovery واقعی روی دیتابیس زنده گرفته شده‌اند
--- (docs/context/CrmCustomerUiDiscovery.md) — هیچ‌کدام حدس نیستند.
+-- معماری v2:
+--   * این فایل فقط «سرور» است: مسیریاب action، لایهٔ SQL، لایهٔ API (teamyar.call_api ماژول ۱۴) و شل HTML.
+--   * رابط کاربری (SPA) در پیوست‌های همین بات است: app.js + app.css — سرو می‌شوند از
+--     /bot/run/443/crm_customer_ui_v01/app.js  (پیوست‌های بات همان‌جا سرو می‌شوند؛ CSP پرتال 'self' را مجاز می‌داند).
+--   * همهٔ درخواست‌های داده POST با فیلدهای ساده (action=...) به آدرس مطلق اجرای بات هستند (الگوی بات ۶۰۹)؛
+--     هرگز فیلدی به نام customform ارسال نمی‌شود (۴۰۰ پلتفرم).
 --
--- نگاشت شناسه مشتری (حیاتی، به Discovery Round 5 مراجعه شود):
---   {id} ورودی این بات = profile_user_info.ID = pa_client.REFFERE_ID
---   (همان عددی که در تمام Route های erp.bimehland.com — /crm/history/*، /crm/client/edit/* —
---   استفاده می‌شود). pa_client.ID یک PK داخلی جداست که فقط با
---   SELECT ID FROM pa_client WHERE REFFERE_ID = {id} پیدا می‌شود؛ CLIENT_ID روی sales_invoice/
---   purchase_invoice/project_project_client/crm_favorite/crm_notify/crm_history به همین
---   pa_client.ID داخلی اشاره می‌کند، نه مستقیم به {id} ورودی.
---   استثنا: cal_invite_user.USER_ID مستقیماً همان {id} ورودی است (بدون نیاز به این Bridge).
+-- نگاشت شناسه‌ها (روی دادهٔ زنده ۱۴۰۵/۰۶/۱۲ با کوئری تأیید شد — چیزی حدس زده نشده):
+--   شناسهٔ مشتری = crm_info.ID = profile_main.ID = profile_user_info.ID  (همان عدد URLهای پرتال)
+--   crm_notify / crm_favorite / crm_history / crm_contacts / crm_address / crm_cross / crm_custom_form
+--       .CLIENT_ID = crm_info.ID  (۱۰۰٪ join؛ نه pa_client.ID — یافتهٔ قبلی نادرست بود)
+--   crm_cross(CLIENT_ID, REFERE_ID): عضویت مشتری در رده؛ REFERE_ID = crm_classify_person.PROFILE_ID
+--   crm_classify_person.section_id -> crm_section.ID  (بخش)
+--   sales_invoice / purchase_invoice .CLIENT_ID = pa_client.ID و pa_client.REFFERE_ID = شناسهٔ مشتری (Bridge حسابداری)
+--   crm_ty_links(SRC_MODULE_ID=14, SRC_LINK_ID=مشتری) -> DST_MODULE_ID: 8 اقدام، 12 ایمیل، 7 اسناد/توضیحات، 20 پروژه، 19 تقویم
+--   «توضیحات» = فایل‌های .tyhtm (documents_main، MIME text-html) لینک‌شده به مشتری؛ نمایش: /crm/history/comment/show_file/
+--   «اسناد» = documents_main.PARENT_ID = crm_info.FOLDER_ID (اگر پوشه ساخته شده باشد) + اسناد لینک‌شدهٔ غیر-توضیح
+--   رویدادها = cal_invite_user.USER_ID = شناسهٔ مشتری ؛ نظرسنجی = poll_related.USER_ID (related_type=1)
+--   پیامک = تطبیق ۱۰ رقم آخر موبایل با sms_phone_book.PHONE_NUMBER ؛ گفتگو = chat_dialogs.AUTHOR_ID
+--   crm_history = لاگ فعالیت (TYPE=1، NOTE = جدول HTML) — نه متن توضیحات کاربر
 --
--- Phase 1 = Read + Links: تب‌هایی که مکانیزم دقیق دیتابیسشان EAV/JSON یا مبتنی بر تطبیق
--- شماره‌تلفن/ایمیل است (اقدام، گفتگو، پیامک، ایمیل، نظرسنجی) فقط Link به صفحه واقعی TeamYar
--- می‌شوند، نه بازسازی Query. اسناد/فایل‌های صوتی هم چون جدول دقیقشان کامل تأیید نشده Link هستند.
+-- عملیاتی که API رسمی ندارند (برگزیده، انتقال به حذف‌شده‌ها، بازگرداندن، تأیید، حذف نهایی، تغییر گروهی رده،
+-- مطلع) در سمت مرورگر با همان GET/POST هم‌مبدأ ماژول بومی انجام می‌شوند (/crm/index/set_favorite/ ...)،
+-- پس سطح دسترسی کاربر دقیقاً همان ماژول بومی است. عملیاتی که API دارند (ثبت توضیح، ویرایش/ایجاد مشتری،
+-- رابط، رده) از این‌جا با teamyar.call_api(14, ...) انجام می‌شوند.
 
 -- =========================================
 -- CONFIG
 -- =========================================
-local DB_SCHEMA        = "0000000"
-local ACCENT           = "#16509D"
-local BASE_URL         = "https://erp.bimehland.com"
-local PAGE_SIZE        = 30
-local LIST_MAX_ROWS    = 5000 -- سقف امنیتی؛ Pagination واقعی با LIMIT/OFFSET انجام می‌شود
-local TAB_ROW_LIMIT     = 50
+local CONFIG = {
+    DB_SCHEMA        = "0000000",
+    BASE_URL         = "https://erp.bimehland.com",
+    BOT_RUN_PATH     = "443/crm_customer_ui_v01",
+    ASSET_VERSION    = "5.2.0",
+    CRM_MODULE_ID    = 14,
+    -- بات ۴۸۶ «show crm saite»: با client_id، صفحهٔ مشتری در سایت (mobile140.com/dashboard/users/customer/<شناسه سایت>) را
+    -- از روی crm_info.COMMENT («شناسه سایت:NNN») در iframe نشان می‌دهد. GET با query هم کار می‌کند (تست زنده ۱۴۰۵/۰۶/۱۲).
+    SITE_VIEW_BOT_PATH = "443/crm_saite_show",
+    SITE_ID_MARKER     = "شناسه سایت",
+    -- بات ۳۹۸ «show_site»: iframe به آدرس سایت با کلید کاربر جاری => لاگین سایت در مرورگر (کوکی mobile140).
+    -- باید قبل از بات ۴۸۶ در همان مرورگر بارگذاری شود؛ app.js آن را در پس‌زمینه (iframe پنهان) اجرا می‌کند.
+    SITE_LOGIN_BOT_PATH = "2/show_site",
+    PAGE_SIZE        = 30,
+    MAX_PAGE_SIZE    = 200,
+    EXPORT_MAX_ROWS  = 3000,
+    TAB_ROW_LIMIT    = 300,
+    HISTORY_LIMIT    = 150,
+    TREE_CACHE       = nil,
+    -- لوگوی «۱۴۰» نسخهٔ White (روی نوار Accent هدر) — در مرحلهٔ build جایگزین می‌شود
+    LOGO140_WHITE_B64 = "{{LOGO140_WHITE_B64}}",
+}
+CONFIG.BOT_RUN_URL   = CONFIG.BASE_URL .. "/bot/run/" .. CONFIG.BOT_RUN_PATH
+CONFIG.ASSET_BASE    = "/bot/run/" .. CONFIG.BOT_RUN_PATH
 
-local input = teamyar.get_input() or {}
+local AMP = "&"   -- «&» همیشه از این ثابت ساخته می‌شود تا decode حریصانهٔ entity در ذخیرهٔ command رخ ندهد
 
 -- =========================================
--- HTML ESCAPE (پیاده‌سازی الزامی برای فایل‌های جدید)
+-- HTML ESCAPE (پیاده‌سازی الزامی — entity ها با الحاق ساخته می‌شوند)
 -- =========================================
 local function escape_html(value)
     if value == nil then return "" end
+    local amp_entity = "&" .. "amp;"
+    local lt_entity = "&" .. "lt;"
+    local gt_entity = "&" .. "gt;"
+    local quot_entity = "&" .. "quot;"
+    local apos_entity = "&" .. "#39;"
     return tostring(value)
-        :gsub("&", "&amp;")
-        :gsub("<", "&lt;")
-        :gsub(">", "&gt;")
-        :gsub('"', "&quot;")
-        :gsub("'", "&#39;")
+        :gsub("&", amp_entity)
+        :gsub("<", lt_entity)
+        :gsub(">", gt_entity)
+        :gsub('"', quot_entity)
+        :gsub("'", apos_entity)
 end
 
 -- =========================================
--- DB HELPERS
+-- GENERIC HELPERS
 -- =========================================
-local function fetch_rows(query, params)
-    pcall(function() db.use_db(DB_SCHEMA) end)
-    local ok, err = pcall(function()
-        db.query({ query = query, params = params or {} })
-    end)
-    if not ok then
-        teamyar.write_log("crm_customer_ui SQL error: " .. tostring(err) .. " | query: " .. query)
-        return nil, err
-    end
-    local rows = {}
-    local record = {}
-    while db.query_fetch(record) do
-        local row = {}
-        for i = 1, #record do row[i] = record[i] end
-        table.insert(rows, row)
-    end
-    db.query_free()
-    return rows
+local function trim(s)
+    if s == nil then return "" end
+    return (tostring(s):gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
-local function fetch_row(query, params)
-    local rows = fetch_rows(query, params)
-    if rows == nil or #rows == 0 then return nil end
-    return rows[1]
+local function scalar_input(value)
+    if value == nil then return nil end
+    local t = _G.type(value)
+    if t ~= "string" and t ~= "number" then return nil end
+    return value
 end
 
-local function fetch_scalar(query, params)
-    local row = fetch_row(query, params)
-    if row == nil then return nil end
-    return row[1]
+local function to_int(v)
+    local n = tonumber(v)
+    if n == nil then return nil end
+    return math.floor(n)
 end
 
--- =========================================
--- FORMAT HELPERS
--- =========================================
-local function fmt_num(value)
-    local n = tonumber(value)
-    if n == nil then return "0" end
-    local s = tostring(math.floor(n + 0.5))
-    local sign = ""
-    if s:sub(1, 1) == "-" then sign = "-"; s = s:sub(2) end
-    return sign .. s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+local function to_positive_int(v)
+    local n = to_int(v)
+    if n == nil or n <= 0 then return nil end
+    return n
 end
 
 local function nz(value, default)
-    if value == nil or value == "" or (type(value) == "userdata") then
-        return default or "—"
+    if value == nil or value == "" or (_G.type(value) == "userdata") then
+        return default or ""
     end
     return tostring(value)
 end
 
--- تبدیل شمسی — پیاده‌سازی خالص Lua (بدون وابستگی به REPORT_FN_JDATE).
--- REPORT_FN_JDATE در چند بات دیگر این ریپو استفاده شده، اما با تست مستقیم روی این دیتابیس
--- زنده (حتی روی مقادیر کاملاً معتبر و غیرصفر، هم از طریق بات schema discovery و هم در اجرای
--- واقعی همین بات) همیشه با «sql error» شکست می‌خورد — نه فقط برای BIRTHDAY خالی. به‌جای
--- وابستگی به یک تابع دیتابیسی که رفتارش این‌جا تأیید نشد، تبدیل کامل در Lua انجام می‌شود:
--- ستون‌های FILETIME خام SELECT می‌شوند و fmt_jalali_from_filetime در زمان رندر صدا زده می‌شود.
+local function is_all_digits(s)
+    return s ~= nil and s ~= "" and s:match("^%d+$") ~= nil
+end
+
+-- فقط برای الگوهای LIKE: چون بایند کردن LIKE ? در لایهٔ db.query این پلتفرم بی‌صدا شکست می‌خورد (CLAUDE.md)،
+-- ورودی کاربر قبل از الحاق به SQL «سفیدلیستی» پاک می‌شود: تنها حروف (هر زبان، بایت‌های UTF-8 >= 128)،
+-- ارقام، فاصله، «-»، «_» و «.» باقی می‌مانند. کوتیشن، بک‌اسلش، درصد، نقطه‌ویرگول و هر نویسهٔ کنترلی حذف می‌شود؛
+-- پس رشتهٔ نهایی نمی‌تواند از داخل literal خارج شود.
+local function sanitize_like_literal(s)
+    local out = {}
+    for i = 1, #s do
+        local b = s:byte(i)
+        if b >= 128 or (b >= 48 and b <= 57) or (b >= 65 and b <= 90) or (b >= 97 and b <= 122)
+            or b == 32 or b == 45 or b == 95 or b == 46 or b == 64 then
+            table.insert(out, string.char(b))
+        end
+    end
+    return table.concat(out)
+end
+
+local function digits_only(s)
+    return (tostring(s or ""):gsub("%D", ""))
+end
+
+local function fmt_num(value)
+    local n = tonumber(value)
+    if n == nil then return "0" end
+    local s = tostring(math.floor(math.abs(n) + 0.5))
+    local sign = n < 0 and "-" or ""
+    return sign .. s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+end
+
+local function strip_tags(html)
+    if html == nil then return "" end
+    local s = tostring(html)
+    s = s:gsub("</td>", " | "):gsub("</tr>", " ‹› "):gsub("<br%s*/?>", " ")
+    s = s:gsub("<[^>]+>", " ")
+    s = s:gsub("&" .. "nbsp;", " ")
+    s = s:gsub("%s+", " ")
+    s = s:gsub(" ‹› ", "  ")
+    return trim(s)
+end
+
+-- =========================================
+-- DATE HELPERS (FILETIME <-> شمسی، خالص Lua — REPORT_FN_JDATE روی این سرور وجود ندارد)
+-- =========================================
 local function floor_div(a, b) return math.floor(a / b) end
 
 local function civil_from_days(z)
@@ -122,9 +184,16 @@ local function civil_from_days(z)
     return y, m, d
 end
 
--- الگوریتم استاندارد gregorian_to_jalali (منبع: jdf.scr.ir، پیاده‌سازی رایج PHP/JS) —
--- با دست روی تاریخ امروز (۲۰۲۶-۰۸-۱۴ میلادی ← ۱۴۰۵/۰۵/۲۳ شمسی) تأیید شد؛ نسخه قبلی این تابع
--- (ترکیب اشتباهِ دو الگوریتم متفاوت با یک JDN میانی) مقدار غلط ۵۱۴۳/... تولید می‌کرد.
+local function days_from_civil(y, m, d)
+    if m <= 2 then y = y - 1 end
+    local era = floor_div(y, 400)
+    local yoe = y - era * 400
+    local mp = (m + 9) % 12
+    local doy = floor_div(153 * mp + 2, 5) + d - 1
+    local doe = yoe * 365 + floor_div(yoe, 4) - floor_div(yoe, 100) + doy
+    return era * 146097 + doe - 719468
+end
+
 local G_D_M = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 }
 
 local function gregorian_to_jalali(gy, gm, gd)
@@ -158,742 +227,1506 @@ local function gregorian_to_jalali(gy, gm, gd)
     return jy, jm, jd
 end
 
--- ستون‌های تاریخ این پروژه FILETIME هستند: filetime/10,000,000 - 11644473600 = ثانیه یونیکس
+local function jalali_to_gregorian(jy, jm, jd)
+    jy = jy + 1595
+    local days = -355668 + (365 * jy) + (math.floor(jy / 33) * 8) + math.floor(((jy % 33) + 3) / 4) + jd
+    if jm < 7 then
+        days = days + (jm - 1) * 31
+    else
+        days = days + ((jm - 7) * 30) + 186
+    end
+    local gy = 400 * math.floor(days / 146097)
+    days = days % 146097
+    if days > 36524 then
+        days = days - 1
+        gy = gy + 100 * math.floor(days / 36524)
+        days = days % 36524
+        if days >= 365 then days = days + 1 end
+    end
+    gy = gy + 4 * math.floor(days / 1461)
+    days = days % 1461
+    if days > 365 then
+        gy = gy + math.floor((days - 1) / 365)
+        days = (days - 1) % 365
+    end
+    local gd = days + 1
+    local is_leap = (gy % 4 == 0 and gy % 100 ~= 0) or (gy % 400 == 0)
+    local g_days_in_month = { 31, is_leap and 29 or 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+    local gm = 1
+    while gm <= 12 and gd > g_days_in_month[gm] do
+        gd = gd - g_days_in_month[gm]
+        gm = gm + 1
+    end
+    return gy, gm, gd
+end
+
+local EPOCH_DIFF_SECONDS = 11644473600
+local TICKS_PER_SECOND   = 10000000
+local DAY_TICKS          = 864000000000
+
 local function fmt_jalali_from_filetime(filetime, with_time)
     local ft = tonumber(filetime)
     if ft == nil or ft <= 0 then return nil end
-    local unixtime = floor_div(ft, 10000000) - 11644473600
+    local unixtime = floor_div(ft, TICKS_PER_SECOND) - EPOCH_DIFF_SECONDS
     if unixtime < 0 then return nil end
-    local days = floor_div(unixtime, 86400)
+    -- ساعت ایران (+03:30) برای نمایش زمان
+    local local_time = unixtime + 12600
+    local days = floor_div(local_time, 86400)
     local gy, gm, gd = civil_from_days(days)
     local jy, jm, jd = gregorian_to_jalali(gy, gm, gd)
     local out = string.format("%04d/%02d/%02d", jy, jm, jd)
     if with_time then
-        local secs_in_day = unixtime % 86400
+        local secs_in_day = local_time % 86400
         out = out .. string.format(" %02d:%02d", floor_div(secs_in_day, 3600), floor_div(secs_in_day % 3600, 60))
     end
     return out
 end
 
-local function fetch_generated_at()
-    local v = fetch_scalar("SELECT UNIX_TIMESTAMP()")
-    local n = tonumber(v)
-    if n == nil then return "—" end
-    return nz(fmt_jalali_from_filetime((n + 11644473600) * 10000000, true), "—")
+-- "1405/06/12" -> FILETIME ابتدای روز (UTC)؛ nil اگر نامعتبر
+local function jalali_string_to_filetime(s)
+    if s == nil then return nil end
+    local jy, jm, jd = tostring(s):match("^%s*(%d%d%d%d)[/%-](%d%d?)[/%-](%d%d?)%s*$")
+    if jy == nil then return nil end
+    jy, jm, jd = tonumber(jy), tonumber(jm), tonumber(jd)
+    if jm < 1 or jm > 12 or jd < 1 or jd > 31 then return nil end
+    local gy, gm, gd = jalali_to_gregorian(jy, jm, jd)
+    local days = days_from_civil(gy, gm, gd)
+    return (days * 86400 + EPOCH_DIFF_SECONDS) * TICKS_PER_SECOND
 end
 
+local function now_filetime()
+    return (os.time() + EPOCH_DIFF_SECONDS) * TICKS_PER_SECOND
+end
+
+-- =========================================
+-- DB HELPERS
+-- =========================================
+local function fetch_rows(query, params)
+    pcall(function() db.use_db(CONFIG.DB_SCHEMA) end)
+    local ok, err = pcall(function()
+        db.query({ query = query, params = params or {} })
+    end)
+    if not ok then
+        teamyar.write_log("crm_customer_ui SQL error: " .. tostring(err) .. " | query: " .. query:sub(1, 400))
+        return nil, err
+    end
+    local rows = {}
+    local record = {}
+    while db.query_fetch(record) do
+        local row = {}
+        for i = 1, #record do row[i] = record[i] end
+        table.insert(rows, row)
+    end
+    db.query_free()
+    return rows
+end
+
+local function fetch_row(query, params)
+    local rows, err = fetch_rows(query, params)
+    if rows == nil then return nil, err end
+    return rows[1]
+end
+
+local function fetch_scalar(query, params)
+    local row, err = fetch_row(query, params)
+    if row == nil then return nil, err end
+    return row[1]
+end
+
+local function id_list_sql(ids)
+    -- ids همیشه از خروجی DB (bigint) یا tonumber() می‌آیند — هرگز رشتهٔ خام کاربر
+    local clean = {}
+    for _, v in ipairs(ids or {}) do
+        local n = to_int(v)
+        if n ~= nil then table.insert(clean, tostring(n)) end
+    end
+    if #clean == 0 then return "(NULL)" end
+    return "(" .. table.concat(clean, ",") .. ")"
+end
+
+-- =========================================
+-- INPUT + CURRENT USER
+-- =========================================
+local input = teamyar.get_input() or {}
+local function inp(name) return scalar_input(input[name]) end
+
+local action = trim(inp("action") or inp("cu_action") or "")
+
+local current_user_id = 0
+do
+    local ok, uinfo = pcall(function() return teamyar.get_user_info() end)
+    if ok and _G.type(uinfo) == "table" then
+        current_user_id = to_int(uinfo.id) or 0
+    end
+end
+
+-- =========================================
+-- NATIVE ROUTE BUILDERS (لینک به صفحات خود پرتال)
+-- =========================================
+local function portal_page(path)
+    return CONFIG.BASE_URL .. "/?page=" .. path
+end
+
+local ROUTES = {
+    -- پارامترهای section/tab در URL پرتال هم‌سطح page هستند (?page=/crm/...&section=2)، نه داخل مسیر
+    client_edit  = function(id, tab) return portal_page("/crm/client/edit/" .. id .. (tab and (AMP .. "tab=" .. tab) or "")) end,
+    history      = function(action_name, id, section) return portal_page("/crm/history/" .. action_name .. "/" .. id .. AMP .. "section=" .. (section or "2")) end,
+    invoice_view = function(id) return portal_page("/sales/invoice/view_invoice/" .. id) end,
+    todo_report  = function(id) return portal_page("/todo/report/" .. id) end,
+    email_view   = function(id) return portal_page("/email/message/edit/" .. id) end,
+    chat_view    = function(id) return portal_page("/chat/dialog/" .. id) end,
+    poll_view    = function(id) return portal_page("/poll/index/questionnaire/view/" .. id) end,
+    project_view = function(id) return portal_page("/project/view" .. AMP .. "project_id=" .. id) end,
+    comment_file = function(client_id, file_id)
+        return CONFIG.BASE_URL .. "/crm/history/comment/show_file/?client_id=" .. client_id .. AMP .. "file_id=" .. file_id
+    end,
+    list_native  = function(category) return portal_page("/crm/index/all/" .. (category and (AMP .. "category=" .. category) or "")) end,
+}
+
+-- =========================================
+-- USER TYPE / STATUS LABELS
+-- =========================================
 local USER_TYPE_LABELS = { [3] = "حقیقی", [4] = "حقوقی" }
 local function user_type_label(v)
-    local n = tonumber(v)
+    local n = to_int(v)
     if n == nil then return "—" end
     return USER_TYPE_LABELS[n] or ("نوع " .. tostring(n))
 end
 
--- =========================================
--- INPUT PARSER
--- =========================================
-local function to_positive_int(v)
-    local n = tonumber(v)
-    if n == nil or n <= 0 then return nil end
-    return math.floor(n)
-end
-
-local customer_id  = to_positive_int(input["id"])          -- profile_user_info.ID (= pa_client.REFFERE_ID)
-local search_q     = tostring(input["q"] or ""):match("^%s*(.-)%s*$")
-local list_page     = to_positive_int(input["page"]) or 1
-local active_tab    = tostring(input["tab"] or "overview")
-local note_submit   = input["note_submit"]
-local note_text     = tostring(input["note_text"] or "")
+local SEX_LABELS = { [1] = "مرد", [2] = "زن" }
+local PHONE_TYPE_LABELS = { [2] = "تلفن منزل", [3] = "تلفن محل کار", [4] = "فکس" }
+local INVOICE_TYPE_LABELS = { [1] = "فاکتور فروش", [3] = "برگشت از فروش", [5] = "پیش‌فاکتور" }
+local TODO_STATUS_LABELS = { [0] = "باز", [1] = "در حال انجام", [2] = "بسته شده", [3] = "موکول شده" }
+local SMS_DIRECTION_LABELS = { [0] = "ارسالی", [1] = "دریافتی" }
 
 -- =========================================
--- ROUTE BUILDER — همه لینک‌ها اینجا ساخته می‌شوند، نه در جاوااسکریپت
+-- LIST: WHERE BUILDER
 -- =========================================
-local function history_url(action, id, extra)
-    return BASE_URL .. "/?page=/crm/history/" .. action .. "/" .. tostring(id) .. "&section=" .. (extra or "2")
-end
-local function edit_url(id, tab)
-    local t = ""
-    if tab ~= nil then t = "&tab=" .. tostring(tab) end
-    return BASE_URL .. "/?page=/crm/client/edit/" .. tostring(id) .. t
-end
-local function list_url_teamyar(category)
-    return BASE_URL .. "/?page=/crm/index/all/&category=" .. tostring(category or "")
-end
+local SCOPE_SQL = {
+    all         = "",
+    person      = " AND ui.USER_TYPE = 3",
+    business    = " AND ui.USER_TYPE = 4",
+    favorite    = " AND EXISTS (SELECT 1 FROM crm_favorite f WHERE f.CLIENT_ID = ci.ID AND f.USER_ID = ? AND f.FLAG = 1)",
+    assign      = " AND EXISTS (SELECT 1 FROM crm_notify n WHERE n.CLIENT_ID = ci.ID AND n.USER_ID = ?)",
+    events      = " AND EXISTS (SELECT 1 FROM cal_invite_user ciu WHERE ciu.USER_ID = ci.ID)",
+    unconfirmed = " AND COALESCE(ci.CONFIRM, 0) = 0",
+    nocat       = " AND NOT EXISTS (SELECT 1 FROM crm_cross x0 WHERE x0.CLIENT_ID = ci.ID)",
+    trash       = "",
+}
+local SCOPES_WITH_USER = { favorite = true, assign = true }
 
-local ROUTES = {
-    todo      = function(id) return history_url("show_todo", id, "0") end,
-    documents = function(id) return history_url("show_documents", id) end,
-    email     = function(id) return history_url("show_emails", id) end,
-    chat      = function(id) return history_url("show_chats", id) end,
-    sms       = function(id) return history_url("show_sms", id) end,
-    poll      = function(id) return history_url("show_poll", id) end,
-    audio     = function(id) return history_url("audio_files", id, "0") end,
-    comments  = function(id) return history_url("show_comments", id) end,
+-- فیلدهای فیلتر پیشرفته — سفیدلیست کامل؛ هر فیلد یا یک ستون مستقیم دارد یا یک EXISTS الگودار
+local ADV_FIELDS = {
+    name          = { kind = "text",   col = "pm.FULLNAME" },
+    company       = { kind = "text",   col = "ci.COMPANY" },
+    job           = { kind = "text",   col = "ci.JOB" },
+    tin           = { kind = "text",   col = "ci.TIN" },
+    kpp           = { kind = "text",   col = "ci.KPP" },
+    comment       = { kind = "text",   col = "ci.COMMENT" },
+    lable         = { kind = "text",   col = "ci.LABLE" },
+    website       = { kind = "text",   col = "ci.WEBSAITE" },
+    reg_number    = { kind = "text",   col = "ci.REG_NUMBER" },
+    industry      = { kind = "text",   col = "ci.INDUSTRY" },
+    mobile        = { kind = "exists", sql = "SELECT 1 FROM profile_mobile m WHERE m.USER_ID = ci.ID AND m.MOBILE %s" },
+    email         = { kind = "exists", sql = "SELECT 1 FROM profile_email e WHERE e.USER_ID = ci.ID AND e.EMAIL %s" },
+    national_code = { kind = "exists", sql = "SELECT 1 FROM profile_nationalcode nc WHERE nc.USER_ID = ci.ID AND nc.NATIONAL_CODE %s" },
+    phone         = { kind = "exists", sql = "SELECT 1 FROM profile_phone ph WHERE ph.USER_ID = ci.ID AND ph.PHONE %s" },
+    city          = { kind = "exists", sql = "SELECT 1 FROM profile_user_address a WHERE a.USER_ID = ci.ID AND a.TYPE = 1 AND a.CITY %s" },
+    state         = { kind = "exists", sql = "SELECT 1 FROM profile_user_address a WHERE a.USER_ID = ci.ID AND a.TYPE = 1 AND a.STATE %s" },
+    address       = { kind = "exists", sql = "SELECT 1 FROM profile_user_address a WHERE a.USER_ID = ci.ID AND a.TYPE = 1 AND a.ADDRESS %s" },
+    zip_code      = { kind = "exists", sql = "SELECT 1 FROM profile_user_address a WHERE a.USER_ID = ci.ID AND a.TYPE = 1 AND a.POSTAL_CODE %s" },
+    author        = { kind = "exists", sql = "SELECT 1 FROM profile_main au WHERE au.ID = ci.AUTHOR_ID AND au.FULLNAME %s" },
+    create_date   = { kind = "date",   col = "ci.CREATE_DATE" },
+    modified_date = { kind = "date",   col = "ci.MODIFIED_DATE" },
+    birth_date    = { kind = "date",   col = "ui.BIRTHDAY" },
+    type          = { kind = "number", col = "ui.USER_TYPE" },
+    gender        = { kind = "number", col = "ui.SEX" },
+    confirm       = { kind = "number", col = "COALESCE(ci.CONFIRM, 0)" },
+    category      = { kind = "member", sql = "SELECT 1 FROM crm_cross x1 WHERE x1.CLIENT_ID = ci.ID AND x1.REFERE_ID = ?" },
+    has_sales     = { kind = "flag",   sql = "EXISTS (SELECT 1 FROM sales_invoice si JOIN pa_client pc ON pc.ID = si.CLIENT_ID WHERE pc.REFFERE_ID = ci.ID AND si.DELETED = 0)" },
+    has_events    = { kind = "flag",   sql = "EXISTS (SELECT 1 FROM cal_invite_user ciu WHERE ciu.USER_ID = ci.ID)" },
+    has_todo      = { kind = "flag",   sql = "EXISTS (SELECT 1 FROM crm_ty_links lk WHERE lk.SRC_MODULE_ID = 14 AND lk.DST_MODULE_ID = 8 AND lk.SRC_LINK_ID = ci.ID)" },
+    is_favorite   = { kind = "flag",   sql = "EXISTS (SELECT 1 FROM crm_favorite f WHERE f.CLIENT_ID = ci.ID AND f.USER_ID = " .. tostring(current_user_id) .. " AND f.FLAG = 1)" },
+    is_notified   = { kind = "flag",   sql = "EXISTS (SELECT 1 FROM crm_notify n WHERE n.CLIENT_ID = ci.ID AND n.USER_ID = " .. tostring(current_user_id) .. ")" },
 }
 
+-- یک شرط فیلتر پیشرفته -> (sql, params). nil اگر شرط نامعتبر باشد (بی‌صدا نادیده نمی‌گیریم: به کلاینت برمی‌گردد)
+local function build_adv_condition(cond)
+    local def = ADV_FIELDS[tostring(cond.field or "")]
+    if def == nil then return nil, "فیلد فیلتر نامعتبر: " .. tostring(cond.field) end
+    local op = tostring(cond.op or "eq")
+    local raw_value = cond.value
+    local value = trim(raw_value)
+    local params = {}
+
+    if def.kind == "flag" then
+        if op == "neq" or op == "empty" then return "NOT " .. def.sql, params end
+        return def.sql, params
+    end
+
+    if def.kind == "member" then
+        local cat = to_positive_int(value)
+        if cat == nil then return nil, "رده انتخاب نشده است" end
+        table.insert(params, cat)
+        if op == "neq" then return "NOT EXISTS (" .. def.sql .. ")", params end
+        return "EXISTS (" .. def.sql .. ")", params
+    end
+
+    if def.kind == "number" then
+        if op == "empty" then return "(" .. def.col .. " IS NULL OR " .. def.col .. " = 0)", params end
+        if op == "not_empty" then return "(" .. def.col .. " IS NOT NULL AND " .. def.col .. " <> 0)", params end
+        local n = to_int(value)
+        if n == nil then return nil, "مقدار عددی نامعتبر" end
+        table.insert(params, n)
+        if op == "neq" then return def.col .. " <> ?", params end
+        if op == "gt" then return def.col .. " > ?", params end
+        if op == "lt" then return def.col .. " < ?", params end
+        return def.col .. " = ?", params
+    end
+
+    if def.kind == "date" then
+        if op == "empty" then return "(" .. def.col .. " IS NULL OR " .. def.col .. " = 0)", params end
+        if op == "not_empty" then return "(" .. def.col .. " IS NOT NULL AND " .. def.col .. " <> 0)", params end
+        if op == "last_days" or op == "before_days" then
+            local days = to_positive_int(value)
+            if days == nil then return nil, "تعداد روز نامعتبر" end
+            local threshold = now_filetime() - days * DAY_TICKS
+            table.insert(params, threshold)
+            if op == "last_days" then return def.col .. " >= ?", params end
+            return "(" .. def.col .. " > 0 AND " .. def.col .. " < ?)", params
+        end
+        local ft = jalali_string_to_filetime(value)
+        if ft == nil then return nil, "تاریخ نامعتبر (قالب 1405/06/12)" end
+        if op == "gt" or op == "gte" then table.insert(params, ft); return def.col .. " >= ?", params end
+        if op == "lt" or op == "lte" then table.insert(params, ft + DAY_TICKS); return def.col .. " < ?", params end
+        if op == "neq" then
+            table.insert(params, ft); table.insert(params, ft + DAY_TICKS)
+            return "NOT (" .. def.col .. " >= ? AND " .. def.col .. " < ?)", params
+        end
+        table.insert(params, ft); table.insert(params, ft + DAY_TICKS)
+        return "(" .. def.col .. " >= ? AND " .. def.col .. " < ?)", params
+    end
+
+    -- text / exists
+    local literal = sanitize_like_literal(value)
+    local expr
+    if op == "empty" then
+        expr = def.kind == "text" and ("(" .. def.col .. " IS NULL OR " .. def.col .. " = '')") or nil
+        if def.kind == "exists" then
+            expr = "NOT EXISTS (" .. string.format(def.sql, "<> ''") .. ")"
+        end
+        return expr, params
+    elseif op == "not_empty" then
+        if def.kind == "text" then return "(" .. def.col .. " IS NOT NULL AND " .. def.col .. " <> '')", params end
+        return "EXISTS (" .. string.format(def.sql, "<> ''") .. ")", params
+    end
+    if literal == "" then return nil, "مقدار فیلتر خالی است" end
+    local comparator
+    if op == "eq" then
+        table.insert(params, value); comparator = "= ?"
+    elseif op == "neq" then
+        table.insert(params, value); comparator = "<> ?"
+    elseif op == "not_contains" then
+        comparator = "NOT LIKE '%" .. literal .. "%'"
+    elseif op == "starts" then
+        comparator = "LIKE '" .. literal .. "%'"
+    else -- contains (default)
+        comparator = "LIKE '%" .. literal .. "%'"
+    end
+    if def.kind == "text" then
+        return "COALESCE(" .. def.col .. ",'') " .. comparator, params
+    end
+    return "EXISTS (" .. string.format(def.sql, comparator) .. ")", params
+end
+
+local function decode_adv(adv_json)
+    if adv_json == nil or trim(adv_json) == "" then return {} end
+    local ok, decoded = pcall(function() return json.decode(adv_json) end)
+    if not ok or _G.type(decoded) ~= "table" then return {} end
+    local out = {}
+    for _, c in ipairs(decoded) do
+        if _G.type(c) == "table" then table.insert(out, c) end
+    end
+    return out
+end
+
+local function build_list_where(opts)
+    local where = { "1=1" }
+    local params = {}
+    local warnings = {}
+
+    if opts.scope == "trash" then
+        table.insert(where, "ci.DELETED = 1")
+    else
+        table.insert(where, "ci.DELETED = 0")
+    end
+
+    local scope_sql = SCOPE_SQL[opts.scope]
+    if scope_sql ~= nil and scope_sql ~= "" then
+        table.insert(where, scope_sql:sub(6)) -- بدون " AND " ابتدایی
+        if SCOPES_WITH_USER[opts.scope] then table.insert(params, current_user_id) end
+    end
+
+    if opts.category_id ~= nil then
+        table.insert(where, "EXISTS (SELECT 1 FROM crm_cross xc WHERE xc.CLIENT_ID = ci.ID AND xc.REFERE_ID = ?)")
+        table.insert(params, opts.category_id)
+    elseif opts.section_id ~= nil then
+        table.insert(where, "EXISTS (SELECT 1 FROM crm_cross xs JOIN crm_classify_person cs ON cs.PROFILE_ID = xs.REFERE_ID WHERE xs.CLIENT_ID = ci.ID AND cs.section_id = ?)")
+        table.insert(params, opts.section_id)
+    end
+
+    local q = trim(opts.q or "")
+    if q ~= "" then
+        if is_all_digits(q) then
+            local n = tonumber(q)
+            local parts = { "ci.ID = ?" }
+            table.insert(params, n)
+            if #q >= 7 then
+                table.insert(parts, "EXISTS (SELECT 1 FROM profile_mobile qm WHERE qm.USER_ID = ci.ID AND RIGHT(qm.MOBILE, 10) = RIGHT(?, 10))")
+                table.insert(params, q)
+                table.insert(parts, "EXISTS (SELECT 1 FROM profile_phone qp WHERE qp.USER_ID = ci.ID AND RIGHT(qp.PHONE, 8) = RIGHT(?, 8))")
+                table.insert(params, q)
+            end
+            table.insert(parts, "EXISTS (SELECT 1 FROM profile_nationalcode qn WHERE qn.USER_ID = ci.ID AND qn.NATIONAL_CODE = ?)")
+            table.insert(params, q)
+            table.insert(where, "(" .. table.concat(parts, " OR ") .. ")")
+        else
+            local literal = sanitize_like_literal(q)
+            if literal ~= "" then
+                local parts = { "pm.FULLNAME LIKE '%" .. literal .. "%'", "COALESCE(ci.COMPANY,'') LIKE '%" .. literal .. "%'" }
+                if q:find("@", 1, true) then
+                    table.insert(parts, "EXISTS (SELECT 1 FROM profile_email qe WHERE qe.USER_ID = ci.ID AND qe.EMAIL LIKE '%" .. literal .. "%')")
+                end
+                table.insert(where, "(" .. table.concat(parts, " OR ") .. ")")
+            end
+        end
+    end
+
+    for _, cond in ipairs(opts.adv or {}) do
+        local sql, extra_or_err = build_adv_condition(cond)
+        if sql == nil then
+            table.insert(warnings, tostring(extra_or_err))
+        else
+            table.insert(where, sql)
+            for _, p in ipairs(extra_or_err) do table.insert(params, p) end
+        end
+    end
+
+    return table.concat(where, " AND "), params, warnings
+end
+
+-- سورت سروری فقط روی ستون‌های مستقیم جدول‌های اصلی؛ سورت روی ستون‌های محاسبه‌ای (زیرکوئری) روی ۸۱هزار ردیف
+-- عملاً به Timeout می‌خورد (تست زنده ۱۴۰۵/۰۶/۱۲: sort=balance بیش از ۲ دقیقه) — آن ستون‌ها در کلاینت روی صفحهٔ جاری سورت می‌شوند.
+local SORT_COLUMNS = {
+    id = "ci.ID", name = "pm.FULLNAME", type = "ui.USER_TYPE", gender = "ui.SEX", created = "ci.CREATE_DATE",
+    modified = "ci.MODIFIED_DATE", confirm = "ci.CONFIRM", company = "ci.COMPANY", job = "ci.JOB", tin = "ci.TIN",
+    kpp = "ci.KPP", reg_number = "ci.REG_NUMBER", industry = "ci.INDUSTRY", website = "ci.WEBSAITE", lable = "ci.LABLE",
+    birthday = "ui.BIRTHDAY", number_personnel = "ci.NUMBER_PERSONNEL",
+}
+
+local LIST_SELECT = [[
+SELECT ci.ID, pm.FULLNAME, ui.USER_TYPE, ui.SEX, ci.CREATE_DATE, ci.MODIFIED_DATE, ci.AUTHOR_ID,
+       (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = ci.AUTHOR_ID) AS author_name,
+       COALESCE(ci.CONFIRM, 0) AS confirm_flag, ci.COMMENT, ci.COMPANY, ci.JOB, ci.TIN,
+       (SELECT m.MOBILE FROM profile_mobile m WHERE m.USER_ID = ci.ID ORDER BY m.ID ASC LIMIT 1) AS mobile,
+       (SELECT e.EMAIL FROM profile_email e WHERE e.USER_ID = ci.ID ORDER BY e.ID ASC LIMIT 1) AS email,
+       (SELECT n.NATIONAL_CODE FROM profile_nationalcode n WHERE n.USER_ID = ci.ID ORDER BY n.ID ASC LIMIT 1) AS national_code,
+       (SELECT a.STATE FROM profile_user_address a WHERE a.USER_ID = ci.ID AND a.TYPE = 1 LIMIT 1) AS state,
+       (SELECT a.CITY FROM profile_user_address a WHERE a.USER_ID = ci.ID AND a.TYPE = 1 LIMIT 1) AS city,
+       (SELECT a.ADDRESS FROM profile_user_address a WHERE a.USER_ID = ci.ID AND a.TYPE = 1 LIMIT 1) AS address,
+       (SELECT a.POSTAL_CODE FROM profile_user_address a WHERE a.USER_ID = ci.ID AND a.TYPE = 1 LIMIT 1) AS zip_code,
+       (SELECT GROUP_CONCAT(CONCAT(s.SECTION_NAME, '/', c.name) SEPARATOR '، ')
+          FROM crm_cross x JOIN crm_classify_person c ON c.PROFILE_ID = x.REFERE_ID JOIN crm_section s ON s.ID = c.section_id
+         WHERE x.CLIENT_ID = ci.ID) AS classify,
+       EXISTS (SELECT 1 FROM crm_favorite f WHERE f.CLIENT_ID = ci.ID AND f.USER_ID = ? AND f.FLAG = 1) AS is_fav,
+       EXISTS (SELECT 1 FROM crm_notify nn WHERE nn.CLIENT_ID = ci.ID AND nn.USER_ID = ?) AS is_notified,
+       (SELECT COUNT(*) FROM crm_notify n2 WHERE n2.CLIENT_ID = ci.ID) AS notify_count,
+       ci.DELETED]]
+
+-- ستون‌های اضافی (فیلدهای جزئیات مشتری) فقط وقتی محاسبه می‌شوند که کاربر آن‌ها را انتخاب کرده باشد (پارامتر cols)؛
+-- محاسبهٔ همهٔ آن‌ها برای هر صفحه، زمان لیست را از ~۱ ثانیه به ۵+ ثانیه می‌رساند (تست زنده ۱۴۰۵/۰۶/۱۲).
+local EXTRA_COLUMNS = {
+    birthday         = { sql = "ui.BIRTHDAY", fmt = "date" },
+    patronymic       = { sql = "ui.PATRONYMIC" },
+    birthplace       = { sql = "ui.BIRTHPLACE" },
+    identity_no      = { sql = "ui.identity_no" },
+    nationality      = { sql = "ui.nationality" },
+    passport_no      = { sql = "ui.passport_no" },
+    kpp              = { sql = "ci.KPP" },
+    reg_number       = { sql = "ci.REG_NUMBER" },
+    industry         = { sql = "ci.INDUSTRY" },
+    number_personnel = { sql = "ci.NUMBER_PERSONNEL" },
+    personality_type = { sql = "ci.PERSONALITY_TYPE" },
+    website          = { sql = "ci.WEBSAITE" },
+    lable            = { sql = "ci.LABLE" },
+    issue_activity   = { sql = "ci.ISSUE_ACTIVITY" },
+    property_code    = { sql = "ci.PROPERTY_CODE" },
+    mobiles_all      = { sql = "(SELECT GROUP_CONCAT(m2.MOBILE SEPARATOR '، ') FROM profile_mobile m2 WHERE m2.USER_ID = ci.ID)" },
+    emails_all       = { sql = "(SELECT GROUP_CONCAT(e2.EMAIL SEPARATOR '، ') FROM profile_email e2 WHERE e2.USER_ID = ci.ID)" },
+    work_phone       = { sql = "(SELECT p3.PHONE FROM profile_phone p3 WHERE p3.USER_ID = ci.ID AND p3.TYPE = 3 ORDER BY p3.ID LIMIT 1)" },
+    home_phone       = { sql = "(SELECT p2.PHONE FROM profile_phone p2 WHERE p2.USER_ID = ci.ID AND p2.TYPE = 2 ORDER BY p2.ID LIMIT 1)" },
+    fax              = { sql = "(SELECT p4.PHONE FROM profile_phone p4 WHERE p4.USER_ID = ci.ID AND p4.TYPE = 4 ORDER BY p4.ID LIMIT 1)" },
+    balance          = { sql = "(SELECT SUM(pc.BALANCE) FROM pa_client pc WHERE pc.REFFERE_ID = ci.ID AND (pc.DELETED IS NULL OR pc.DELETED = 0))", fmt = "money" },
+    account_code     = { sql = "(SELECT GROUP_CONCAT(pc2.ACCOUNT_CODE SEPARATOR '، ') FROM pa_client pc2 WHERE pc2.REFFERE_ID = ci.ID AND (pc2.DELETED IS NULL OR pc2.DELETED = 0))" },
+    sales_count      = { sql = "(SELECT COUNT(*) FROM sales_invoice s JOIN pa_client pc3 ON pc3.ID = s.CLIENT_ID WHERE pc3.REFFERE_ID = ci.ID AND s.DELETED = 0)", fmt = "int" },
+    last_invoice     = { sql = "(SELECT MAX(s2.RUN_DATE) FROM sales_invoice s2 JOIN pa_client pc4 ON pc4.ID = s2.CLIENT_ID WHERE pc4.REFFERE_ID = ci.ID AND s2.DELETED = 0 AND s2.CANCELED = 0)", fmt = "date" },
+    last_comment     = { sql = "(SELECT h.NOTE FROM crm_history h WHERE h.CLIENT_ID = ci.ID AND h.TYPE = 1 AND COALESCE(h.NOTE,'') <> '' AND h.NOTE NOT LIKE '<%' ORDER BY h.ID DESC LIMIT 1)" },
+    modifier         = { sql = "(SELECT mo.FULLNAME FROM profile_main mo WHERE mo.ID = ci.MODIFIER)" },
+    contacts_count   = { sql = "(SELECT COUNT(*) FROM crm_contacts cc WHERE cc.CLIENT_ID = ci.ID)", fmt = "int" },
+    events_count     = { sql = "(SELECT COUNT(*) FROM cal_invite_user ciu WHERE ciu.USER_ID = ci.ID)", fmt = "int" },
+    todo_count       = { sql = "(SELECT COUNT(*) FROM crm_ty_links l JOIN todo_task t ON t.ID = l.DST_LINK_ID WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 8 AND l.SRC_LINK_ID = ci.ID)", fmt = "int" },
+    has_folder       = { sql = "(COALESCE(ci.FOLDER_ID, 0) > 0)", fmt = "bool" },
+    phone            = { sql = "(SELECT p5.PHONE FROM profile_phone p5 WHERE p5.USER_ID = ci.ID ORDER BY p5.ID LIMIT 1)" },
+}
+local BASE_COLUMN_COUNT = 25
+
+-- پارامتر cols: فهرست کاماجدای کلیدهای EXTRA_COLUMNS؛ کلید ناشناخته نادیده گرفته می‌شود (سفیدلیست)
+local function parse_extra_cols(raw)
+    local keys = {}
+    for key in tostring(raw or ""):gmatch("[%w_]+") do
+        if EXTRA_COLUMNS[key] ~= nil then table.insert(keys, key) end
+    end
+    return keys
+end
+
+local function extra_select_sql(keys)
+    local parts = {}
+    for _, key in ipairs(keys) do table.insert(parts, ", " .. EXTRA_COLUMNS[key].sql .. " AS x_" .. key) end
+    return table.concat(parts)
+end
+
+local function format_extra(fmt, value)
+    if fmt == "date" then return nz(fmt_jalali_from_filetime(value), "") end
+    if fmt == "money" then return fmt_num(value) end
+    if fmt == "int" then return to_int(value) or 0 end
+    if fmt == "bool" then return to_int(value) == 1 end
+    return nz(value, "")
+end
+
+local LIST_FROM = [[
+
+FROM crm_info ci
+INNER JOIN profile_main pm ON pm.ID = ci.ID
+LEFT JOIN profile_user_info ui ON ui.ID = ci.ID
+WHERE ]]
+
+local function map_list_row(r)
+    return {
+        id            = tostring(r[1]),
+        name          = nz(r[2], "—"),
+        type          = to_int(r[3]),
+        type_label    = user_type_label(r[3]),
+        gender        = SEX_LABELS[to_int(r[4]) or 0] or "",
+        created       = nz(fmt_jalali_from_filetime(r[5], true), ""),
+        modified      = nz(fmt_jalali_from_filetime(r[6], true), ""),
+        author_id     = tostring(r[7] or ""),
+        author        = nz(r[8], ""),
+        confirm       = to_int(r[9]) == 1,
+        comment       = nz(r[10], ""),
+        company       = nz(r[11], ""),
+        job           = nz(r[12], ""),
+        tin           = nz(r[13], ""),
+        mobile        = nz(r[14], ""),
+        email         = nz(r[15], ""),
+        national_code = nz(r[16], ""),
+        state         = nz(r[17], ""),
+        city          = nz(r[18], ""),
+        address       = nz(r[19], ""),
+        zip_code      = nz(r[20], ""),
+        classify      = nz(r[21], ""),
+        is_fav        = to_int(r[22]) == 1,
+        is_notified   = to_int(r[23]) == 1,
+        notify_count  = to_int(r[24]) or 0,
+        deleted       = to_int(r[25]) == 1,
+    }
+end
+
+-- ستون‌های اضافی انتخاب‌شده (به ترتیب keys، بعد از BASE_COLUMN_COUNT ستون پایه)
+local function map_extra_columns(row, r, keys)
+    for i, key in ipairs(keys) do
+        local def = EXTRA_COLUMNS[key]
+        row[key] = format_extra(def.fmt, r[BASE_COLUMN_COUNT + i])
+        if key == "balance" then row.balance_fmt = row[key]; row.balance = tonumber(r[BASE_COLUMN_COUNT + i]) or 0 end
+    end
+    return row
+end
+
+local function action_list()
+    local scope = trim(inp("scope") or "all")
+    if SCOPE_SQL[scope] == nil then scope = "all" end
+    local page = to_positive_int(inp("page")) or 1
+    local per_page = to_positive_int(inp("per_page")) or CONFIG.PAGE_SIZE
+    if per_page > CONFIG.MAX_PAGE_SIZE then per_page = CONFIG.MAX_PAGE_SIZE end
+    local sort_key = trim(inp("sort") or "id")
+    local sort_col = SORT_COLUMNS[sort_key] or "ci.ID"
+    local dir = trim(inp("dir") or "desc"):lower() == "asc" and "ASC" or "DESC"
+
+    local where, params, warnings = build_list_where({
+        scope = scope,
+        section_id = to_positive_int(inp("section_id")),
+        category_id = to_positive_int(inp("category_id")),
+        q = inp("q"),
+        adv = decode_adv(inp("adv")),
+    })
+
+    local total, count_err = fetch_scalar("SELECT COUNT(*) FROM crm_info ci INNER JOIN profile_main pm ON pm.ID = ci.ID LEFT JOIN profile_user_info ui ON ui.ID = ci.ID WHERE " .. where, params)
+    if total == nil then return { ok = false, error = "خطا در شمارش مشتریان: " .. tostring(count_err) } end
+
+    local list_params = { current_user_id, current_user_id }
+    for _, p in ipairs(params) do table.insert(list_params, p) end
+    table.insert(list_params, per_page)
+    table.insert(list_params, (page - 1) * per_page)
+
+    local extra_keys = parse_extra_cols(inp("cols"))
+    local rows, err = fetch_rows(LIST_SELECT .. extra_select_sql(extra_keys) .. LIST_FROM .. where .. " ORDER BY " .. sort_col .. " " .. dir .. ", ci.ID DESC LIMIT ? OFFSET ?", list_params)
+    if rows == nil then return { ok = false, error = "خطا در دریافت لیست مشتریان: " .. tostring(err) } end
+
+    local out = {}
+    for _, r in ipairs(rows) do table.insert(out, map_extra_columns(map_list_row(r), r, extra_keys)) end
+    local result = {
+        ok = true, rows = out, total = tonumber(total) or 0, page = page, per_page = per_page,
+        scope = scope, sort = sort_key, dir = dir:lower(), warnings = warnings,
+    }
+    if inp("debug") == "1" then
+        -- عیب‌یابی: متن WHERE و پارامترها (بدون دادهٔ حساس)
+        result.debug = { where = where, params = params, q_raw = inp("q"), q_bytes = #tostring(inp("q") or "") }
+    end
+    return result
+end
+
+-- خروجی Excel: همان فیلترها، بدون صفحه‌بندی (تا سقف EXPORT_MAX_ROWS)
+local function action_export()
+    local scope = trim(inp("scope") or "all")
+    if SCOPE_SQL[scope] == nil then scope = "all" end
+    local where, params = build_list_where({
+        scope = scope,
+        section_id = to_positive_int(inp("section_id")),
+        category_id = to_positive_int(inp("category_id")),
+        q = inp("q"),
+        adv = decode_adv(inp("adv")),
+    })
+    local list_params = { current_user_id, current_user_id }
+    for _, p in ipairs(params) do table.insert(list_params, p) end
+    table.insert(list_params, CONFIG.EXPORT_MAX_ROWS)
+    local extra_keys = parse_extra_cols(inp("cols"))
+    local rows, err = fetch_rows(LIST_SELECT .. extra_select_sql(extra_keys) .. LIST_FROM .. where .. " ORDER BY ci.ID DESC LIMIT ?", list_params)
+    if rows == nil then return { ok = false, error = "خطا در خروجی: " .. tostring(err) } end
+    local out = {}
+    for _, r in ipairs(rows) do table.insert(out, map_extra_columns(map_list_row(r), r, extra_keys)) end
+    return { ok = true, rows = out, truncated = (#rows >= CONFIG.EXPORT_MAX_ROWS), max_rows = CONFIG.EXPORT_MAX_ROWS }
+end
+
 -- =========================================
--- CUSTOMER ID RESOLVER — profile_user_info.ID <-> pa_client.ID
+-- TREE: بخش‌ها و رده‌ها با شمارش
 -- =========================================
-local function resolve_pa_client_ids(profile_id)
-    local rows = fetch_rows(
-        "SELECT ID FROM pa_client WHERE REFFERE_ID = ? AND (DELETED IS NULL OR DELETED = 0)",
-        { profile_id })
-    if rows == nil then return {} end
+local function action_tree()
+    local rows, err = fetch_rows([[
+SELECT c.PROFILE_ID, c.name, c.section_id, s.SECTION_NAME, s.S_ORDER, c.sort_id, c.TYPE, c.DEFULT,
+       (SELECT COUNT(*) FROM crm_cross x JOIN crm_info i ON i.ID = x.CLIENT_ID AND i.DELETED = 0 WHERE x.REFERE_ID = c.PROFILE_ID) AS members
+FROM crm_classify_person c
+INNER JOIN crm_section s ON s.ID = c.section_id
+ORDER BY s.S_ORDER, s.ID, c.sort_id, c.ID]], {})
+    if rows == nil then return { ok = false, error = "خطا در دریافت درخت رده‌ها: " .. tostring(err) } end
+
+    local totals = fetch_row([[
+SELECT (SELECT COUNT(*) FROM crm_info WHERE DELETED = 0),
+       (SELECT COUNT(*) FROM crm_info ci WHERE ci.DELETED = 0 AND NOT EXISTS (SELECT 1 FROM crm_cross x WHERE x.CLIENT_ID = ci.ID)),
+       (SELECT COUNT(*) FROM crm_info WHERE DELETED = 1),
+       (SELECT COUNT(*) FROM crm_info WHERE DELETED = 0 AND COALESCE(CONFIRM,0) = 0),
+       (SELECT COUNT(*) FROM crm_favorite f JOIN crm_info i ON i.ID = f.CLIENT_ID AND i.DELETED = 0 WHERE f.USER_ID = ? AND f.FLAG = 1),
+       (SELECT COUNT(*) FROM crm_notify n JOIN crm_info i ON i.ID = n.CLIENT_ID AND i.DELETED = 0 WHERE n.USER_ID = ?),
+       (SELECT COUNT(*) FROM crm_info ci JOIN profile_user_info ui ON ui.ID = ci.ID WHERE ci.DELETED = 0 AND ui.USER_TYPE = 3),
+       (SELECT COUNT(*) FROM crm_info ci JOIN profile_user_info ui ON ui.ID = ci.ID WHERE ci.DELETED = 0 AND ui.USER_TYPE = 4)]],
+        { current_user_id, current_user_id }) or {}
+
+    local sections, by_id = {}, {}
+    for _, r in ipairs(rows) do
+        local sid = tostring(r[3])
+        if by_id[sid] == nil then
+            by_id[sid] = { id = to_int(r[3]), name = nz(r[4], "—"), categories = {}, members = 0 }
+            table.insert(sections, by_id[sid])
+        end
+        local members = to_int(r[9]) or 0
+        table.insert(by_id[sid].categories, {
+            id = to_int(r[1]), name = nz(r[2], "—"), members = members,
+            is_default = to_int(r[8]) == 1, type = to_int(r[7]) or 0,
+        })
+        by_id[sid].members = by_id[sid].members + members
+    end
+
+    return {
+        ok = true, sections = sections,
+        totals = {
+            all = tonumber(totals[1]) or 0, nocat = tonumber(totals[2]) or 0, trash = tonumber(totals[3]) or 0,
+            unconfirmed = tonumber(totals[4]) or 0, favorite = tonumber(totals[5]) or 0, assign = tonumber(totals[6]) or 0,
+            person = tonumber(totals[7]) or 0, business = tonumber(totals[8]) or 0,
+        },
+        current_user_id = current_user_id,
+    }
+end
+
+-- =========================================
+-- CLIENT PROFILE
+-- =========================================
+local function resolve_pa_client_ids(client_id)
+    local rows = fetch_rows("SELECT ID FROM pa_client WHERE REFFERE_ID = ? AND (DELETED IS NULL OR DELETED = 0)", { client_id }) or {}
     local ids = {}
-    for _, r in ipairs(rows) do table.insert(ids, tostring(r[1])) end
+    for _, r in ipairs(rows) do table.insert(ids, to_int(r[1])) end
     return ids
 end
 
-local function build_in_clause(ids)
-    if #ids == 0 then return "(NULL)" end
-    return "(" .. table.concat(ids, ",") .. ")"
-    -- توجه: ids همیشه از resolve_pa_client_ids می‌آید که خودش نتیجهٔ bigint ID از DB است،
-    -- هرگز مستقیم از ورودی کاربر — پس این‌جا نیازی به پارامترسازی escape نیست.
+local function rows_to_objects(rows, mapper)
+    local out = {}
+    for _, r in ipairs(rows or {}) do table.insert(out, mapper(r)) end
+    return out
+end
+
+local function load_client(client_id)
+    local base = fetch_row([[
+SELECT ci.ID, pm.FULLNAME, ui.NAME, ui.SURNAME, ui.USER_TYPE, ui.SEX, ui.BIRTHDAY, ui.PATRONYMIC, ui.BIRTHPLACE,
+       ui.identity_no, ui.identity_serial_no, ui.nationality, ui.passport_no, ui.PLACEOFISSUE, ui.dateofissue,
+       ci.DELETED, COALESCE(ci.CONFIRM,0), ci.CREATE_DATE, ci.MODIFIED_DATE, ci.AUTHOR_ID,
+       (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = ci.AUTHOR_ID),
+       ci.MODIFIER, (SELECT mo.FULLNAME FROM profile_main mo WHERE mo.ID = ci.MODIFIER),
+       ci.COMMENT, ci.COMPANY, ci.JOB, ci.TIN, ci.KPP, ci.REG_NUMBER, ci.INDUSTRY, ci.NUMBER_PERSONNEL,
+       ci.PERSONALITY_TYPE, ci.WEBSAITE, ci.LABLE, ci.ISSUE_ACTIVITY, ci.PROPERTY_CODE, ci.PROPERTY_DATE,
+       ci.state_code, ci.city_code, ci.FOLDER_ID, ci.IMPORT_ID, ci.DOMAIN, ci.LANGUAGE, ci.ACCOUNT,
+       EXISTS (SELECT 1 FROM crm_favorite f WHERE f.CLIENT_ID = ci.ID AND f.USER_ID = ? AND f.FLAG = 1),
+       EXISTS (SELECT 1 FROM crm_notify n WHERE n.CLIENT_ID = ci.ID AND n.USER_ID = ?)
+FROM crm_info ci
+INNER JOIN profile_main pm ON pm.ID = ci.ID
+LEFT JOIN profile_user_info ui ON ui.ID = ci.ID
+WHERE ci.ID = ?]], { current_user_id, current_user_id, client_id })
+    if base == nil then return nil end
+
+    local client = {
+        id = tostring(base[1]), full_name = nz(base[2], "—"), name = nz(base[3], ""), surname = nz(base[4], ""),
+        type = to_int(base[5]), type_label = user_type_label(base[5]), gender = to_int(base[6]),
+        gender_label = SEX_LABELS[to_int(base[6]) or 0] or "",
+        birthday = nz(fmt_jalali_from_filetime(base[7]), ""), patronymic = nz(base[8], ""), birthplace = nz(base[9], ""),
+        identity_no = nz(base[10], ""), identity_serial = nz(base[11], ""), nationality = nz(base[12], ""),
+        passport_no = nz(base[13], ""), place_of_issue = nz(base[14], ""), date_of_issue = nz(fmt_jalali_from_filetime(base[15]), ""),
+        deleted = to_int(base[16]) == 1, confirm = to_int(base[17]) == 1,
+        created = nz(fmt_jalali_from_filetime(base[18], true), ""), modified = nz(fmt_jalali_from_filetime(base[19], true), ""),
+        author_id = tostring(base[20] or ""), author = nz(base[21], ""), modifier_id = tostring(base[22] or ""), modifier = nz(base[23], ""),
+        comment = nz(base[24], ""), company = nz(base[25], ""), job = nz(base[26], ""), tin = nz(base[27], ""), kpp = nz(base[28], ""),
+        reg_number = nz(base[29], ""), industry = nz(base[30], ""), number_personnel = nz(base[31], ""),
+        personality_type = nz(base[32], ""), website = nz(base[33], ""), lable = nz(base[34], ""), issue_activity = nz(base[35], ""),
+        property_code = nz(base[36], ""), property_date = nz(fmt_jalali_from_filetime(base[37]), ""),
+        state_code = nz(base[38], ""), city_code = nz(base[39], ""), folder_id = to_int(base[40]) or 0,
+        import_id = nz(base[41], ""), domain = nz(base[42], ""), language = nz(base[43], ""), account_manager = nz(base[44], ""),
+        is_fav = to_int(base[45]) == 1, is_notified = to_int(base[46]) == 1,
+    }
+
+    client.mobiles = rows_to_objects(fetch_rows("SELECT ID, MOBILE, COUNTRY_CODE FROM profile_mobile WHERE USER_ID = ? ORDER BY ID", { client_id }),
+        function(r) return { id = tostring(r[1]), value = nz(r[2], ""), country = to_int(r[3]) or 364 } end)
+    client.emails = rows_to_objects(fetch_rows("SELECT ID, EMAIL, verified FROM profile_email WHERE USER_ID = ? ORDER BY ID", { client_id }),
+        function(r) return { id = tostring(r[1]), value = nz(r[2], ""), verified = to_int(r[3]) == 1 } end)
+    client.phones = rows_to_objects(fetch_rows("SELECT ID, TYPE, PHONE, COUNTRY_CODE FROM profile_phone WHERE USER_ID = ? ORDER BY ID", { client_id }),
+        function(r) return { id = tostring(r[1]), type = to_int(r[2]) or 2, type_label = PHONE_TYPE_LABELS[to_int(r[2]) or 0] or "تلفن", value = nz(r[3], "") } end)
+    client.national_codes = rows_to_objects(fetch_rows("SELECT ID, NATIONAL_CODE, COUNTRY_CODE FROM profile_nationalcode WHERE USER_ID = ? ORDER BY ID", { client_id }),
+        function(r) return { id = tostring(r[1]), value = nz(r[2], ""), country = to_int(r[3]) or 364 } end)
+    client.profile_addresses = rows_to_objects(fetch_rows("SELECT TYPE, COUNTRY_CODE, STATE, CITY, POSTAL_CODE, ADDRESS, LOC_X, LOC_Y FROM profile_user_address WHERE USER_ID = ? ORDER BY TYPE", { client_id }),
+        function(r) return { type = to_int(r[1]) or 1, type_label = (to_int(r[1]) == 2) and "آدرس محل کار" or "آدرس", country = nz(r[2], ""), state = nz(r[3], ""), city = nz(r[4], ""), zip_code = nz(r[5], ""), address = nz(r[6], ""), loc_x = tonumber(r[7]) or 0, loc_y = tonumber(r[8]) or 0 } end)
+    client.crm_addresses = rows_to_objects(fetch_rows("SELECT ID, TITLE, PROVINCE, STATE_STR, CITY, POSTAL_CODE, HOME_PHONE, WORK_PHONE, MOBILE, FAX, ADDRESS, COMMENT, LATITUDE, LONGITUDE, CONFIRM FROM crm_address WHERE CLIENT_ID = ? ORDER BY ID", { client_id }),
+        function(r) return { id = tostring(r[1]), title = nz(r[2], ""), province = nz(r[3], ""), state = nz(r[4], ""), city = nz(r[5], ""), zip_code = nz(r[6], ""), home_phone = nz(r[7], ""), work_phone = nz(r[8], ""), mobile = nz(r[9], ""), fax = nz(r[10], ""), address = nz(r[11], ""), comment = nz(r[12], ""), lat = nz(r[13], ""), lng = nz(r[14], ""), confirm = to_int(r[15]) == 1 } end)
+    client.categories = rows_to_objects(fetch_rows([[
+SELECT c.PROFILE_ID, c.name, c.section_id, s.SECTION_NAME FROM crm_cross x
+JOIN crm_classify_person c ON c.PROFILE_ID = x.REFERE_ID JOIN crm_section s ON s.ID = c.section_id
+WHERE x.CLIENT_ID = ? ORDER BY s.S_ORDER, c.sort_id]], { client_id }),
+        function(r) return { id = to_int(r[1]), name = nz(r[2], ""), section_id = to_int(r[3]), section_name = nz(r[4], "") } end)
+    client.notify_users = rows_to_objects(fetch_rows("SELECT n.USER_ID, pm.FULLNAME FROM crm_notify n LEFT JOIN profile_main pm ON pm.ID = n.USER_ID WHERE n.CLIENT_ID = ? ORDER BY pm.FULLNAME", { client_id }),
+        function(r) return { id = tostring(r[1]), name = nz(r[2], "کاربر #" .. tostring(r[1])) } end)
+    client.favorite_users = rows_to_objects(fetch_rows("SELECT f.USER_ID, pm.FULLNAME FROM crm_favorite f LEFT JOIN profile_main pm ON pm.ID = f.USER_ID WHERE f.CLIENT_ID = ? AND f.FLAG = 1", { client_id }),
+        function(r) return { id = tostring(r[1]), name = nz(r[2], "کاربر #" .. tostring(r[1])) } end)
+    client.contacts = rows_to_objects(fetch_rows([[
+SELECT c.CONTACT_ID, c.TYPE, c.CONTACT_TEXT, c.POST, c.PHONE_TEXT, c.DESCRIPTION, pm.FULLNAME,
+       (SELECT m.MOBILE FROM profile_mobile m WHERE m.USER_ID = c.CONTACT_ID ORDER BY m.ID LIMIT 1)
+FROM crm_contacts c LEFT JOIN profile_main pm ON pm.ID = c.CONTACT_ID WHERE c.CLIENT_ID = ? ORDER BY c.TYPE, pm.FULLNAME]], { client_id }),
+        function(r)
+            local ctype = to_int(r[2]) or 1
+            return { contact_id = tostring(r[1]), type = ctype,
+                type_label = (ctype == 3 and "معرف") or (ctype == 2 and "غیر تیم‌یاری") or "مشتری تیم‌یار",
+                name = nz(r[7], nz(r[3], "—")), text = nz(r[3], ""), post = nz(r[4], ""), phone = nz(r[5], nz(r[8], "")), description = nz(r[6], "") }
+        end)
+    client.custom_fields = rows_to_objects(fetch_rows([[
+SELECT fe.ID, fe.NAME, fe.TYPE, fv.VALUE_CHAR FROM crm_field_ext fe
+LEFT JOIN crm_field_ext_value fv ON fv.FIELD_ID = fe.ID AND fv.CLIENT_ID = ?
+WHERE COALESCE(fe.NAME,'') <> '' ORDER BY fe.ID]], { client_id }),
+        function(r) return { id = to_int(r[1]), name = nz(r[2], ""), type = to_int(r[3]) or 0, value = nz(r[4], "") } end)
+    client.custom_forms = rows_to_objects(fetch_rows("SELECT cf.SECTION_ID, s.SECTION_NAME, cf.FORM_DATA FROM crm_custom_form cf LEFT JOIN crm_section s ON s.ID = cf.SECTION_ID WHERE cf.CLIENT_ID = ?", { client_id }),
+        function(r) return { section_id = to_int(r[1]), section_name = nz(r[2], ""), data = nz(r[3], "") } end)
+    client.cards = rows_to_objects(fetch_rows("SELECT ID, BANK_NAME, CARD_NUMBER, CARD_HOLDER, EXPIRY_DATE, CART_TYPE, DEPOSIT_TYPE, iban, COMMENT FROM crm_card_info WHERE CLIENT_ID = ? ORDER BY ID", { client_id }),
+        function(r) return { id = tostring(r[1]), bank = nz(r[2], ""), card_number = nz(r[3], ""), holder = nz(r[4], ""), expiry = nz(r[5], ""), card_type = nz(r[6], ""), deposit_type = nz(r[7], ""), iban = nz(r[8], ""), comment = nz(r[9], "") } end)
+    client.bank_accounts = rows_to_objects(fetch_rows("SELECT ID, BANK_NAME, BRANCH, ACCOUNT_NUMBER, SHABA, IBAN, SWIFT_CODE, COUNTRY_STR, CITY, COMMENT FROM crm_account_info WHERE CLIENT_ID = ? ORDER BY ID", { client_id }),
+        function(r) return { id = tostring(r[1]), bank = nz(r[2], ""), branch = nz(r[3], ""), account_number = nz(r[4], ""), shaba = nz(r[5], ""), iban = nz(r[6], ""), swift = nz(r[7], ""), country = nz(r[8], ""), city = nz(r[9], ""), comment = nz(r[10], "") } end)
+    client.accounting = rows_to_objects(fetch_rows([[
+SELECT p.ID, p.ORG_ID, o.NAME, p.CODE, p.ACCOUNT_CODE, p.BALANCE, p.STATUS FROM pa_client p
+LEFT JOIN org_info o ON o.ID = p.ORG_ID WHERE p.REFFERE_ID = ? AND (p.DELETED IS NULL OR p.DELETED = 0) ORDER BY p.ORG_ID]], { client_id }),
+        function(r) return { pa_client_id = tostring(r[1]), org_id = to_int(r[2]), org_name = nz(r[3], "سازمان " .. tostring(r[2])), code = nz(r[4], ""), account_code = nz(r[5], ""), balance = tonumber(r[6]) or 0, balance_fmt = fmt_num(r[6]) } end)
+    client.family = rows_to_objects(fetch_rows("SELECT FIRST_NAME, LAST_NAME, RELATION, NATIONAL_CODE, BIRTH_DATE, PHONE, JOB FROM crm_person_family WHERE PROFILE_ID = ? ORDER BY ID", { client_id }),
+        function(r) return { name = trim(nz(r[1], "") .. " " .. nz(r[2], "")), relation = nz(r[3], ""), national_code = nz(r[4], ""), birth_date = nz(fmt_jalali_from_filetime(r[5]), nz(r[5], "")), phone = nz(r[6], ""), job = nz(r[7], "") } end)
+
+    client.links = {
+        native_edit = ROUTES.client_edit(client.id, 1), native_view = ROUTES.client_edit(client.id),
+        todo = ROUTES.history("show_todo", client.id, "0"), documents = ROUTES.history("show_documents", client.id),
+        emails = ROUTES.history("show_emails", client.id), chats = ROUTES.history("show_chats", client.id),
+        events = ROUTES.history("show_events", client.id, "0"), sms = ROUTES.history("show_sms", client.id),
+        sales = ROUTES.history("show_sales", client.id), purchase = ROUTES.history("show_purchase", client.id),
+        poll = ROUTES.history("show_poll", client.id), audio = ROUTES.history("audio_files", client.id) .. AMP .. "tab=3" .. AMP .. "type=audio" .. AMP .. "call_id=0",
+        comments = ROUTES.history("show_comments", client.id) .. AMP .. "tab=2" .. AMP .. "type=comment",
+        project = ROUTES.history("show_project", client.id),
+        print = CONFIG.BASE_URL .. "/crm/client/print/" .. client.id,
+        envelope = CONFIG.BASE_URL .. "/crm/client/envelope_print/" .. client.id,
+    }
+    return client
+end
+
+local function action_client()
+    local client_id = to_positive_int(inp("id"))
+    if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
+    local client = load_client(client_id)
+    if client == nil then return { ok = false, error = "مشتری با شناسهٔ " .. tostring(client_id) .. " یافت نشد" } end
+    return { ok = true, client = client }
 end
 
 -- =========================================
--- CUSTOMER PROFILE QUERY
+-- CLIENT COUNTS (نشان تب‌ها + KPI)
 -- =========================================
-local function load_customer_profile(profile_id)
-    local u = fetch_row([[
-        SELECT ID, NAME, SURNAME, USER_TYPE, SEX, BIRTHDAY
-        FROM profile_user_info WHERE ID = ?
-    ]], { profile_id })
-    if u == nil then return nil end
+local INVOICE_AMOUNT_SUBQUERY = [[
+SELECT ip.INVOICE_ID AS invoice_id,
+       SUM(COALESCE((ip.QUANTITY / POW(10, COALESCE(sc.DECIMAL_NUM, 0))) * (ip.FEE / POW(10, COALESCE(dd.digit_fee, 0))), 0)
+           - COALESCE(ip.DISCOUNT, 0) + COALESCE(ip.VALUE_ADDED, 0)
+           + COALESCE(ip.TAX / POW(10, COALESCE(dd.digit_fee, 0)), 0) + COALESCE(ip.TOLL / POW(10, COALESCE(dd.digit_fee, 0)), 0)) AS amount
+FROM sales_invoice_product ip
+INNER JOIN sales_invoice i2 ON i2.ID = ip.INVOICE_ID
+LEFT JOIN wh_product wp ON wp.ID = ip.PRODUCT_ID
+LEFT JOIN wh_stock_capacity sc ON sc.ID = wp.CAPACITY_ID
+LEFT JOIN (
+    SELECT po.ORG_ID, (CASE WHEN COALESCE(ps.FEE_DECIMAL, 0) = 0 THEN COALESCE(ps.DECIMAL_COUNT, 0) ELSE COALESCE(ps.FEE_DECIMAL, 0) END) AS digit_fee
+    FROM pa_organizations po INNER JOIN pa_symbols ps ON ps.ID = po.BASE_CURRENCY AND ps.ORG_ID = po.ORG_ID
+) dd ON dd.ORG_ID = i2.ORG_ID
+WHERE i2.CLIENT_ID IN %s
+GROUP BY ip.INVOICE_ID]]
 
-    local mobile = fetch_scalar(
-        "SELECT MOBILE FROM profile_mobile WHERE USER_ID = ? ORDER BY ID ASC LIMIT 1",
-        { profile_id })
-    local email = fetch_scalar(
-        "SELECT EMAIL FROM profile_email WHERE USER_ID = ? ORDER BY ID ASC LIMIT 1",
-        { profile_id })
-    local national_code = fetch_scalar(
-        "SELECT NATIONAL_CODE FROM profile_nationalcode WHERE USER_ID = ? ORDER BY ID ASC LIMIT 1",
-        { profile_id })
+local function action_counts()
+    local client_id = to_positive_int(inp("id"))
+    if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
+    local pa_ids = resolve_pa_client_ids(client_id)
+    local pa_in = id_list_sql(pa_ids)
 
-    local pa = fetch_row([[
-        SELECT ID, ORG_ID, CODE, ACCOUNT_CODE, NAME, BALANCE
-        FROM pa_client WHERE REFFERE_ID = ? AND (DELETED IS NULL OR DELETED = 0)
-        ORDER BY ID ASC LIMIT 1
-    ]], { profile_id })
+    local mobile_rows = fetch_rows("SELECT RIGHT(MOBILE, 10) FROM profile_mobile WHERE USER_ID = ?", { client_id }) or {}
+    local mobile_tails = {}
+    for _, r in ipairs(mobile_rows) do
+        local t = digits_only(r[1])
+        if #t >= 7 then table.insert(mobile_tails, "'" .. t .. "'") end
+    end
+    local sms_where = "b.user_id = ?"
+    if #mobile_tails > 0 then sms_where = sms_where .. " OR RIGHT(b.PHONE_NUMBER, 10) IN (" .. table.concat(mobile_tails, ",") .. ")" end
+
+    local counts = fetch_row([[
+SELECT (SELECT COUNT(*) FROM sales_invoice s WHERE s.CLIENT_ID IN ]] .. pa_in .. [[ AND s.DELETED = 0),
+       (SELECT COUNT(*) FROM purchase_invoice p WHERE p.CLIENT_ID IN ]] .. pa_in .. [[ AND p.DELETED = 0),
+       (SELECT COUNT(*) FROM crm_ty_links l JOIN todo_task t0 ON t0.ID = l.DST_LINK_ID WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 8 AND l.SRC_LINK_ID = ?),
+       (SELECT COUNT(*) FROM crm_history h WHERE h.CLIENT_ID = ? AND h.TYPE = 1 AND COALESCE(h.NOTE,'') <> '' AND h.NOTE NOT LIKE '<%')
+         + (SELECT COUNT(*) FROM crm_ty_links l JOIN documents_main d ON d.ID = l.DST_LINK_ID WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 7 AND l.SRC_LINK_ID = ? AND d.MIME_TYPE IN ('text-html','text/html')),
+       (SELECT COUNT(*) FROM crm_ty_links l JOIN documents_main d ON d.ID = l.DST_LINK_ID WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 7 AND l.SRC_LINK_ID = ? AND d.MIME_TYPE NOT IN ('text-html','text/html'))
+         + (SELECT COUNT(*) FROM documents_main d2 JOIN crm_info c2 ON c2.FOLDER_ID = d2.PARENT_ID WHERE c2.ID = ? AND c2.FOLDER_ID > 0),
+       (SELECT COUNT(*) FROM crm_ty_links l WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 12 AND l.SRC_LINK_ID = ?),
+       (SELECT COUNT(*) FROM chat_dialogs cd WHERE cd.AUTHOR_ID = ? AND COALESCE(cd.deleted,0) = 0),
+       (SELECT COUNT(*) FROM cal_invite_user ciu WHERE ciu.USER_ID = ?),
+       (SELECT COUNT(*) FROM sms_message m JOIN sms_phone_book b ON b.ID = m.NUMBER_ID WHERE ]] .. sms_where .. [[),
+       (SELECT COUNT(*) FROM poll_related pr WHERE pr.USER_ID = ? AND pr.related_type = 1),
+       (SELECT COUNT(*) FROM crm_ty_links l WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 20 AND l.SRC_LINK_ID = ?),
+       (SELECT COUNT(*) FROM crm_history h WHERE h.CLIENT_ID = ?),
+       (SELECT COUNT(*) FROM crm_contacts c WHERE c.CLIENT_ID = ?),
+       (SELECT COUNT(*) FROM crm_notify n WHERE n.CLIENT_ID = ?),
+       (SELECT MAX(s.RUN_DATE) FROM sales_invoice s WHERE s.CLIENT_ID IN ]] .. pa_in .. [[ AND s.DELETED = 0 AND s.CANCELED = 0),
+       (SELECT COUNT(*) FROM crm_ty_links l JOIN todo_task t ON t.ID = l.DST_LINK_ID WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 8 AND l.SRC_LINK_ID = ? AND t.STATUS IN (0,1))]],
+        { client_id, client_id, client_id, client_id, client_id, client_id, client_id, client_id, client_id, client_id, client_id, client_id, client_id, client_id, client_id })
+    if counts == nil then return { ok = false, error = "خطا در شمارش تب‌ها" } end
+
+    local sales_total, returns_total = 0, 0
+    if #pa_ids > 0 then
+        local sums = fetch_row([[
+SELECT SUM(CASE WHEN s.TYPE = 3 THEN 0 ELSE COALESCE(ia.amount,0) END), SUM(CASE WHEN s.TYPE = 3 THEN COALESCE(ia.amount,0) ELSE 0 END)
+FROM sales_invoice s LEFT JOIN (]] .. string.format(INVOICE_AMOUNT_SUBQUERY, pa_in) .. [[) ia ON ia.invoice_id = s.ID
+WHERE s.CLIENT_ID IN ]] .. pa_in .. [[ AND s.DELETED = 0 AND s.CANCELED = 0 AND s.PRE_INVOICE = 0]], {})
+        if sums ~= nil then
+            sales_total = tonumber(sums[1]) or 0
+            returns_total = tonumber(sums[2]) or 0
+        end
+    end
 
     return {
-        profile_id     = tostring(u[1]),
-        name           = u[2],
-        surname        = u[3],
-        user_type      = u[4],
-        sex            = u[5],
-        birthday_j     = u[6],
-        mobile         = mobile,
-        email          = email,
-        national_code  = national_code,
-        pa_client_id   = pa and tostring(pa[1]) or nil,
-        org_id         = pa and pa[2] or nil,
-        code           = pa and pa[3] or nil,
-        account_code   = pa and pa[4] or nil,
-        pa_name        = pa and pa[5] or nil,
-        balance        = pa and pa[6] or nil,
+        ok = true,
+        counts = {
+            sales = tonumber(counts[1]) or 0, purchase = tonumber(counts[2]) or 0, todo = tonumber(counts[3]) or 0,
+            comments = tonumber(counts[4]) or 0, documents = tonumber(counts[5]) or 0, emails = tonumber(counts[6]) or 0,
+            chats = tonumber(counts[7]) or 0, events = tonumber(counts[8]) or 0, sms = tonumber(counts[9]) or 0,
+            polls = tonumber(counts[10]) or 0, projects = tonumber(counts[11]) or 0, history = tonumber(counts[12]) or 0,
+            contacts = tonumber(counts[13]) or 0, notify = tonumber(counts[14]) or 0, calls = 0,
+        },
+        kpi = {
+            sales_total = sales_total, sales_total_fmt = fmt_num(sales_total),
+            returns_total = returns_total, returns_total_fmt = fmt_num(returns_total),
+            net_sales_fmt = fmt_num(sales_total - returns_total),
+            last_invoice = nz(fmt_jalali_from_filetime(counts[15]), "—"),
+            open_todos = tonumber(counts[16]) or 0,
+        },
     }
 end
 
 -- =========================================
--- CUSTOMER LIST QUERY (result_type=HTML, این بات هم لیست هم پروفایل را رندر می‌کند)
+-- TABS
 -- =========================================
-local function load_customer_list(q, page)
-    local where = "p.DELETED IS NULL OR p.DELETED = 0"
-    local params = {}
-    if q ~= "" then
-        if tonumber(q) ~= nil then
-            where = where .. " AND p.REFFERE_ID = ?"
-            table.insert(params, tonumber(q))
-        else
-            where = where .. " AND CONCAT(COALESCE(u.NAME,''),' ',COALESCE(u.SURNAME,'')) LIKE ?"
-            table.insert(params, "%" .. q .. "%")
-        end
-    end
+local TAB_LOADERS = {}
 
-    local total = fetch_scalar([[
-        SELECT COUNT(*)
-        FROM pa_client p
-        LEFT JOIN profile_user_info u ON u.ID = p.REFFERE_ID
-        WHERE ]] .. where, params) or 0
-
-    local offset = (page - 1) * PAGE_SIZE
-    local list_params = {}
-    for _, v in ipairs(params) do table.insert(list_params, v) end
-    table.insert(list_params, PAGE_SIZE)
-    table.insert(list_params, offset)
-
+TAB_LOADERS.sales = function(client_id)
+    local pa_ids = resolve_pa_client_ids(client_id)
+    if #pa_ids == 0 then return {} end
+    local pa_in = id_list_sql(pa_ids)
     local rows = fetch_rows([[
-        SELECT p.REFFERE_ID, u.NAME, u.SURNAME, u.USER_TYPE, p.ORG_ID, p.CODE
-        FROM pa_client p
-        LEFT JOIN profile_user_info u ON u.ID = p.REFFERE_ID
-        WHERE ]] .. where .. [[
-        ORDER BY p.ID DESC
-        LIMIT ? OFFSET ?
-    ]], list_params) or {}
-
-    return rows, tonumber(total) or 0
+SELECT s.ID, s.TITLE, s.TYPE, s.RUN_DATE, s.STATUS, s.INVOICE_CODE, s.CANCELED, s.PRE_INVOICE, s.REMAINED_AMOUNT,
+       COALESCE(ia.amount, 0), s.PAYMENT_TYPE, s.DATE_CREATE, s.REJECT, pc.NAME AS sales_center, s.delivery_date,
+       (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = s.USER_CREATE)
+FROM sales_invoice s
+LEFT JOIN (]] .. string.format(INVOICE_AMOUNT_SUBQUERY, pa_in) .. [[) ia ON ia.invoice_id = s.ID
+LEFT JOIN pa_center pc ON pc.ID = s.SALES_CENTER
+WHERE s.CLIENT_ID IN ]] .. pa_in .. [[ AND s.DELETED = 0
+ORDER BY s.RUN_DATE DESC, s.ID DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, {}) or {}
+    return rows_to_objects(rows, function(r)
+        local itype = to_int(r[3]) or 1
+        return { id = tostring(r[1]), title = nz(r[2], ""), type = itype, type_label = INVOICE_TYPE_LABELS[itype] or ("نوع " .. itype),
+            date = nz(fmt_jalali_from_filetime(r[4]), ""), status = to_int(r[5]) or 0, code = nz(r[6], ""),
+            canceled = to_int(r[7]) == 1, pre_invoice = to_int(r[8]) or 0, remained = fmt_num(r[9]), amount = tonumber(r[10]) or 0,
+            amount_fmt = fmt_num(r[10]), payment_type = to_int(r[11]) or 0, created = nz(fmt_jalali_from_filetime(r[12], true), ""),
+            reject = to_int(r[13]) == 1, center = nz(r[14], ""), delivery = nz(fmt_jalali_from_filetime(r[15]), ""), creator = nz(r[16], ""),
+            url = ROUTES.invoice_view(tostring(r[1])) }
+    end)
 end
 
--- =========================================
--- SALES DATA
--- =========================================
-local function load_sales(pa_ids)
+TAB_LOADERS.purchase = function(client_id)
+    local pa_ids = resolve_pa_client_ids(client_id)
     if #pa_ids == 0 then return {} end
-    return fetch_rows([[
-        SELECT ID, TITLE, TYPE, RUN_DATE, STATUS
-        FROM sales_invoice
-        WHERE CLIENT_ID IN ]] .. build_in_clause(pa_ids) .. [[
-          AND (DELETED IS NULL OR DELETED = 0)
-        ORDER BY RUN_DATE DESC
-        LIMIT ]] .. TAB_ROW_LIMIT) or {}
+    local rows = fetch_rows([[
+SELECT p.ID, p.TITLE, p.TYPE, p.RUN_DATE, p.STATUS, p.INVOICE_NUM, p.CANCELED, p.pre_payment_amount, p.DATE_CREATE,
+       (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = p.USER_CREATE)
+FROM purchase_invoice p WHERE p.CLIENT_ID IN ]] .. id_list_sql(pa_ids) .. [[ AND p.DELETED = 0
+ORDER BY p.RUN_DATE DESC, p.ID DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, {}) or {}
+    return rows_to_objects(rows, function(r)
+        return { id = tostring(r[1]), title = nz(r[2], ""), type = to_int(r[3]) or 0, date = nz(fmt_jalali_from_filetime(r[4]), ""),
+            status = to_int(r[5]) or 0, number = nz(r[6], ""), canceled = to_int(r[7]) == 1, pre_payment = fmt_num(r[8]),
+            created = nz(fmt_jalali_from_filetime(r[9], true), ""), creator = nz(r[10], "") }
+    end)
 end
 
--- =========================================
--- PURCHASE DATA
--- =========================================
-local function load_purchases(pa_ids)
-    if #pa_ids == 0 then return {} end
-    return fetch_rows([[
-        SELECT ID, TITLE, TYPE, RUN_DATE, STATUS
-        FROM purchase_invoice
-        WHERE CLIENT_ID IN ]] .. build_in_clause(pa_ids) .. [[
-          AND (DELETED IS NULL OR DELETED = 0)
-        ORDER BY RUN_DATE DESC
-        LIMIT ]] .. TAB_ROW_LIMIT) or {}
+TAB_LOADERS.todo = function(client_id)
+    local rows = fetch_rows([[
+SELECT t.ID, t.TASK_TITLE, t.STATUS, t.T_START_DATE, t.T_END_DATE, t.T_REAL_END_DATE, t.progress, t.T_PRIORITY,
+       COALESCE(NULLIF(t.AUTHOR_NAME,''), (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = t.AUTHOR_ID)),
+       (SELECT ow.FULLNAME FROM profile_main ow WHERE ow.ID = t.OWNER_ID), t.LAST_MODIFY_DATE, l.DATE_CREATE
+FROM crm_ty_links l INNER JOIN todo_task t ON t.ID = l.DST_LINK_ID
+WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 8 AND l.SRC_LINK_ID = ?
+ORDER BY t.ID DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id }) or {}
+    return rows_to_objects(rows, function(r)
+        local st = to_int(r[3]) or 0
+        return { id = tostring(r[1]), title = nz(r[2], ""), status = st, status_label = TODO_STATUS_LABELS[st] or ("وضعیت " .. st),
+            start = nz(fmt_jalali_from_filetime(r[4]), ""), deadline = nz(fmt_jalali_from_filetime(r[5]), ""),
+            finished = nz(fmt_jalali_from_filetime(r[6]), ""), progress = to_int(r[7]) or 0, priority = to_int(r[8]) or 0,
+            author = nz(r[9], ""), owner = nz(r[10], ""), modified = nz(fmt_jalali_from_filetime(r[11], true), ""),
+            linked = nz(fmt_jalali_from_filetime(r[12], true), ""), url = ROUTES.todo_report(tostring(r[1])) }
+    end)
 end
 
--- =========================================
--- PROJECT DATA
--- =========================================
-local function load_projects(pa_ids)
-    if #pa_ids == 0 then return {} end
-    return fetch_rows([[
-        SELECT pp.ID, pp.TITLE, pp.PROGRESS, pp.STATUS, pp.DATE_START, pp.DATE_LIMIT
-        FROM project_project_client ppc
-        JOIN project_project pp ON pp.ID = ppc.PROJECT_ID
-        WHERE ppc.CLIENT_ID IN ]] .. build_in_clause(pa_ids) .. [[
-        ORDER BY pp.DATE_CREATE DESC
-        LIMIT ]] .. TAB_ROW_LIMIT) or {}
+local function map_document_row(client_id, r, source)
+    local mime = nz(r[3], "")
+    return { id = tostring(r[1]), name = nz(r[2], ""), mime = mime, size = to_int(r[4]) or 0, size_fmt = fmt_num(r[4]),
+        created = nz(fmt_jalali_from_filetime(r[5], true), ""), author = nz(r[6], ""), file_type = to_int(r[7]) or 0,
+        is_folder = to_int(r[8]) == 1, source = source, version = to_int(r[9]) or 0,
+        url = ROUTES.comment_file(client_id, tostring(r[1])) }
 end
 
--- =========================================
--- EVENTS DATA (ماژول تقویم — کلید مستقیم profile_id، بدون Bridge)
--- =========================================
-local function load_events(profile_id)
-    return fetch_rows([[
-        SELECT ce.ID, ce.NAME, ce.DATE_START, ce.DATE_FINISH, ciu.STATUS
-        FROM cal_invite_user ciu
-        JOIN cal_event ce ON ce.ID = ciu.EVENT_ID
-        WHERE ciu.USER_ID = ?
-        ORDER BY ce.DATE_START DESC
-        LIMIT ]] .. TAB_ROW_LIMIT, { profile_id }) or {}
+TAB_LOADERS.documents = function(client_id)
+    local out = {}
+    local folder = fetch_rows([[
+SELECT d.ID, d.NAME, d.MIME_TYPE, d.SIZE, d.DATE_CREATE, (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = d.AUTHOR_ID), d.FILE_TYPE, (d.TYPE = 1), d.VERSION
+FROM documents_main d INNER JOIN crm_info c ON c.FOLDER_ID = d.PARENT_ID
+WHERE c.ID = ? AND c.FOLDER_ID > 0 ORDER BY d.TYPE, d.DATE_CREATE DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id }) or {}
+    for _, r in ipairs(folder) do table.insert(out, map_document_row(client_id, r, "folder")) end
+    local linked = fetch_rows([[
+SELECT d.ID, d.NAME, d.MIME_TYPE, d.SIZE, d.DATE_CREATE, (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = d.AUTHOR_ID), d.FILE_TYPE, (d.TYPE = 1), d.VERSION
+FROM crm_ty_links l INNER JOIN documents_main d ON d.ID = l.DST_LINK_ID
+WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 7 AND l.SRC_LINK_ID = ? AND d.MIME_TYPE NOT IN ('text-html','text/html')
+ORDER BY d.DATE_CREATE DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id }) or {}
+    for _, r in ipairs(linked) do table.insert(out, map_document_row(client_id, r, "linked")) end
+    return out
 end
 
--- =========================================
--- FAVORITE (برگزیده) / AWARE (مطلع) DATA
--- =========================================
-local function load_favorite(pa_ids)
-    if #pa_ids == 0 then return {} end
-    return fetch_rows([[
-        SELECT cf.USER_ID, u.NAME, u.SURNAME, cf.FLAG
-        FROM crm_favorite cf
-        LEFT JOIN profile_user_info u ON u.ID = cf.USER_ID
-        WHERE cf.CLIENT_ID IN ]] .. build_in_clause(pa_ids)) or {}
+-- «توضیحات» (تأیید زنده ۱۴۰۵/۰۶/۱۲ با /crm/history/change_comments): ردیف‌های crm_history با TYPE=1 که NOTE متن
+-- ساده است. ردیف‌های لاگ سیستمی همان TYPE را دارند ولی NOTE آن‌ها HTML است (با <table یا <span شروع می‌شود؛
+-- AUTHOR_ID=3 «TeamYar») — پس هر NOTE که با «<» شروع شود لاگ است، نه توضیح کاربر. بخش = section_id.
+TAB_LOADERS.comments = function(client_id)
+    local notes = fetch_rows([[
+SELECT h.ID, h.NOTE, h.DATE_MODIFY, h.AUTHOR_ID, (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = h.AUTHOR_ID), h.section_id,
+       (SELECT s.SECTION_NAME FROM crm_section s WHERE s.ID = h.section_id)
+FROM crm_history h
+WHERE h.CLIENT_ID = ? AND h.TYPE = 1 AND COALESCE(h.NOTE,'') <> '' AND h.NOTE NOT LIKE '<%'
+ORDER BY h.ID DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id }) or {}
+    local out = rows_to_objects(notes, function(r)
+        return { id = tostring(r[1]), kind = "note", text = nz(r[2], ""), created = nz(fmt_jalali_from_filetime(r[3], true), ""),
+            author_id = tostring(r[4] or ""), author = nz(r[5], ""), section_id = to_int(r[6]) or 0, section_name = nz(r[7], ""),
+            url = ROUTES.history("show_comments", tostring(client_id)) .. AMP .. "tab=2" .. AMP .. "type=comment" }
+    end)
+    -- فایل‌های توضیح قدیمی/پیوست‌شده (.tyhtm در ماژول اسناد، لینک‌شده به مشتری)
+    local rows = fetch_rows([[
+SELECT d.ID, d.NAME, d.MIME_TYPE, d.SIZE, d.DATE_CREATE, (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = d.AUTHOR_ID), d.FILE_TYPE, (d.TYPE = 1), d.VERSION, l.DATE_CREATE
+FROM crm_ty_links l INNER JOIN documents_main d ON d.ID = l.DST_LINK_ID
+WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 7 AND l.SRC_LINK_ID = ? AND d.MIME_TYPE IN ('text-html','text/html')
+ORDER BY d.DATE_CREATE DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id }) or {}
+    local files = rows_to_objects(rows, function(r)
+        local row = map_document_row(client_id, r, "comment")
+        row.kind = "file"
+        -- نام فایل توضیح: «نام مشتری-موضوع-نویسنده.tyhtm» -> موضوع را جدا می‌کنیم
+        local title = row.name:gsub("%.tyhtm$", ""):gsub("%.html?$", "")
+        local parts = {}
+        for piece in title:gmatch("[^%-]+") do table.insert(parts, trim(piece)) end
+        if #parts >= 3 then
+            row.subject = table.concat(parts, "-", 2, #parts - 1)
+        elseif #parts == 2 then
+            row.subject = parts[2]
+        else
+            row.subject = title
+        end
+        row.linked = nz(fmt_jalali_from_filetime(r[10], true), "")
+        return row
+    end)
+    for _, f in ipairs(files) do table.insert(out, f) end
+    return out
 end
 
-local function load_aware(pa_ids)
-    if #pa_ids == 0 then return {} end
-    return fetch_rows([[
-        SELECT cn.USER_ID, u.NAME, u.SURNAME
-        FROM crm_notify cn
-        LEFT JOIN profile_user_info u ON u.ID = cn.USER_ID
-        WHERE cn.CLIENT_ID IN ]] .. build_in_clause(pa_ids)) or {}
+TAB_LOADERS.emails = function(client_id)
+    local rows = fetch_rows([[
+SELECT e.ID, e.SUBJECT, e.DATE_CRAETE, e.date_sent, e.CATEGORY, e.SEND_FLAG,
+       (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = e.AUTHOR_ID), e.ARCHIVE_FLAG, l.DATE_CREATE
+FROM crm_ty_links l INNER JOIN email_message e ON e.ID = l.DST_LINK_ID
+WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 12 AND l.SRC_LINK_ID = ?
+ORDER BY e.ID DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id }) or {}
+    return rows_to_objects(rows, function(r)
+        return { id = tostring(r[1]), subject = nz(r[2], "(بدون موضوع)"), created = nz(fmt_jalali_from_filetime(r[3], true), ""),
+            sent = nz(fmt_jalali_from_filetime(r[4], true), ""), category = to_int(r[5]) or 0, sent_flag = to_int(r[6]) or 0,
+            author = nz(r[7], ""), archived = to_int(r[8]) == 1, linked = nz(fmt_jalali_from_filetime(r[9], true), ""),
+            url = ROUTES.email_view(tostring(r[1])) }
+    end)
 end
 
--- =========================================
--- NOTE DATA (توضیحات) — فقط Read در فاز ۱؛ ثبت از طریق لینک به صفحه واقعی TeamYar
--- (schema دقیق section_id لازم برای /api/client/add/comment هنوز کالیبره نشده — به فاز ۲ موکول شد)
--- =========================================
-local function load_notes(pa_ids)
-    if #pa_ids == 0 then return {} end
-    return fetch_rows([[
-        SELECT ch.ID, ch.DATE_MODIFY,
-               COALESCE(ch.NOTE, ch.CONTENT, '') AS note_text, au.NAME, au.SURNAME
-        FROM crm_history ch
-        LEFT JOIN profile_user_info au ON au.ID = ch.AUTHOR_ID
-        WHERE ch.CLIENT_ID IN ]] .. build_in_clause(pa_ids) .. [[
-        ORDER BY ch.DATE_MODIFY DESC
-        LIMIT ]] .. TAB_ROW_LIMIT) or {}
-end
-
--- =========================================
--- HTML TEMPLATE PARTS
--- =========================================
-local function render_status_badge(status)
-    local s = tonumber(status)
-    if s == nil then return '<span class="badge-status">—</span>' end
-    return '<span class="badge-status">وضعیت ' .. escape_html(s) .. '</span>'
-end
-
-local function render_table(headers, rows_html, empty_text)
-    local out = { '<div class="table-wrap"><table class="main-table"><thead><tr>' }
-    for _, h in ipairs(headers) do
-        table.insert(out, "<th>" .. escape_html(h) .. "</th>")
+TAB_LOADERS.chats = function(client_id)
+    local rows = fetch_rows([[
+SELECT c.ID, c.TOPIC, c.DATE_CREATE, c.DATE_END, c.LAST_MODIFIED, c.STATUS, c.TYPE, c.AUTHOR_NAME, c.AUTHOR_MOBILE,
+       (SELECT COUNT(*) FROM chat_message cm WHERE cm.DIALOG_ID = c.ID)
+FROM chat_dialogs c WHERE c.AUTHOR_ID = ? AND COALESCE(c.deleted,0) = 0
+ORDER BY c.ID DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id })
+    if rows == nil then
+        rows = fetch_rows([[
+SELECT c.ID, c.TOPIC, c.DATE_CREATE, c.DATE_END, c.LAST_MODIFIED, c.STATUS, c.TYPE, c.AUTHOR_NAME, c.AUTHOR_MOBILE, 0
+FROM chat_dialogs c WHERE c.AUTHOR_ID = ? AND COALESCE(c.deleted,0) = 0
+ORDER BY c.ID DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id }) or {}
     end
-    table.insert(out, "</tr></thead><tbody>")
-    if #rows_html == 0 then
-        table.insert(out, '<tr><td colspan="' .. #headers .. '" class="empty-row">' .. escape_html(empty_text) .. "</td></tr>")
+    return rows_to_objects(rows, function(r)
+        return { id = tostring(r[1]), topic = nz(r[2], "(بدون عنوان)"), created = nz(fmt_jalali_from_filetime(r[3], true), ""),
+            ended = nz(fmt_jalali_from_filetime(r[4], true), ""), modified = nz(fmt_jalali_from_filetime(r[5], true), ""),
+            status = to_int(r[6]) or 0, type = to_int(r[7]) or 0, author = nz(r[8], ""), mobile = nz(r[9], ""),
+            messages = to_int(r[10]) or 0, url = ROUTES.chat_view(tostring(r[1])) }
+    end)
+end
+
+TAB_LOADERS.events = function(client_id)
+    local rows = fetch_rows([[
+SELECT ce.ID, ce.NAME, ce.DATE_START, ce.DATE_FINISH, ciu.STATUS, ce.PLACE, ce.DESCRIPTION,
+       (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = ce.CREATOR_ID), ce.STATUS, ce.online_meeting
+FROM cal_invite_user ciu INNER JOIN cal_event ce ON ce.ID = ciu.EVENT_ID
+WHERE ciu.USER_ID = ? ORDER BY ce.DATE_START DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id }) or {}
+    return rows_to_objects(rows, function(r)
+        return { id = tostring(r[1]), name = nz(r[2], ""), start = nz(fmt_jalali_from_filetime(r[3], true), ""),
+            finish = nz(fmt_jalali_from_filetime(r[4], true), ""), invite_status = to_int(r[5]) or 0, place = nz(r[6], ""),
+            description = strip_tags(nz(r[7], "")):sub(1, 200), creator = nz(r[8], ""), status = to_int(r[9]) or 0,
+            online = to_int(r[10]) == 1 }
+    end)
+end
+
+TAB_LOADERS.sms = function(client_id)
+    local mobile_rows = fetch_rows("SELECT RIGHT(MOBILE, 10) FROM profile_mobile WHERE USER_ID = ?", { client_id }) or {}
+    local tails = {}
+    for _, r in ipairs(mobile_rows) do
+        local t = digits_only(r[1])
+        if #t >= 7 then table.insert(tails, "'" .. t .. "'") end
+    end
+    local where = "b.user_id = ?"
+    if #tails > 0 then where = where .. " OR RIGHT(b.PHONE_NUMBER, 10) IN (" .. table.concat(tails, ",") .. ")" end
+    local rows = fetch_rows([[
+SELECT m.ID, m.CONTENT, m.DIRECTION, m.STATUS, m.CATEGORY, m.DATE_CREATE, b.PHONE_NUMBER,
+       (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = m.AUTHOR_ID), m.SENDRESULT
+FROM sms_message m INNER JOIN sms_phone_book b ON b.ID = m.NUMBER_ID
+WHERE ]] .. where .. [[ ORDER BY m.ID DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id }) or {}
+    return rows_to_objects(rows, function(r)
+        local dir = to_int(r[3]) or 0
+        return { id = tostring(r[1]), content = nz(r[2], ""), direction = dir, direction_label = SMS_DIRECTION_LABELS[dir] or "",
+            status = to_int(r[4]) or 0, category = to_int(r[5]) or 0, date = nz(fmt_jalali_from_filetime(r[6], true), ""),
+            number = nz(r[7], ""), author = nz(r[8], ""), result = nz(r[9], "") }
+    end)
+end
+
+TAB_LOADERS.polls = function(client_id)
+    local rows = fetch_rows([[
+SELECT q.ID, q.NAME, q.STATUS, q.START_DATE, q.END_DATE, q.DATE_CREATE, q.TYPE, pr.TYPE,
+       (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = q.AUTHOR_ID)
+FROM poll_related pr INNER JOIN poll_questionnaire q ON q.ID = pr.QUESTIONNAIRE_ID
+WHERE pr.USER_ID = ? AND pr.related_type = 1 AND COALESCE(q.FLAG_DELETED,0) = 0
+ORDER BY q.ID DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id }) or {}
+    return rows_to_objects(rows, function(r)
+        return { id = tostring(r[1]), name = nz(r[2], ""), status = to_int(r[3]) or 0, start = nz(fmt_jalali_from_filetime(r[4]), ""),
+            finish = nz(fmt_jalali_from_filetime(r[5]), ""), created = nz(fmt_jalali_from_filetime(r[6], true), ""),
+            type = to_int(r[7]) or 0, relation_type = to_int(r[8]) or 0, author = nz(r[9], ""), url = ROUTES.poll_view(tostring(r[1])) }
+    end)
+end
+
+TAB_LOADERS.projects = function(client_id)
+    local rows = fetch_rows([[
+SELECT pp.ID, pp.TITLE, pp.PROGRESS, pp.STATUS, pp.DATE_START, pp.DATE_LIMIT, pp.DATE_CREATE
+FROM crm_ty_links l INNER JOIN project_project pp ON pp.ID = l.DST_LINK_ID
+WHERE l.SRC_MODULE_ID = 14 AND l.DST_MODULE_ID = 20 AND l.SRC_LINK_ID = ?
+ORDER BY pp.ID DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id }) or {}
+    return rows_to_objects(rows, function(r)
+        return { id = tostring(r[1]), title = nz(r[2], ""), progress = to_int(r[3]) or 0, status = to_int(r[4]) or 0,
+            start = nz(fmt_jalali_from_filetime(r[5]), ""), deadline = nz(fmt_jalali_from_filetime(r[6]), ""),
+            created = nz(fmt_jalali_from_filetime(r[7], true), ""), url = ROUTES.project_view(tostring(r[1])) }
+    end)
+end
+
+TAB_LOADERS.history = function(client_id)
+    local rows = fetch_rows([[
+SELECT h.ID, h.TYPE, h.DATE_MODIFY, COALESCE(NULLIF(h.NOTE,''), h.CONTENT, ''), h.AUTHOR_ID,
+       (SELECT au.FULLNAME FROM profile_main au WHERE au.ID = h.AUTHOR_ID), h.section_id
+FROM crm_history h WHERE h.CLIENT_ID = ? ORDER BY h.ID DESC LIMIT ]] .. CONFIG.HISTORY_LIMIT, { client_id }) or {}
+    return rows_to_objects(rows, function(r)
+        return { id = tostring(r[1]), type = to_int(r[2]) or 0, date = nz(fmt_jalali_from_filetime(r[3], true), ""),
+            text = strip_tags(r[4]):sub(1, 400), author_id = tostring(r[5] or ""), author = nz(r[6], ""), section_id = to_int(r[7]) or 0 }
+    end)
+end
+
+TAB_LOADERS.calls = function(client_id)
+    local rows = fetch_rows([[
+SELECT c.ID, c.DATE, c.CALL_DURATION, c.COST, c.TYPE, c.STATUS, c.CID, c.RECORDINGFILE
+FROM crm_calllog c WHERE c.profile_src_id = ? OR c.profile_dst_id = ? OR c.CUSTOMER_ID = ?
+ORDER BY c.ID DESC LIMIT ]] .. CONFIG.TAB_ROW_LIMIT, { client_id, client_id, client_id }) or {}
+    return rows_to_objects(rows, function(r)
+        return { id = tostring(r[1]), date = nz(fmt_jalali_from_filetime(r[2], true), ""), duration = to_int(r[3]) or 0,
+            cost = fmt_num(r[4]), type = to_int(r[5]) or 0, status = to_int(r[6]) or 0, cid = nz(r[7], ""), has_file = nz(r[8], "") ~= "" }
+    end)
+end
+
+local function action_tab()
+    local client_id = to_positive_int(inp("id"))
+    local tab = trim(inp("tab") or "")
+    if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
+    local loader = TAB_LOADERS[tab]
+    if loader == nil then return { ok = false, error = "تب ناشناخته: " .. tab } end
+    local ok, rows_or_err = pcall(loader, client_id)
+    if not ok then return { ok = false, error = "خطا در بارگذاری تب «" .. tab .. "»: " .. tostring(rows_or_err) } end
+    return { ok = true, tab = tab, rows = rows_or_err, limit = CONFIG.TAB_ROW_LIMIT }
+end
+
+-- =========================================
+-- LOOKUPS (برای فرم‌ها)
+-- =========================================
+local function action_lookup()
+    local kind = trim(inp("kind") or "")
+    local q = trim(inp("q") or "")
+    local literal = sanitize_like_literal(q)
+    if kind == "users" then
+        -- کاربران داخلی (پرسنل) برای «مطلع»/«مسئول»
+        local where = literal ~= "" and (" AND pm.FULLNAME LIKE '%" .. literal .. "%'") or ""
+        local rows = fetch_rows([[
+SELECT DISTINCT pm.ID, pm.FULLNAME FROM hr_personnels hp INNER JOIN profile_main pm ON pm.ID = hp.profile_id
+WHERE pm.FULLNAME <> '']] .. where .. [[ ORDER BY pm.FULLNAME LIMIT 40]], {}) or {}
+        return { ok = true, rows = rows_to_objects(rows, function(r) return { id = tostring(r[1]), name = nz(r[2], "") } end) }
+    elseif kind == "clients" then
+        local where = ""
+        local params = {}
+        if is_all_digits(q) then
+            where = " AND ci.ID = ?"
+            table.insert(params, tonumber(q))
+        elseif literal ~= "" then
+            where = " AND pm.FULLNAME LIKE '%" .. literal .. "%'"
+        end
+        local rows = fetch_rows([[
+SELECT ci.ID, pm.FULLNAME, (SELECT m.MOBILE FROM profile_mobile m WHERE m.USER_ID = ci.ID ORDER BY m.ID LIMIT 1)
+FROM crm_info ci INNER JOIN profile_main pm ON pm.ID = ci.ID WHERE ci.DELETED = 0]] .. where .. [[ ORDER BY ci.ID DESC LIMIT 30]], params) or {}
+        return { ok = true, rows = rows_to_objects(rows, function(r) return { id = tostring(r[1]), name = nz(r[2], ""), mobile = nz(r[3], "") } end) }
+    elseif kind == "cities" then
+        local where = literal ~= "" and (" WHERE STATE_NAME LIKE '%" .. literal .. "%' OR CITY_NAME LIKE '%" .. literal .. "%'") or ""
+        local rows = fetch_rows("SELECT STATE_CODE, STATE_NAME, CITY_CODE, CITY_NAME FROM crm_state_city" .. where .. " ORDER BY STATE_NAME, CITY_NAME LIMIT 60", {}) or {}
+        return { ok = true, rows = rows_to_objects(rows, function(r) return { state_code = nz(r[1], ""), state = nz(r[2], ""), city_code = nz(r[3], ""), city = nz(r[4], "") } end) }
+    end
+    return { ok = false, error = "نوع جستجوی نامعتبر" }
+end
+
+-- =========================================
+-- WRITE ACTIONS — از طریق API رسمی CRM (module_id 14)
+-- =========================================
+local function call_crm_api(path, payload)
+    local ok, res = pcall(function() return teamyar.call_api(CONFIG.CRM_MODULE_ID, path, payload) end)
+    if not ok then
+        teamyar.write_log("crm_customer_ui call_api error " .. path .. ": " .. tostring(res))
+        return { ok = false, error = "خطا در فراخوانی API «" .. path .. "»: " .. tostring(res) }
+    end
+    if _G.type(res) == "string" then
+        local decoded_ok, decoded = pcall(function() return json.decode(res) end)
+        if decoded_ok and _G.type(decoded) == "table" then res = decoded end
+    end
+    if _G.type(res) ~= "table" then
+        return { ok = false, error = "پاسخ نامعتبر از API «" .. path .. "»", raw = tostring(res) }
+    end
+    local success = res.success
+    if success == nil then success = res.ok end
+    if success == false then
+        -- خطای API یا رشته است یا جدول {message, status} (مثل SECTION_ID_NOT_FOUND)
+        local msg = res.error or res.message or res.msg or (res.data and res.data.message) or "عملیات توسط سرور رد شد"
+        if _G.type(msg) == "table" then msg = msg.message or msg.error or json.encode(msg) end
+        local translations = {
+            SECTION_ID_NOT_FOUND = "بخش (section) نامعتبر است — بخش را انتخاب کنید",
+            ACCESS_DENIED = "برای این عملیات دسترسی ندارید",
+            ERROR_EXIST_SEVERAL_CLASSIFY_FOR_USER = "مشتری نمی‌تواند در چند رده از یک بخش باشد",
+            ERROR_DELETE_SEVERAL_USER_FOR_CLASSIFY = "تنظیمات رده دارای پیش‌فرض است، امکان حذف وجود ندارد",
+        }
+        local text = tostring(msg)
+        return { ok = false, error = translations[text] or text, api = res }
+    end
+    return { ok = true, api = res }
+end
+
+local function decode_json_input(name)
+    local raw = inp(name)
+    if raw == nil or trim(raw) == "" then return nil, "دادهٔ «" .. name .. "» ارسال نشده است" end
+    local ok, decoded = pcall(function() return json.decode(raw) end)
+    if not ok or _G.type(decoded) ~= "table" then return nil, "دادهٔ «" .. name .. "» JSON معتبر نیست" end
+    return decoded
+end
+
+local function action_api_get()
+    local client_id = to_positive_int(inp("id"))
+    if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
+    return call_crm_api("/api/client/get", { id = client_id })
+end
+
+local function action_comment_add()
+    local client_id = to_positive_int(inp("id"))
+    local comment = trim(inp("comment") or "")
+    if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
+    if comment == "" then return { ok = false, error = "متن توضیح خالی است" } end
+    if #comment > 4000 then return { ok = false, error = "متن توضیح بیش از حد بلند است (حداکثر ۴۰۰۰ نویسه)" } end
+    -- مشتری باید وجود داشته باشد و حذف‌شده نباشد (لایهٔ اعتبارسنجی قبل از هر نوشتن)
+    local exists = fetch_scalar("SELECT COUNT(*) FROM crm_info WHERE ID = ? AND DELETED = 0", { client_id })
+    if tonumber(exists) ~= 1 then return { ok = false, error = "مشتری یافت نشد یا حذف شده است" } end
+    -- API بخش معتبر می‌خواهد (section_id=0 => SECTION_ID_NOT_FOUND، تست زندهٔ ۱۴۰۵/۰۶/۱۲). ترتیب انتخاب:
+    -- بخش انتخاب‌شده در فرم -> بخش اولین ردهٔ مشتری -> اولین بخش فعال سیستم
+    local section_id = to_positive_int(inp("section_id"))
+    if section_id == nil then
+        section_id = to_positive_int(fetch_scalar([[
+SELECT c.section_id FROM crm_cross x JOIN crm_classify_person c ON c.PROFILE_ID = x.REFERE_ID
+WHERE x.CLIENT_ID = ? ORDER BY c.section_id LIMIT 1]], { client_id }))
+    end
+    if section_id == nil then
+        section_id = to_positive_int(fetch_scalar("SELECT ID FROM crm_section ORDER BY S_ORDER, ID LIMIT 1"))
+    end
+    if section_id == nil then return { ok = false, error = "هیچ بخشی برای ثبت توضیح تعریف نشده است" } end
+    local res = call_crm_api("/api/client/add/comment", { id = client_id, comment = comment, section_id = section_id })
+    res.section_id = section_id
+    if res.ok then
+        teamyar.write_log("crm_customer_ui comment_add ok client=" .. client_id .. " by user=" .. current_user_id)
+    end
+    return res
+end
+
+-- اعتبارسنجی پروفایل: هر فیلد ناقص => کل درخواست رد می‌شود (نه ثبت ناقص)
+local function validate_profile(profile, is_create)
+    if _G.type(profile) ~= "table" then return "ساختار پروفایل نامعتبر است" end
+    local user_type = to_int(profile.user_type)
+    if user_type ~= 3 and user_type ~= 4 then return "نوع مشتری (حقیقی/حقوقی) مشخص نیست" end
+    if trim(profile.name or "") == "" then return "نام الزامی است" end
+    if user_type == 3 and trim(profile.last_name or "") == "" then return "نام خانوادگی برای مشتری حقیقی الزامی است" end
+    for _, m in ipairs(profile.mobile or {}) do
+        local d = digits_only(m.value)
+        if d ~= "" and #d < 10 then return "شمارهٔ همراه «" .. tostring(m.value) .. "» نامعتبر است" end
+        m.value = d
+        m.country = to_int(m.country) or 364
+    end
+    for _, e in ipairs(profile.email or {}) do
+        local v = trim(e.value or "")
+        if v ~= "" and not v:match("^[%w%.%%%+%-_]+@[%w%.%-]+%.%a+$") then return "ایمیل «" .. v .. "» نامعتبر است" end
+        e.value = v
+    end
+    for _, n in ipairs(profile.national_code or {}) do
+        local d = digits_only(n.value)
+        if d ~= "" and user_type == 3 and #d ~= 10 then return "کد ملی باید ۱۰ رقم باشد" end
+        if d ~= "" and user_type == 4 and #d ~= 11 then return "شناسهٔ ملی حقوقی باید ۱۱ رقم باشد" end
+        n.value = d
+        n.country = to_int(n.country) or 364
+    end
+    for _, p in ipairs(profile.phone or {}) do
+        p.value = digits_only(p.value)
+        p.type = to_int(p.type) or 3
+        p.country = to_int(p.country) or 364
+    end
+    -- تاریخ‌های شمسی فرم -> FILETIME (API عدد int64 می‌گیرد)؛ تاریخ نامعتبر = رد کل درخواست
+    local date_fields = { { "birth_date_jalali", "birth_date", "تاریخ تولد" }, { "date_of_issue_jalali", "date_of_issue", "تاریخ صدور" } }
+    for _, df in ipairs(date_fields) do
+        local raw = profile[df[1]]
+        if raw ~= nil and trim(raw) ~= "" then
+            local ft = jalali_string_to_filetime(raw)
+            if ft == nil then return df[3] .. " نامعتبر است (قالب 1370/01/01)" end
+            profile[df[2]] = ft
+        end
+        profile[df[1]] = nil
+    end
+    if is_create then
+        local has_contact = false
+        for _, m in ipairs(profile.mobile or {}) do if m.value ~= "" then has_contact = true end end
+        for _, e in ipairs(profile.email or {}) do if e.value ~= "" then has_contact = true end end
+        if not has_contact then return "برای ایجاد مشتری دست‌کم یک شمارهٔ همراه یا ایمیل لازم است" end
+    end
+    return nil
+end
+
+local function action_client_update()
+    local client_id = to_positive_int(inp("id"))
+    if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
+    local payload, err = decode_json_input("payload")
+    if payload == nil then return { ok = false, error = err } end
+    local exists = fetch_scalar("SELECT COUNT(*) FROM crm_info WHERE ID = ? AND DELETED = 0", { client_id })
+    if tonumber(exists) ~= 1 then return { ok = false, error = "مشتری یافت نشد یا حذف شده است" } end
+    -- قانون کسب‌وکار (بات ۵۵۹): نوشتن CRM هرگز روی پروفایل پرسنل انجام نمی‌شود
+    local is_staff = fetch_scalar("SELECT COUNT(*) FROM hr_personnels WHERE profile_id = ?", { client_id })
+    if tonumber(is_staff) and tonumber(is_staff) > 0 then return { ok = false, error = "این پروفایل متعلق به پرسنل است و از این‌جا ویرایش نمی‌شود" } end
+    if payload.profile ~= nil then
+        local verr = validate_profile(payload.profile, false)
+        if verr ~= nil then return { ok = false, error = verr } end
+    end
+    payload.id = client_id
+    local res = call_crm_api("/api/client/update", payload)
+    if res.ok then teamyar.write_log("crm_customer_ui client_update ok client=" .. client_id .. " by user=" .. current_user_id) end
+    return res
+end
+
+local function action_client_check()
+    local payload, err = decode_json_input("payload")
+    if payload == nil then return { ok = false, error = err } end
+    return call_crm_api("/api/client/check", payload)
+end
+
+local function action_client_create()
+    local payload, err = decode_json_input("payload")
+    if payload == nil then return { ok = false, error = err } end
+    local verr = validate_profile(payload.profile, true)
+    if verr ~= nil then return { ok = false, error = verr } end
+    payload.id = 0
+    payload.section_id = to_int(payload.section_id) or 0
+    local res = call_crm_api("/api/client/create", payload)
+    if res.ok then
+        local new_id = nil
+        if _G.type(res.api) == "table" and _G.type(res.api.data) == "table" then
+            new_id = res.api.data.profile_id or res.api.data.id
+        end
+        res.new_id = new_id and tostring(new_id) or nil
+        teamyar.write_log("crm_customer_ui client_create ok new_id=" .. tostring(new_id) .. " by user=" .. current_user_id)
+        -- تست زنده ۱۴۰۵/۰۶/۱۲: create فیلدهای سطح بالا (comment/job/company/...) را ذخیره نمی‌کند — فقط update.
+        -- پس همان فیلدها بلافاصله با update روی شناسهٔ جدید ثبت می‌شوند.
+        if new_id ~= nil then
+            local top_fields = { "comment", "company", "job", "website", "tin", "kpp", "industry", "number_personnel", "reg_number", "lable", "issue_activity", "property_code" }
+            local follow = { id = to_int(new_id) }
+            local has_any = false
+            for _, k in ipairs(top_fields) do
+                local v = payload[k]
+                if v ~= nil and trim(v) ~= "" then follow[k] = v; has_any = true end
+            end
+            if has_any then res.followup_update = call_crm_api("/api/client/update", follow) end
+        end
+        -- عضویت در رده (اگر انتخاب شده بود) — category/add
+        local category_id = to_positive_int(payload.category_id)
+        if new_id ~= nil and category_id ~= nil then
+            local cat = call_crm_api("/api/client/category/add", { id = to_int(new_id), category_id = category_id, category_profile_id = category_id })
+            res.category_result = cat
+        end
+    end
+    return res
+end
+
+local function action_contact_add()
+    local client_id = to_positive_int(inp("id"))
+    local contact, err = decode_json_input("contact")
+    if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
+    if contact == nil then return { ok = false, error = err } end
+    contact.type = to_int(contact.type) or 1
+    contact.contact_id = to_int(contact.contact_id) or 0
+    if contact.type ~= 2 and contact.contact_id <= 0 then return { ok = false, error = "رابط انتخاب نشده است" } end
+    if contact.type == 2 and trim(contact.contact_text or "") == "" then return { ok = false, error = "عنوان رابط غیر تیم‌یاری الزامی است" } end
+    return call_crm_api("/api/client/contact/add", { id = client_id, contact = { contact } })
+end
+
+local function action_contact_del()
+    local client_id = to_positive_int(inp("id"))
+    local contact_id = to_int(inp("contact_id"))
+    local ctype = to_int(inp("type")) or 1
+    if client_id == nil or contact_id == nil then return { ok = false, error = "شناسه‌ها نامعتبرند" } end
+    return call_crm_api("/api/client/contact/del", { id = client_id, contact = { { type = ctype, contact_id = contact_id } } })
+end
+
+local function action_category_change(mode)
+    local client_id = to_positive_int(inp("id"))
+    local category_id = to_positive_int(inp("category_id"))
+    if client_id == nil or category_id == nil then return { ok = false, error = "شناسهٔ مشتری یا رده نامعتبر است" } end
+    -- تست زنده ۱۴۰۵/۰۶/۱۲: category_id = crm_classify_person.ID (شناسهٔ رده) و category_profile_id = PROFILE_ID
+    -- (همان عددی که در crm_cross.REFERE_ID و URL رده استفاده می‌شود). ارسال PROFILE_ID به‌جای ID => INVALID_CATEGORY_ID
+    local cat_row = fetch_row("SELECT ID, PROFILE_ID FROM crm_classify_person WHERE PROFILE_ID = ? OR ID = ? LIMIT 1", { category_id, category_id })
+    if cat_row == nil then return { ok = false, error = "رده یافت نشد" } end
+    local path = mode == "add" and "/api/client/category/add" or "/api/client/category/del"
+    return call_crm_api(path, { id = client_id, category_id = to_int(cat_row[1]), category_profile_id = to_int(cat_row[2]) })
+end
+
+-- «مطلع» (assign) و «مسئول» (responsible): در هیچ جدول قابل‌کوئری این پایگاه‌داده پیدا نشدند (crm_assign خالی است،
+-- crm_notify فهرست اعلان‌گیران رده است، نه مطلع) — پس خواندن از API رسمی (assign/get, responsible/get) انجام می‌شود.
+-- نوشتن (تست زنده ۱۴۰۵/۰۶/۱۲): /api/client/assign/add کار می‌کند ولی assign/del و responsible/add|del با success=true
+-- بی‌اثرند؛ راه معتبر همان POST هم‌مبدأ ماژول بومی /crm/client/assign/ با فهرست کاملِ جایگزین است
+-- (type=0 مطلع، type=2 مسئول) که در app.js انجام می‌شود، با نشست و سطح دسترسی خودِ کاربر.
+local function normalize_user_list(api_res)
+    -- پاسخ assign/get یا responsible/get: آرایه‌ای از {id, name, ...} در data یا data.list
+    local out = {}
+    if not api_res.ok or _G.type(api_res.api) ~= "table" then return out end
+    local data = api_res.api.data
+    -- شکل واقعی پاسخ (تست زنده ۱۴۰۵/۰۶/۱۲): assign/get -> data.assigns[] ، responsible/get -> data.responsibles[]
+    if _G.type(data) == "table" then
+        if _G.type(data.assigns) == "table" then data = data.assigns
+        elseif _G.type(data.responsibles) == "table" then data = data.responsibles
+        elseif _G.type(data.list) == "table" then data = data.list
+        elseif data.id ~= nil then data = {} end
+    end
+    if _G.type(data) ~= "table" then return out end
+    for _, u in pairs(data) do
+        if _G.type(u) == "table" then
+            local uid = u.id or u.user_id or u.USER_ID
+            if uid ~= nil then table.insert(out, { id = tostring(math.floor(tonumber(uid) or 0)), name = nz(u.name or u.title or u.FULLNAME, "کاربر #" .. tostring(uid)), type = to_int(u.type) or 0 }) end
+        elseif tonumber(u) ~= nil then
+            table.insert(out, { id = tostring(math.floor(tonumber(u))), name = "کاربر #" .. tostring(u), type = 0 })
+        end
+    end
+    return out
+end
+
+local function fetch_relation_users(client_id, relation)
+    return normalize_user_list(call_crm_api("/api/client/" .. relation .. "/get", { id = client_id }))
+end
+
+local function action_relation_get(relation)
+    local client_id = to_positive_int(inp("id"))
+    if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
+    local res = call_crm_api("/api/client/" .. relation .. "/get", { id = client_id })
+    if not res.ok then return res end
+    return { ok = true, users = normalize_user_list(res), api = res.api }
+end
+
+-- =========================================
+-- SHELL HTML
+-- =========================================
+local function render_shell()
+    local v = CONFIG.ASSET_VERSION
+    local css_url = CONFIG.ASSET_BASE .. "/app.css?v=" .. v
+    local js_url = CONFIG.ASSET_BASE .. "/app.js?v=" .. v
+    local parts = {}
+    table.insert(parts, '<!DOCTYPE html>\n<html dir="rtl" lang="fa">\n<head>\n<meta charset="UTF-8">\n')
+    table.insert(parts, '<meta name="viewport" content="width=device-width, initial-scale=1">\n')
+    table.insert(parts, '<title>CRM مشتریان</title>\n')
+    table.insert(parts, '<link rel="stylesheet" href="' .. escape_html(css_url) .. '">\n')
+    table.insert(parts, '</head>\n<body>\n')
+    table.insert(parts, '<div id="crm606" class="crm606-root" data-crm606-root="1"')
+    table.insert(parts, ' data-run-url="' .. escape_html(CONFIG.BOT_RUN_URL) .. '"')
+    table.insert(parts, ' data-base-url="' .. escape_html(CONFIG.BASE_URL) .. '"')
+    table.insert(parts, ' data-user-id="' .. escape_html(current_user_id) .. '"')
+    table.insert(parts, ' data-version="' .. escape_html(v) .. '"')
+    table.insert(parts, ' data-page-size="' .. escape_html(CONFIG.PAGE_SIZE) .. '"')
+    table.insert(parts, ' data-site-bot="' .. escape_html("/bot/run/" .. CONFIG.SITE_VIEW_BOT_PATH) .. '"')
+    table.insert(parts, ' data-site-marker="' .. escape_html(CONFIG.SITE_ID_MARKER) .. '"')
+    table.insert(parts, ' data-site-login="' .. escape_html("/bot/run/" .. CONFIG.SITE_LOGIN_BOT_PATH) .. '"')
+    table.insert(parts, ' data-logo="data:image/png;base64,' .. CONFIG.LOGO140_WHITE_B64 .. '">\n')
+    table.insert(parts, '  <div class="crm606-boot">در حال بارگذاری ماژول مشتریان…</div>\n')
+    table.insert(parts, '</div>\n')
+    table.insert(parts, '<script src="' .. escape_html(js_url) .. '"></script>\n')
+    table.insert(parts, '<script>\n')
+    table.insert(parts, 'if (!window.CRM606) { var b = document.querySelector("#crm606 .crm606-boot"); if (b) { b.textContent = "فایل رابط کاربری (app.js) بارگذاری نشد — پیوست‌های بات را بررسی کنید."; } }\n')
+    table.insert(parts, '</script>\n</body>\n</html>')
+    return table.concat(parts)
+end
+
+-- =========================================
+-- DISPATCH
+-- =========================================
+local ACTIONS = {
+    list          = action_list,
+    export        = action_export,
+    tree          = action_tree,
+    client        = function()
+        local res = action_client()
+        if res.ok then
+            -- «مطلع» و «مسئول» فقط از API خوانده می‌شوند (جدول قابل‌کوئری ندارند)
+            res.client.assigned = fetch_relation_users(to_int(res.client.id), "assign")
+            res.client.responsible = fetch_relation_users(to_int(res.client.id), "responsible")
+            res.client.is_assigned = false
+            for _, u in ipairs(res.client.assigned) do if tostring(u.id) == tostring(current_user_id) then res.client.is_assigned = true end end
+        end
+        return res
+    end,
+    counts        = action_counts,
+    tab           = action_tab,
+    lookup        = action_lookup,
+    api_get       = action_api_get,
+    comment_add   = action_comment_add,
+    client_update = action_client_update,
+    client_create = action_client_create,
+    client_check  = action_client_check,
+    contact_add   = action_contact_add,
+    contact_del   = action_contact_del,
+    category_add  = function() return action_category_change("add") end,
+    category_del  = function() return action_category_change("del") end,
+    -- مطلع/مسئول: فقط خواندن از API؛ نوشتن در کلاینت با POST هم‌مبدأ /crm/client/assign/ (type 0 مطلع، 2 مسئول)
+    assign_get    = function() return action_relation_get("assign") end,
+    responsible_get = function() return action_relation_get("responsible") end,
+    whoami        = function() return { ok = true, user_id = current_user_id, version = CONFIG.ASSET_VERSION } end,
+}
+
+local function main()
+    if action == "" then
+        teamyar.write_result(render_shell())
+        return
+    end
+    local handler = ACTIONS[action]
+    if handler == nil then
+        teamyar.write_result(json.encode({ ok = false, error = "عملیات ناشناخته: " .. action }))
+        return
+    end
+    local ok, result = pcall(handler)
+    if not ok then
+        teamyar.write_log("crm_customer_ui action error [" .. action .. "]: " .. tostring(result))
+        teamyar.write_result(json.encode({ ok = false, error = "خطای داخلی بات: " .. tostring(result) }))
+        return
+    end
+    teamyar.write_result(json.encode(result))
+end
+
+local main_ok, main_err = pcall(main)
+if not main_ok then
+    teamyar.write_log("crm_customer_ui fatal: " .. tostring(main_err))
+    if action ~= "" then
+        teamyar.write_result(json.encode({ ok = false, error = "خطای داخلی بات" }))
     else
-        for _, r in ipairs(rows_html) do table.insert(out, r) end
+        teamyar.write_result('<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="UTF-8"><title>خطا</title></head><body style="font-family:tahoma;padding:2rem;text-align:center;font-size:14px;"><h2 style="color:#16509D;font-size:15px;">خطایی در بارگذاری صفحه رخ داد. لطفاً دوباره تلاش کنید.</h2></body></html>')
     end
-    table.insert(out, "</tbody></table></div>")
-    return table.concat(out)
-end
-
-local function link_only_card(title, description, url)
-    return string.format([[
-    <div class="link-card">
-        <div class="link-card-body">
-            <h4>%s</h4>
-            <p>%s</p>
-        </div>
-        <a class="btn-action" href="%s" target="_blank" rel="noopener">مشاهده در تیم‌یار ↗</a>
-    </div>
-    ]], escape_html(title), escape_html(description), escape_html(url))
-end
-
--- =========================================
--- RENDER: LIST VIEW
--- =========================================
-local function render_list_view()
-    local rows, total = load_customer_list(search_q, list_page)
-    local rows_html = {}
-    for _, r in ipairs(rows) do
-        local pid = tostring(r[1])
-        local full_name = nz((r[2] or "") .. " " .. (r[3] or ""), "—")
-        table.insert(rows_html, string.format([[
-            <tr>
-                <td>%s</td>
-                <td class="name-cell"><a href="?id=%s">%s</a></td>
-                <td>%s</td>
-                <td>%s</td>
-                <td><a class="btn-sms" href="?id=%s">مشاهده</a></td>
-            </tr>
-        ]], escape_html(pid), escape_html(pid), escape_html(full_name),
-            escape_html(user_type_label(r[4])), escape_html(nz(r[5], "—")), escape_html(pid)))
-    end
-
-    local total_pages = math.max(1, math.ceil(total / PAGE_SIZE))
-    local pager = { '<div class="pager">' }
-    if list_page > 1 then
-        table.insert(pager, string.format('<a class="btn" href="?q=%s&page=%d">قبلی</a>', escape_html(search_q), list_page - 1))
-    end
-    table.insert(pager, string.format('<span class="pager-info">صفحه %d از %d — مجموع %s مشتری</span>', list_page, total_pages, fmt_num(total)))
-    if list_page < total_pages then
-        table.insert(pager, string.format('<a class="btn" href="?q=%s&page=%d">بعدی</a>', escape_html(search_q), list_page + 1))
-    end
-    table.insert(pager, "</div>")
-
-    return string.format([[
-    <div class="list-toolbar">
-        <form method="get" action="" class="search-form">
-            <input class="search" type="text" name="q" value="%s" placeholder="جستجو بر اساس شناسه یا نام مشتری">
-            <button class="btn-action" type="submit">جستجو</button>
-        </form>
-    </div>
-    %s
-    %s
-    ]], escape_html(search_q),
-        render_table({ "شناسه", "نام کامل", "نوع", "واحد سازمانی", "عملیات" }, rows_html, "مشتری‌ای یافت نشد"),
-        table.concat(pager))
-end
-
--- =========================================
--- RENDER: PROFILE VIEW
--- =========================================
-local function render_profile_view()
-    local profile = load_customer_profile(customer_id)
-    if profile == nil then
-        return string.format('<div class="empty-state">مشتری‌ای با شناسه %s یافت نشد. <a href="?">بازگشت به لیست</a></div>', escape_html(customer_id))
-    end
-
-    local pa_ids = resolve_pa_client_ids(customer_id)
-    local full_name = nz((profile.name or "") .. " " .. (profile.surname or ""), profile.pa_name or "—")
-
-    -- ---- بررسی / هدر پروفایل ----
-    local header = string.format([[
-    <div class="profile-hero">
-        <div class="profile-avatar">👤</div>
-        <div class="profile-meta">
-            <h1>%s</h1>
-            <div class="meta-row">
-                <span>شناسه مشتری: <b>%s</b></span>
-                <span>نوع: <b>%s</b></span>
-                <span>کد ملی: <b>%s</b></span>
-                <span>تلفن همراه: <b>%s</b></span>
-                <span>ایمیل: <b>%s</b></span>
-                <span>مانده حساب: <b>%s</b></span>
-            </div>
-        </div>
-        <div class="profile-actions">
-            %s
-            %s
-            <a class="btn" href="%s" target="_blank" rel="noopener">بررسی/ویرایش کامل ↗</a>
-        </div>
-    </div>
-    ]],
-        escape_html(full_name),
-        escape_html(profile.profile_id),
-        escape_html(user_type_label(profile.user_type)),
-        escape_html(nz(profile.national_code)),
-        escape_html(nz(profile.mobile)),
-        escape_html(nz(profile.email)),
-        escape_html(fmt_num(profile.balance)),
-        profile.mobile and string.format('<a class="btn" href="tel:%s">☎ تماس</a>', escape_html(profile.mobile)) or "",
-        profile.email and string.format('<a class="btn" href="mailto:%s">✉ ایمیل</a>', escape_html(profile.email)) or "",
-        escape_html(edit_url(profile.profile_id, 1)))
-
-    -- ---- تب‌های READY (Query واقعی) ----
-    local sales_rows, purchase_rows, project_rows, event_rows, aware_rows, fav_rows, note_rows = {}, {}, {}, {}, {}, {}, {}
-    if #pa_ids > 0 then
-        sales_rows    = load_sales(pa_ids)
-        purchase_rows = load_purchases(pa_ids)
-        project_rows  = load_projects(pa_ids)
-        aware_rows    = load_aware(pa_ids)
-        fav_rows      = load_favorite(pa_ids)
-        note_rows     = load_notes(pa_ids)
-    end
-    event_rows = load_events(customer_id)
-
-    local function sales_html()
-        local rows_html = {}
-        for _, r in ipairs(sales_rows) do
-            table.insert(rows_html, string.format(
-                "<tr><td>%s</td><td class=\"name-cell\">%s</td><td>%s</td><td>%s</td></tr>",
-                escape_html(r[1]), escape_html(nz(r[2])), escape_html(nz(fmt_jalali_from_filetime(r[4]), "—")), render_status_badge(r[5])))
-        end
-        return render_table({ "شماره فاکتور", "عنوان", "تاریخ", "وضعیت" }, rows_html, "فاکتور فروشی برای این مشتری ثبت نشده است.")
-    end
-
-    local function purchase_html()
-        local rows_html = {}
-        for _, r in ipairs(purchase_rows) do
-            table.insert(rows_html, string.format(
-                "<tr><td>%s</td><td class=\"name-cell\">%s</td><td>%s</td><td>%s</td></tr>",
-                escape_html(r[1]), escape_html(nz(r[2])), escape_html(nz(fmt_jalali_from_filetime(r[4]), "—")), render_status_badge(r[5])))
-        end
-        return render_table({ "شماره فاکتور", "عنوان", "تاریخ", "وضعیت" }, rows_html, "برای این مشتری رکورد خریدی ثبت نشده است.")
-    end
-
-    local function project_html()
-        local rows_html = {}
-        for _, r in ipairs(project_rows) do
-            table.insert(rows_html, string.format(
-                "<tr><td>%s</td><td class=\"name-cell\">%s</td><td>%s%%</td><td>%s</td><td>%s</td></tr>",
-                escape_html(r[1]), escape_html(nz(r[2])), escape_html(fmt_num(r[3])),
-                escape_html(nz(fmt_jalali_from_filetime(r[5]), "—")), escape_html(nz(fmt_jalali_from_filetime(r[6]), "—"))))
-        end
-        return render_table({ "شناسه", "عنوان پروژه", "پیشرفت", "تاریخ شروع", "مهلت" }, rows_html, "پروژه‌ای برای این مشتری ثبت نشده است.")
-    end
-
-    local function events_html()
-        local rows_html = {}
-        for _, r in ipairs(event_rows) do
-            table.insert(rows_html, string.format(
-                "<tr><td>%s</td><td class=\"name-cell\">%s</td><td>%s</td><td>%s</td></tr>",
-                escape_html(r[1]), escape_html(nz(r[2])),
-                escape_html(nz(fmt_jalali_from_filetime(r[3], true), "—")), escape_html(nz(fmt_jalali_from_filetime(r[4], true), "—"))))
-        end
-        return render_table({ "شناسه", "نام رویداد", "شروع", "پایان" }, rows_html, "رویدادی در تقویم برای این مشتری یافت نشد.")
-    end
-
-    local function aware_html()
-        local rows_html = {}
-        for _, r in ipairs(aware_rows) do
-            table.insert(rows_html, string.format(
-                "<tr><td class=\"name-cell\">%s</td></tr>",
-                escape_html(nz((r[2] or "") .. " " .. (r[3] or ""), "کاربر #" .. tostring(r[1])))))
-        end
-        return render_table({ "کاربر مطلع" }, rows_html, "هیچ کاربری به‌عنوان مطلع ثبت نشده است.")
-    end
-
-    local function favorite_html()
-        local rows_html = {}
-        for _, r in ipairs(fav_rows) do
-            table.insert(rows_html, string.format(
-                "<tr><td class=\"name-cell\">%s</td><td>%s</td></tr>",
-                escape_html(nz((r[2] or "") .. " " .. (r[3] or ""), "کاربر #" .. tostring(r[1]))),
-                tonumber(r[4]) == 1 and "برگزیده" or "—"))
-        end
-        return render_table({ "کاربر", "وضعیت" }, rows_html, "این مشتری برای هیچ کاربری برگزیده نشده است.")
-    end
-
-    local function notes_html()
-        local rows_html = {}
-        for _, r in ipairs(note_rows) do
-            table.insert(rows_html, string.format(
-                "<tr><td>%s</td><td class=\"name-cell\">%s</td><td>%s</td></tr>",
-                escape_html(nz(fmt_jalali_from_filetime(r[2], true), "—")), escape_html(nz((r[4] or "") .. " " .. (r[5] or ""), "—")), escape_html(nz(r[3], "—"))))
-        end
-        return render_table({ "تاریخ", "ثبت‌کننده", "متن توضیح" }, rows_html, "توضیحی برای این مشتری ثبت نشده است.")
-            .. link_only_card("افزودن توضیح جدید", "ثبت توضیح جدید فعلاً فقط از صفحه اصلی تیم‌یار ممکن است (فاز ۲).", ROUTES.comments(customer_id))
-    end
-
-    -- ---- تب‌های Link-only (فاز ۱) ----
-    local link_tabs = {
-        { key = "todo",      label = "اقدام",         desc = "لیست اقدام‌های این مشتری (فرم سفارشی TeamYar).",           url = ROUTES.todo(customer_id) },
-        { key = "documents", label = "اسناد",          desc = "اسناد و فایل‌های پیوست این مشتری.",                        url = ROUTES.documents(customer_id) },
-        { key = "email",     label = "ایمیل",          desc = "تاریخچه ایمیل‌های این مشتری.",                             url = ROUTES.email(customer_id) },
-        { key = "chat",      label = "گفتگو",          desc = "گفتگوهای مرتبط با این مشتری.",                            url = ROUTES.chat(customer_id) },
-        { key = "sms",       label = "پیامک",          desc = "تاریخچه پیامک‌های ارسالی/دریافتی این مشتری.",             url = ROUTES.sms(customer_id) },
-        { key = "poll",      label = "نظرسنجی",        desc = "نظرسنجی‌های مرتبط با این مشتری.",                          url = ROUTES.poll(customer_id) },
-        { key = "audio",     label = "فایل‌های صوتی",  desc = "فایل‌های صوتی تماس‌های این مشتری.",                        url = ROUTES.audio(customer_id) },
-    }
-    local link_tabs_html = {}
-    for _, t in ipairs(link_tabs) do
-        table.insert(link_tabs_html, link_only_card(t.label, t.desc, t.url))
-    end
-
-    -- ---- ساخت تب‌ها ----
-    local TABS = {
-        { key = "overview", label = "بررسی",      content = header .. '<div class="grid-2">'
-            .. '<div class="field"><label>کد حساب</label><div>' .. escape_html(nz(profile.account_code)) .. '</div></div>'
-            .. '<div class="field"><label>کد مشتری داخلی</label><div>' .. escape_html(nz(profile.code)) .. '</div></div>'
-            .. '</div>' },
-        { key = "sales",    label = "فروش",       content = sales_html() },
-        { key = "purchase", label = "خرید",       content = purchase_html() },
-        { key = "projects", label = "پروژه",      content = project_html() },
-        { key = "events",   label = "رویدادها",   content = events_html() },
-        { key = "aware",    label = "مطلع",       content = aware_html() },
-        { key = "favorite", label = "برگزیده",    content = favorite_html() },
-        { key = "notes",    label = "توضیحات",    content = notes_html() },
-        { key = "more",     label = "سایر (لینک‌ها)", content = table.concat(link_tabs_html) },
-    }
-
-    local tabs_nav, tabs_panes = {}, {}
-    for i, t in ipairs(TABS) do
-        table.insert(tabs_nav, string.format('<button class="tab%s" data-tab="%s">%s</button>',
-            i == 1 and " active" or "", t.key, escape_html(t.label)))
-        table.insert(tabs_panes, string.format('<div id="tab-%s" class="tabpane%s">%s</div>',
-            t.key, i == 1 and "" or " hidden", t.content))
-    end
-
-    return string.format([[
-    %s
-    <div class="tabs">%s</div>
-    <div class="tab-content">%s</div>
-    ]], "", table.concat(tabs_nav), table.concat(tabs_panes))
-    -- توجه: header از قبل داخل تب «بررسی» رندر شده تا در بار اول هم دیده شود
-end
-
--- =========================================
--- CSS  (پالت الزامی #16509D + white/gray/black، فونت Peyda، لوگو 140)
--- =========================================
-local CSS = [[
-@font-face {
-    font-family: "PeydaReport";
-    src: url(data:font/truetype;charset=utf-8;base64,AAEAAAAOAIAAAwBgRFNJRwAAAAEAASFUAAAACEdERUYrBC3XAADcNAAAAHxHUE9TKUGIwAAA3LAAADTIR1NVQk+rAWsAARF4AAAP2k9TLzJ2gVbcAAABaAAAAGBjbWFwh/GYyAAADSAAAAeaZ2x5ZmvrPHUAABpsAACfzmhlYWQnUViOAAAA7AAAADZoaGVhCDcSFgAAASQAAAAkaG10eD9fZe0AAAHIAAALWGxvY2EviwdzAAAUvAAABa5tYXhwA1MBBAAAAUgAAAAgbmFtZXvHsAoAALo8AAAFPnBvc3RoWZoTAAC/fAAAHLcAAQAAAAMAAGLmoqxfDzz1AAMD6AAAAADflRqKAAAAAOO0+jP/S/3XBaMFFgAAAAcAAgAAAAAAAAABAAADRv5wAAASx/9L/ggFowABAAAAAAAAAAAAAAAAAAAC1gABAAAC1gBhAAcAgQAGAAEAAgAeAAYAAABkAAAAAwADAAQCZAGQAAUACAKKAlgAAABLAooCWAAAAV4AMgEsAAAAAAAAAAAAAAAAAAAgAQAAAAAAAAAIAAAAAEtIRE0AwAAN/vwD6P4MAAAEsAH0AAAAQAAAAAABaQK/AAAAIAAEAiwASwJYAAACWAAAAIMAAAJnABgCaABTAh4AOgKCAFMCLgBUAgwAVAJgADYCogBTAP4AUwE3ABMCVwBTAc8AUwNJAFMCjQBTAqgANQJTAFMCqAA1AosAUwIuADACJAAPApYATgJnABgDkwAdAjQAEwI1ABMCFQAoAdkAJwIYAEkBsAAwAhgALwIHAC8BdwAeAe0AMAIpAEkA6gBJANkAAQINAEkA6wBKA08ASQIpAEkCFAAwAhgASAIYADABcgBJAbkALgFvAB4CKQBAAeQAGAK0ABgB0QAYAcsAGAHFACgCOgApAaIAMwI6AEMCLAA1AjoAKAI1AEECNwAxAhsASgIxACwCNwAxARAAWAEKAEEBEQBYAREAQwG+AEkCVgBJAh4ANAIYACgByQAYAZUASAHtACgCRQBJAe4AKADYADsB2wAxANwAQwGNAEMC9ABhBAkASQJEAEkCqwAlAukAQwFZAEYBWQAyAcEAVwEWAF8BxABUAVsASAGXADEBWwAvAREALAD4ACgB7AArAecAKwDZAEIB1wAoAaUAhAI+AEkChgBJBHoASQKQAEYCogBGAqIARgJbAEkB8ABJAigASQKdAEYCQABJAlcASQI1AEkB8gBJARYAXwLuAE0A8ABNAPAARAH6AEoBuABGAdAASgKQAEYCGgBiAiwARgIuAEYCtwBmAacATAGnADgAAP94AAD/eAJnABgCZwAYAmcAGAJnABgCZwAYAmcAGAJnABgCZwAYAmcAGAN/ABgCHgA6Ah4AOgIeADoCHgA6AtQAUgKCAFMC1ABSAi4AVAIuAFQCLgBUAi4AVAIuAFQCLgBUAi4AVAIuAFQCdAAsAmAANgJgADYCYAA2Ap4ANQD+AFMA/v/ZAP4AGwD+AFMA/v+9AP7/8QD+//ICVwBTAc8AUwHP/9cBzwBTAd0ADAKNAFMCjQBTAo0AUwJ6AFMCjQBTAqgANQKoADUCqAA1AqgANQKoADUCqAA1AqcANQKoADUD+gA1AlgAUwKLAFMCiwBTAosAUwIuADACLgAwAi4AMAIuADACZABKAlAAJQIkAA8CJAAPAiQADwKWAE4ClgBOApYATgKWAE4ClgBOApYATgKWAE4ClgBOA5MAHQOTAB0DkwAdA5MAHQI1ABMCNQATAjUAEwI1ABMCFQAoAhUAKAIVACgB2QAnAdkAJwHZACcB2QAnAdkAJwHZACcB2QAnAdkAJwHZACcDHgAnAbAAMAGwADABsAAwAbAAMAI9ADECGAAvAhgALwIMAC8CBwAvAgwALwH7AC8CBwAvAfsALwIHAC8CBwAvAgcAKgHtADAB7QAwAe0AMAIpACMA6gBJAPsASQEB/9AA+gAVAOgARwDpAAAA5//mAOr/6AINAEkA6wBKAOv/ywDrADUA6//tAikASQIpAEkCKQBJAisASQIpAEkCFAAwAhQAMAIUADACFAAwAhQAMAIUADACFAAwAhQAMANoADACGABIAXIASQFyAA4BcgA7AbkALgG5AC4BuQAuAbkALgJoAEgBbwAeAW//8QFvAB4BbwAeAikAQAIpAEACKQBAAikAQAIpAEACKQBAAikAQAIpAEACtAAYArQAGAK0ABgCtAAYAcsAGAHLABgBywAYAcUAKAHFACgBxQAoAdgAQQDRAEcBCABIAM3/5QEO/+4A3P/wAQsAAAD//+8BKf/vAUH/1QE3/8kDUgBHA3oARwFe//IBM//yAUv/8gGT//IB3f/yA1IARwN6AEcBXv/yATP/8gGT//IDUgBHA3oARwFe//IBS//yAZP/8gHd//IDUgBHA3oARwFe//IBS//yAZP/8gG///IDUgBHA3oARwFe//IBS//yAZP/8gGW//IDUgBHA3oARwFe//IBM//yApsASAKzAEgCrf/yAp3/8gKhAEgCsQBIAq3/8gKd//ICkgBIArMASAKt//ICmP/yApsASAKzAEgCrf/yAp3/8gIlAEgCRgBIAiUASAJGAEgCJQBIAkYASAFE/9gBAv/eAWf/2AEk/94BRP/YAWf/2AEk/94BAv/eAUT/2AFn/9gBRP/YAWf/2AFE/9gBAv/eAbP/2AEk/94EhQBHBLwASAL5//ICx//yBIUARwS8AEgC+f/yAsf/8gTHAEcE9QBHAzH/8gME//IExwBHBPUARwMx//IDBP/yAt0ASQMLAEkCzP/yAp7/8gLdAEkDCwBJAsz/8gKe//ICMABJAlkASQJS//IB2f/yAjAASQJZAEkCUv/yAdn/8gNTAEkDnwBJAcP/8gHH//IDUwBJA58ASQHD//IBx//yA1MASQOfAEkBw//yAcf/8gK7AEkC3ABJArsASQLcAEkBw//yAcf/8gNSAEkDegBJAgD/8gGH//IDaQBHA2oARwRRAEkD4ABHBIQASQIA//IDJP/yAYf/8gGH//IC8v/yA2kARwNoAEcEUQBJA+AARwSEAEkCAP/yAyT/8QGH//IBg//yAvL/8QK5AEgC8QBIAU3/8gEK//MCugBIAvEASAFN//IBCv/zAo8ARwLkAEcCMP/yAgb/8gK3AEcC5gBHAV7/8gEz//ICtwBHAuYARwHnAEcCBABJAm7/8gKw//IB5wBHAgQASQHnAEcCKwA7AkX/8gEz//IB5wBHAgQASQKw//ICVQBBAuz/8gKw//IB5wBHAgQASQHnAEcCKwA7AeAAQQHtAEEB4QBBAewAQQHhAEEB7ABBAeEAQQHsAEEC1wBHAuEARwLXAEcC4QBHApgARwFe//IBS//yAZP/8gHT//IC2AAuAuIARwKYAEcBXv/yATP/8gGT//IC2AA8AtcARwLhAEcCmABHAV7/8gFL//IBk//yAdD/8gJsAEcCmABHArgARwLnAEcAwQAAAhAAMQJGADECEAAWAkYAFwIQADACRgAxAiIAAAJV//wCEP/ZA4kARwPRAEcDjwBHA48ARwOTAC4DjwBHAkb/2gPRAEcD0QBHA+QAUAPRAEcDjwBH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AQ0BDgEUAQ8AdAETASYBIwEkASUBLwEWATEAigDiAIYA3gCLAOMAjwDnAJIA6gCQAOgAlADsAJUA7QCcAPQAmgDyAJ0A9QCXAO8AnwD3AKEA+QCgAPgAogD6AKgBAQCpAQIApgD7AKoBAwCrAQQArQEGAKwBBQCuAQcArwEIALEBCgCwAQkAswEMALkBEgC4AREAvAEVAL4BFwDAARkAvwEYAMEBGgDDARwAwgEbAMgBIQDHASAAxgEfAM8BKADRASoAzgEnANABKQDTASwA1wEwANgA2gEyANwBNADbATMAxAEdAMkBIgLEAsUCxwLLAswCyQLDAsICygLGAsgBNQE8ATgB+gE6AgkBNgFHAfQBUgFYAWIBagFuAXIBdAF4AXwBiAGMAZABlAGYAZwBoAGkAhsBqAG2AboB0gHaAd4B5AH4AgACAgKtAq4CrwKwArECsgKzArsCvAKrAqwCqgKXAmQCZQKRAUABtAKpAT4B6AHqAe4B9gH8Af4A1QEuANIBKwDUAS0ChAKCAoUCgwKLAoYCiQKKAocCjAKBAoACfgJ/AGAAYQBkAGIAYwBlAH4AfwBmAUwBTQFPAU4BXgFfAWEBYAGtAa8BrgFmAWcBaQFoAXYBdwGEAYYBgAGBAb4BwQHFAcMByAHLAc8BzQHoAekB6gHrAe0B7AHxAfMB8gIXAhACEQIUAhMCOAI6AkACQgJIAkoCUQJTAjkCOwJBAkMCSQJLAlICVAE1ATwBPQE4ATkB+gH7AToBOwIJAgoCDQIMATYBNwFHAUgBSgFJAfQB9QFSAVMBVQFUAVgBWQFbAVoBYgFjAWUBZAFqAWsBbQFsAW4BbwFxAXABcgFzAXQBdQF4AXoBfAF9AYgBiQGLAYoBjAGNAY8BjgGQAZEBkwGSAZQBlQGXAZYBmAGZAZsBmgGcAZ0BnwGeAaABoQGjAaIBpAGlAacBpgGoAakBqwGqAbYBtwG5AbgBugG7Ab0BvAHSAdMB1QHUAdoB2wHdAdwB3gHfAeEB4AHkAeUB5wHmAfgB+QIAAgECAgIDAgYCBQIiAiMCHgIfAiACIQIcAh0AAAAAAEIAQgBCAEIAXACNALgA2gDyAQcBOQFRAV0BdAGZAakBxAHbAgMCJAJWAoYCwwLVAvMDBwMkAz8DVANqA6sD2QP8BCoEXQSHBQIFLgVABVkFfAWJBdMGAAYz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AAEACgB2AAMAAQQJAAIADgCAAAMAAQQJAAMAMACOAAMAAQQJAAQAGgC+AAMAAQQJAAUAGgDYAAMAAQQJAAYAGgDyAAMAAQQJAAcAUAEMAAMAAQQJAAgAGAFcAAMAAQQJAAkAGAFcAAMAAQQJAAoAmgF0AAMAAQQJAAsAIAIOAAMAAQQJAAwAQAIuAAMAAQQJAA0AmgF0AAMAAQQJAA4AKgJuAAMAAQQJABAACgB2AAMAAQQJABEADgCAAAMAAQQJAGQByAKYAEMAbwBwAHkAcgBpAGcAaAB0ACAAKABjACkAIAAyADAAMgAxACAAYgB5ACAAdwB3AHcALgBmAG8AbgB0AGkAcgBhAG4ALgBjAG8AbQAgAEEAbABsACAAcgBpAGcAaAB0AHMAIAByAGUAcwBlAHIAdgBlAGQALgBQAGUAeQBkAGEAUgBlAGcAdQBsAGEAcgAzAC4AMAAwADAAOwBLAEgARABNADsAUABlAHkAZABhAC0AUgBlAGcAdQBsAGEAcgBQAGUAeQBkAGEAIABSAGUAZwB1AGwAYQByAFYAZQByAHMAaQBvAG4AIAAzAC4AMAAwADAAUABlAHkAZABhAC0AUgBlAGcAdQBsAGEAcgBQAGUAeQBkAGEAIABpAHMAIABhACAAdAByAGEAZABlAG0AYQByAGsAIABvAGYAIAB3AHcAdwAuAGYAbwBuAHQAaQByAGEAbgAuAGMAbwBtAE4AYQBzAGUAcgAgAEsAaABhAGQAZQBtAFQAbwAgAHUAcwBlACAAdABoAGkAcwAgAGYAbwBuAHQALAAgAGkAdAAgAGkAcwAgAG4AZQBjAGUAcwBzAGEAcgB5ACAAdABvACAAbwBiAHQAYQBpAG4AIAB0AGgAZQAgAGwAaQBjAGUAbgBzAGUAIABmAHIAbwBtACAAdwB3AHcALgBmAG8AbgB0AGkAcgBhAG4ALgBjAG8AbQB3AHcAdwAuAGYAbwBuAHQAaQByAGEAbgAuAGMAbwBtAGgAdAB0AHAAcwA6AC8ALwBkAHIAaQBiAGIAYgBsAGUALgBjAG8AbQAvAG4AYQBzAGUAcgBrAGgAYQBkAGUAbQBmAG8AbgB0AGkAcgBhAG4ALgBjAG8AbQAvAGwAaQBjAGUAbgBzAGUAcwBlAHkASgBwAGQAaQBJADYASQBtAGQAawBNADIATQByAFMARgBNAHYAUQBWAGcAMABPAEgAcABHAGUAaQA4ADMAZQBHADkASABRAGwARQA5AFAAUwBJAHMASQBuAFoAaABiAEgAVgBsAEkAagBvAGkAYQBtADEAVQBXAFcAVgBXAFYAMAA1AHIAWgAxAEIAMQBMADAAcABhAFIAbABZADUAUwBqAGwAQwBUAG0AOQBEAFEAVgBWAHEAUwBUAFoARgBSAG4ATgBIAFUAWABwAGgAYgB6AGgAdABUAEYAbABxAGMAegAwAGkATABDAEoAdABZAFcATQBpAE8AaQBJADAAWgBXAFkAegBNAEQAZABtAFkAMgBaAGwAWQB6AEYAaQBZAFQAaABpAFkAVABZAHcATwBHAEYAbQBZAFQAQQB5AE4ARABVAHkATgBUAFYAagBNAG0AWgBtAE0AagBKAGsATgB6AGcANABZAGoARQA0AFoAagBBADIAWgBXAEYAaABNAGoAawB5AE0ARABFAHkAWQBUAFYAbABNADIAVgBtAE0ARwBRAHoASQBpAHcAaQBkAEcARgBuAEkAagBvAGkASQBuADAAPQAAAAIAAAAAAAD/nAAyAAAAAAAAAAAAAAAAAAAAAAAAAAAC1gAAAAEAAgADACQAJQAmACcAKAApACoAKwAsAC0ALgAvADAAMQAyADMANAA1ADYANwA4ADkAOgA7ADwAPQBEAEUARgBHAEgASQBKAEsATABNAE4ATwBQAFEAUgBTAFQAVQBWAFcAWABZAFoAWwBcAF0AEwAUABUAFgAXABgAGQAaABsAHAARAA8AHQAeABAADgANAEEA2QASAB8AIAAhAAQAIgAKAAUABgAjAAcACAAJAAsADABeAF8AYAA+AD8AQAC2ALcAtAC1AMQAxQCHAEIAsgCzAIwAigCLAL0AhACFAJYA7wCTAPAAuADoAKsAwwCjAKIAgwC8AIgAhgCCAMIAYQC+AL8BAgEDAMkBBADHAGIArQEFAQYAYwCuAJAA/QD/AGQBBwDpAQgBCQBlAQoAyADKAQsAywEMAQ0BDgD4AQ8BEAERAMwAzQDOAPoAzwESARMBFAEVARYBFwDiARgBGQEaAGYBGwDQANEAZwDTARwBHQCRAK8AsADtAR4BHwEgASEA5AD7ASIBIwEkASUBJgEnANQA1QBoANYBKAEpASoBKwEsAS0BLgEvAOsBMAC7ATEBMgDmATMAaQE0AGsAbABqATUBNgBuAG0AoAD+AQAAbwE3AOoBOAEBAHABOQByAHMBOgBxATsBPAE9APkBPgE/AUAA1wB0AHYAdwFBAHUBQgFDAUQBRQFGAUcA4wFIAUkBSgB4AUsAeQB7AHwAegFMAU0AoQB9ALEA7gFOAU8BUAFRAOUA/AFSAIkBUwFUAVUBVgB+AIAAgQB/AVcBWAFZAVoBWwFcAV0BXgDsAV8AugFgAOcBYQFiAWMBZAFlAWYBZwFoAWkBagFrAWwBbQFuAW8BcAFxAXIBcwF0AXUBdgF3AXgBeQF6AXsBfAF9AX4BfwGAAYEBggGDAYQBhQGGAYcBiAGJAYoBiwGMAY0BjgGPAZABkQGSAZMBlAGVAZYBlwGYAZkBmgGbAZwBnQGeAZ8BoAGhAaIBowGkAaUBpgGnAagBqQGqAasBrAGtAa4BrwGwAbEBsgGzAbQBtQG2AbcBuAG5AboBuwG8Ab0BvgG/AcABwQHCAcMBxAHFAcYBxwHIAckBygHLAcwBzQHOAc8B0AHRAdIB0wHUAdUB1gHXAdgB2QHaAdsB3AHdAd4B3wHgAeEB4gHjAeQB5QHmAecB6AHpAeoB6wHsAe0B7gHvAfAB8QHyAfMB9AH1AfYB9wH4AfkB+gH7AfwB/QH+Af8CAAIBAgICAwIEAgUCBgIHAggCCQIKAgsCDAINAg4CDwIQAhECEgITAhQCFQIWAhcCGAIZAhoCGwIcAh0CHgIfAiACIQIiAiMCJAIlAiYCJwIoAikCKgIrAiwCLQIuAi8CMAIxAjICMwI0AjUCNgI3AjgCOQI6AjsCPAI9Aj4CPwJAAkECQgJDAkQCRQJGAkcCSAJJAkoCSwJMAk0CTgJPAlACUQJSAlMCVAJVAlYCVwJYAlkCWgJbAlwCXQJeAl8CYAJhAmICYwJkAmUCZgJnAmgCaQJqAmsCbAJtAm4CbwJwAnECcgJzAnQCdQJ2AncCeAJ5AnoCewJ8An0CfgJ/AoACgQKCAoMChAKFAoYChwKIAokCigKLAowCjQKOAo8CkAKRApICkwKUApUClgKXApgCmQKaApsCnAKdAp4CnwKgAqECogKjAqQCpQKmAqcCqAKpAqoCqwKsAq0CrgKvArACsQKyArMCtAK1ArYCtwK4ArkCugK7ArwCvQK+Ar8CwACpAKoCwQLCAsMCxALFAsYCxwLIAskCygLLAswCzQLOAs8C0ALRAtIC0wLUAtUC1gLXAtgC2QLaAtsC3ALdAt4C3wLgAuEC4gLjAuQC5QLmAucC6ALpAuoC6wLsAu0C7gLvAvAC8QLyAvMC9AL1AvYC9wL4AvkC+gL7AOEC/AL9Av4C/wd1bmkwNjVBB3VuaTA2NUIGQWJyZXZlB0FtYWNyb24HQW9nb25lawpDZG90YWNjZW50BkRjYXJvbgZEY3JvYXQGRWNhcm9uCkVkb3RhY2NlbnQHRW1hY3JvbgdFb2dvbmVrB3VuaTAxOEYHdW5pMDEyMgpHZG90YWNjZW50BEhiYXIHSW1hY3JvbgdJb2dvbmVrB3VuaTAxMzYGTGFjdXRlBkxjYXJvbgd1bmkwMTNCBk5hY3V0ZQZOY2Fyb24HdW5pMDE0NQNFbmcNT2h1bmdhcnVtbGF1dAdPbWFjcm9uBlJhY3V0ZQZSY2Fyb24HdW5pMDE1NgZTYWN1dGUHdW5pMDIxOAd1bmkxRTlFBFRiYXIGVGNhcm9uB3VuaTAxNjIHdW5pMDIxQQ1VaHVuZ2FydW1sYXV0B1VtYWNyb24HVW9nb25lawVVcmluZwZXYWN1dGULV2NpcmN1bWZsZXgJV2RpZXJlc2lzBldncmF2ZQtZY2lyY3VtZmxleAZZZ3JhdmUGWmFjdXRlClpkb3RhY2NlbnQGYWJyZXZlB2FtYWNyb24HYW9nb25lawpjZG90YWNjZW50BmRjYXJvbgZlY2Fyb24KZWRvdGFjY2VudAdlbWFjcm9uB2VvZ29uZWsHdW5pMDI1OQd1bmkwMTIzCmdkb3RhY2NlbnQEaGJhcglpLmxvY2xUUksHaW1hY3Jvbgdpb2dvbmVrB3VuaTAxMzcGbGFjdXRlBmxjYXJvbgd1bmkwMTNDBm5hY3V0ZQZuY2Fyb24HdW5pMDE0NgNlbmcNb2h1bmdhcnVtbGF1dAdvbWFjcm9uBnJhY3V0ZQZyY2Fyb24HdW5pMDE1NwZzYWN1dGUHdW5pMDIxOQR0YmFyBnRjYXJvbgd1bmkwMTYzB3VuaTAyMUINdWh1bmdhcnVtbGF1dAd1bWFjcm9uB3VvZ29uZWsFdXJpbmcGd2FjdXRlC3djaXJjdW1mbGV4CXdkaWVyZXNpcwZ3Z3JhdmULeWNpcmN1bWZsZXgGemFjdXRlCnpkb3RhY2NlbnQHdW5pMDYyMQd1bmkwNjI3DHVuaTA2MjcuZmluYQd1bmkwNjIzDHVuaTA2MjMuZmluYQd1bmkwNjI1DHVuaTA2MjUuZmluYQd1bmkwNjIyDHVuaTA2MjIuZmluYQd1bmkwNjcxDHVuaTA2NzEuZmluYQd1bmkwNjZFDHVuaTA2NkUuZmluYQx1bmkwNjZFLm1lZGkMdW5pMDY2RS5pbml0EHVuaTA2NkUuaW5pdC5hbHQRdW5pMDY2RS5pbml0LmFsdDIRdW5pMDY2RS5pbml0LmFsdDMHdW5pMDYyOAx1bmkwNjI4LmZpbmEMdW5pMDYyOC5tZWRpDHVuaTA2MjguaW5pdBB1bmkwNjI4LmluaXQuYWx0B3VuaTA2N0UMdW5pMDY3RS5maW5hDHVuaTA2N0UubWVkaQx1bmkwNjdFLmluaXQQdW5pMDY3RS5pbml0LmFsdBF1bmkwNjdFLmluaXQuYWx0Mgd1bmkwNjJBDHVuaTA2MkEuZmluYQx1bmkwNjJBLm1lZGkMdW5pMDYyQS5pbml0EHVuaTA2MkEuaW5pdC5hbHQRdW5pMDYyQS5pbml0LmFsdDIHdW5pMDYyQgx1bmkwNjJCLmZpbmEMdW5pMDYyQi5tZWRpDHVuaTA2MkIuaW5pdBB1bmkwNjJCLmluaXQuYWx0EXVuaTA2MkIuaW5pdC5hbHQyB3VuaTA2NzkMdW5pMDY3OS5maW5hDHVuaTA2NzkubWVkaQx1bmkwNjc5LmluaXQHdW5pMDYyQwx1bmkwNjJDLmZpbmEMdW5pMDYyQy5tZWRpDHVuaTA2MkMuaW5pdAd1bmkwNjg2DHVuaTA2ODYuZmluYQx1bmkwNjg2Lm1lZGkMdW5pMDY4Ni5pbml0B3VuaTA2MkQMdW5pMDYyRC5maW5hDHVuaTA2MkQubWVkaQx1bmkwNjJELmluaXQHdW5pMDYyRQx1bmkwNjJFLmZpbmEMdW5pMDYyRS5tZWRpDHVuaTA2MkUuaW5pdAd1bmkwNjJGDHVuaTA2MkYuZmluYQd1bmkwNjMwDHVuaTA2MzAuZmluYQd1bmkwNjg4DHVuaTA2ODguZmluYQd1bmkwNjMxC3VuaTA2MzEuYWx0DHVuaTA2MzEuZmluYRB1bmkwNjMxLmZpbmEuYWx0B3VuaTA2MzIMdW5pMDYzMi5maW5hEHVuaTA2MzIuZmluYS5hbHQLdW5pMDYzMi5hbHQHdW5pMDY5MQx1bmkwNjkxLmZpbmEHdW5pMDY5NQx1bmkwNjk1LmZpbmEHdW5pMDY5OAt1bmkwNjk4LmFsdAx1bmkwNjk4LmZpbmEQdW5pMDY5OC5maW5hLmFsdAd1bmkwNjMzDHVuaTA2MzMuZmluYQx1bmkwNjMzLm1lZGkMdW5pMDYzMy5pbml0B3VuaTA2MzQMdW5pMDYzNC5maW5hDHVuaTA2MzQubWVkaQx1bmkwNjM0LmluaXQHdW5pMDYzNQx1bmkwNjM1LmZpbmEMdW5pMDYzNS5tZWRpDHVuaTA2MzUuaW5pdAd1bmkwNjM2DHVuaTA2MzYuZmluYQx1bmkwNjM2Lm1lZGkMdW5pMDYzNi5pbml0B3VuaTA2MzcMdW5pMDYzNy5maW5hDHVuaTA2MzcubWVkaQx1bmkwNjM3LmluaXQHdW5pMDYzOAx1bmkwNjM4LmZpbmEMdW5pMDYzOC5tZWRpDHVuaTA2MzguaW5pdAd1bmkwNjM5DHVuaTA2MzkuZmluYQx1bmkwNjM5Lm1lZGkMdW5pMDYzOS5pbml0B3VuaTA2M0EMdW5pMDYzQS5maW5hDHVuaTA2M0EubWVkaQx1bmkwNjNBLmluaXQHdW5pMDY0MQx1bmkwNjQxLmZpbmEMdW5pMDY0MS5tZWRpDHVuaTA2NDEuaW5pdAd1bmkwNkE0DHVuaTA2QTQuZmluYQx1bmkwNkE0Lm1lZGkMdW5pMDZBNC5pbml0B3VuaTA2QTEMdW5pMDZBMS5maW5hDHVuaTA2QTEubWVkaQx1bmkwNkExLmluaXQHdW5pMDY2Rgx1bmkwNjZGLmZpbmEHdW5pMDY0Mgx1bmkwNjQyLmZpbmEMdW5pMDY0Mi5tZWRpDHVuaTA2NDIuaW5pdAd1bmkwNjQzDHVuaTA2NDMuZmluYQx1bmkwNjQzLm1lZGkMdW5pMDY0My5pbml0B3VuaTA2QTkLdW5pMDZBOS5hbHQMdW5pMDZBOS5zczAxDHVuaTA2QTkuZmluYRF1bmkwNkE5LmZpbmEuc3MwMQx1bmkwNkE5Lm1lZGkRdW5pMDZBOS5tZWRpLnNzMDEMdW5pMDZBOS5pbml0EHVuaTA2QTkuaW5pdC5hbHQRdW5pMDZBOS5pbml0LnNzMDEHdW5pMDZBRgt1bmkwNkFGLmFsdAx1bmkwNkFGLnNzMDEMdW5pMDZBRi5maW5hEXVuaTA2QUYuZmluYS5zczAxDHVuaTA2QUYubWVkaRF1bmkwNkFGLm1lZGkuc3MwMQx1bmkwNkFGLmluaXQQdW5pMDZBRi5pbml0LmFsdBF1bmkwNkFGLmluaXQuc3MwMQd1bmkwNjQ0DHVuaTA2NDQuZmluYQx1bmkwNjQ0Lm1lZGkMdW5pMDY0NC5pbml0B3VuaTA2QjUMdW5pMDZCNS5maW5hDHVuaTA2QjUubWVkaQx1bmkwNkI1LmluaXQHdW5pMDY0NQx1bmkwNjQ1LmZpbmEMdW5pMDY0NS5tZWRpDHVuaTA2NDUuaW5pdAd1bmkwNjQ2DHVuaTA2NDYuZmluYQx1bmkwNjQ2Lm1lZGkMdW5pMDY0Ni5pbml0B3VuaTA2QkEMdW5pMDZCQS5maW5hB3VuaTA2NDcMdW5pMDY0Ny5maW5hDHVuaTA2NDcubWVkaQx1bmkwNjQ3LmluaXQHdW5pMDZDMAx1bmkwNkMwLmZpbmEHdW5pMDZDMQx1bmkwNkMxLmZpbmEMdW5pMDZDMS5tZWRpDHVuaTA2QzEuaW5pdAd1bmkwNkMyDHVuaTA2QzIuZmluYQd1bmkwNkJFDHVuaTA2QkUuZmluYQx1bmkwNkJFLm1lZGkMdW5pMDZCRS5pbml0B3VuaTA2MjkMdW5pMDYyOS5maW5hB3VuaTA2QzMMdW5pMDZDMy5maW5hB3VuaTA2NDgMdW5pMDY0OC5maW5hB3VuaTA2MjQMdW5pMDYyNC5maW5hB3VuaTA2QzYMdW5pMDZDNi5maW5hB3VuaTA2QzcMdW5pMDZDNy5maW5hB3VuaTA2NDkMdW5pMDY0OS5maW5hB3VuaTA2NEEMdW5pMDY0QS5maW5hEXVuaTA2NEEuZmluYS5zczAxDHVuaTA2NEEubWVkaQx1bmkwNjRBLmluaXQQdW5pMDY0QS5pbml0LmFsdBF1bmkwNjRBLmluaXQuYWx0Mgd1bmkwNjI2DHVuaTA2MjYuZmluYRF1bmkwNjI2LmZpbmEuc3MwMQx1bmkwNjI2Lm1lZGkMdW5pMDYyNi5pbml0EHVuaTA2MjYuaW5pdC5hbHQHdW5pMDZDRQd1bmkwNkNDDHVuaTA2Q0MuZmluYRF1bmkwNkNDLmZpbmEuc3MwMQx1bmkwNkNDLm1lZGkMdW5pMDZDQy5pbml0EHVuaTA2Q0MuaW5pdC5hbHQRdW5pMDZDQy5pbml0LmFsdDIHdW5pMDZEMgx1bmkwNkQyLmZpbmEHdW5pMDc2OQx1bmkwNzY5LmZpbmEHdW5pMDY0MAt1bmkwNjQ0MDYyNxB1bmkwNjQ0MDYyNy5maW5hC3VuaTA2NDQwNjIzEHVuaTA2NDQwNjIzLmZpbmELdW5pMDY0NDA2MjUQdW5pMDY0NDA2MjUuZmluYQt1bmkwNjQ0MDYyMhB1bmkwNjQ0MDYyMi5maW5hC3VuaTA2NDQwNjcxEHVuaTA2NkUwNkNDLmZpbmEVdW5pMDY2RTA2Q0MuX2ZpbmEuYWx0EHVuaTA2MjgwNjQ5LmZpbmEQdW5pMDYyODA2NEEuZmluYRB1bmkwNjI4MDYyNi5maW5hEHVuaTA2MjgwNkNDLmZpbmEQdW5pMDY0NDA2NzEuZmluYRB1bmkwNjdFMDY0OS5maW5hEHVuaTA2N0UwNjRBLmZpbmEQdW5pMDY3RTA2MjYuZmluYRB1bmkwNjdFMDZDQy5maW5hEHVuaTA2MkEwNjQ5LmZpbmEQdW5pMDYyQTA2NEEuZmluYRB1bmkwNjJBMDYyNi5maW5hEHVuaTA2MkEwNkNDLmZpbmEQdW5pMDYyQjA2NDkuZmluYRB1bmkwNjJCMDY0QS5maW5hEHVuaTA2MkIwNjI2LmZpbmEQdW5pMDYyQjA2Q0MuZmluYQt1bmkwNjMzMDY0ORB1bmkwNjMzMDY0OS5maW5hC3VuaTA2MzMwNjRBEHVuaTA2MzMwNjRBLmZpbmELdW5pMDYzMzA2MjYQdW5pMDYzMzA2MjYuZmluYQt1bmkwNjMzMDZDQxB1bmkwNjMzMDZDQy5maW5hC3VuaTA2MzQwNjQ5EHVuaTA2MzQwNjQ5LmZpbmELdW5pMDYzNDA2NEEQdW5pMDYzNDA2NEEuZmluYQt1bmkwNjM0MDYyNhB1bmkwNjM0MDYyNi5maW5hC3VuaTA2MzQwNkNDEHVuaTA2MzQwNkNDLmZpbmELdW5pMDYzNTA2NDkQdW5pMDYzNTA2NDkuZmluYQt1bmkwNjM1MDY0QRB1bmkwNjM1MDY0QS5maW5hC3VuaTA2MzUwNjI2EHVuaTA2MzUwNjI2LmZpbmELdW5pMDYzNTA2Q0MQdW5pMDYzNTA2Q0MuZmluYRp1bmkwNjM2X2ZhcnNpX3VuaTA2Q0MuZmluYQt1bmkwNjM2MDY0ORB1bmkwNjM2MDY0OS5maW5hC3VuaTA2MzYwNjRBEHVuaTA2MzYwNjRBLmZpbmELdW5pMDYzNjA2MjYQdW5pMDYzNjA2MjYuZmluYQt1bmkwNjM2MDZDQxB1bmkwNjQ2MDY0OS5maW5hEHVuaTA2NDYwNjRBLmZpbmEQdW5pMDY0NjA2MjYuZmluYRB1bmkwNjQ2MDZDQy5maW5hEHVuaTA2NEEwNjRBLmZpbmEQdW5pMDY0QTA2Q0MuZmluYRB1bmkwNjI2MDY0OS5maW5hEHVuaTA2MjYwNjRBLmZpbmEQdW5pMDYyNjA2MjYuZmluYRB1bmkwNjI2MDZDQy5maW5hEHVuaTA2Q0MwNkNDLmZpbmEHdW5pRkRGMgd1bmkwNjZCB3VuaTA2NkMHdW5pMDY2MAd1bmkwNjYxB3VuaTA2NjIHdW5pMDY2Mwd1bmkwNjY0B3VuaTA2NjUHdW5pMDY2Ngd1bmkwNjY3B3VuaTA2NjgHdW5pMDY2OQd1bmkwNkYwB3VuaTA2RjEHdW5pMDZGMgd1bmkwNkYzB3VuaTA2RjQHdW5pMDZGNQd1bmkwNkY2B3VuaTA2RjcHdW5pMDZGOAd1bmkwNkY5DHVuaTA2RjQudXJkdQx1bmkwNkY3LnVyZHUHdW5pMzAwMAd1bmkyMDVGB3VuaTIwMEUHdW5pMjAwRgd1bmkyMDBEB3VuaTIwMEMHdW5pMjAwMQd1bmkyMDAzB3VuaTIwMDAHdW5pMjAwMgd1bmkyMDA1B3VuaTIwMEEHdW5pMjAyRgd1bmkyMDA2B3VuaTIwMDkHdW5pMjAwNAd1bmkyMDBCB3VuaTA2RDQHdW5pMDYwQwd1bmkwNjFCB3VuaTA2MUYHdW5pMDY2RAd1bmlGRDNFB3VuaUZEM0YHdW5pRkRGQwd1bmkwNjZBB3VuaTA2MTUKZG90YWJvdmVhcgpkb3RiZWxvd2FyC2RvdGNlbnRlcmFyFnR3b2RvdHN2ZXJ0aWNhbGFib3ZlYXIWdHdvZG90c3ZlcnRpY2FsYmVsb3dhchh0d29kb3RzaG9yaXpvbnRhbGFib3ZlYXIYdHdvZG90c2hvcml6b250YWxiZWxvd2FyFHRocmVlZG90c2Rvd25hYm92ZWFyFHRocmVlZG90c2Rvd25iZWxvd2FyEnRocmVlZG90c3VwYWJvdmVhchJ0aHJlZWRvdHN1cGJlbG93YXIHd2FzbGFhcgttaW5pS2VoZWhhchFnYWZzYXJrYXNoYWJvdmVhchVnYWZzYXJrYXNoYWJvdmVhci5hbHQSZ2Fmc2Fya2FzaGNlbnRlcmFyB3VuaTA2NzAHdW5pMDY1Ngd1bmkwNjU0B3VuaTA2NTUHdW5pMDY0Qgd1bmkwNjRDB3VuaTA2NEQHdW5pMDY0RQd1bmkwNjRGB3VuaTA2NTAHdW5pMDY1MQt1bmkwNjUxMDY0Qgt1bmkwNjUxMDY0Qwt1bmkwNjUxMDY0RAt1bmkwNjUxMDY0RQt1bmkwNjUxMDY0Rgt1bmkwNjUxMDY1MAt1bmkwNjUxMDY3MAd1bmkwNjUyB3VuaTA2NTMIc2FyZXlhYXIRc2V2ZW5zYW1sbC5ib3R0b20Qc2V2ZW5zbWFsbC5hYm92ZQ55ZWhzYW1sLmJvdHRvbQ15ZWhzbWFsLmFib3ZlB3VuaTAzMDgHdW5pMDMwNwlncmF2ZWNvbWIJYWN1dGVjb21iB3VuaTAzMEIHdW5pMDMwMgd1bmkwMzBDB3VuaTAzMDYHdW5pMDMwQQl0aWxkZWNvbWIHdW5pMDMwNAd1bmkwMzEyB3VuaTAzMjYHdW5pMDMyNwd1bmkwMzI4DHVuaTA2Y2UuZmluYQx1bmkwNmNlLmluaXQMdW5pMDZjZS5tZWRpDHVuaTA2ZDUuZmluYQAAAQACAA4AAAAAAAAANgACAAYAgwCEAAMBNQIbAAECHAJjAAICmAK8AAMCwgLQAAMC0gLVAAEAAQACAAAADAAAABgAAQAEAqoCrAKvArIAAQAVAIMAhAKYAqQCpQKpAqsCrQKuArACsQKzArQCtQK2ArcCuAK5AroCuwK8AAEAAAAKAH4AugADREZMVAAUYXJhYgAYbGF0bgAuAFQAAAAKAAFVUkQgAFAAAP//AAMAAAADAAQALgAHQVpFIAA6Q1JUIAA6S0FaIAA6TU9MIAA6Uk9NIAA6VEFUIAA6VFJLIAA6AAD//wADAAEAAgAEAAD//wADAAAAAgAEAAVrZXJuACBrZXJuACBtYXJrACptYXJrACpta21rADQAAAADAAAAAQACAAAAAwADAAQABQAAAAIABgAHAAgAEgXyFvgZmhpOJ3wx9jJsAAIACAACAAoEKgABAEQABAAAAB0C5ALkAIIAggLyAIgAtgEYARgBJgGAAYoB/AIKAnwC1gLWAuQC5ALyAvIDCAMOAxwD6gPwBAYEEAQWAAEAHQBCAEMARABFAEYASABLAFEAUgBYAFkAWgBcAF0AXgBhAGMAZABlAGgAaQB3AHgAeQCBAIICcAJ2AncAAQAZ//MACwAE/9sADf/tABcABQAd//cAIP/wACH/7AAi//AAJP/yACz/8AAu/+wAMP/1ABgABP/WAAb/+gAK//kADf/tABL/+QAU//kAHv/qACD/3wAh/94AIv/fACT/4AAq/+wAK//sACz/3wAt/+wALv/eAC//7AAw/+UAMv/uADP/+QA0//oANv/4ADf/9wBLAAAAAwBL/8AAVP/0AFf/5QAWAAb/9AAK//MAEv/zABT/8wAe//oAIP/uACH/7QAi/+4AI//7ACcACwAq//sAK//7ACz/7gAt//sALv/tAC//+wAw//sAMv/xADP/+wA0//gANv/7AFr/9QACAFz/+gBf//oAHAAE/+8ABv/qAAr/6QAS/+kAFP/pABb/9wAe/+cAIP/hACH/4QAi/+EAI//3ACcACgAq/+wAK//sACz/4QAt/+wALv/hAC//7AAw/+4AMf/xADL/5AAz/+gANP/mADX/8wA2/+kAN//yAFj/+gBa/+4AAwBZ//UAXP/uAF//6wAcAAT/7AAG/+gACv/mABL/5gAU/+YAFv/3AB7/4wAg/9wAIf/dACL/3AAj//EAJwAEACr/6wAr/+sALP/cAC3/6wAu/90AL//rADD/6wAx/+kAMv/gADP/4gA0/+EANf/xADb/5AA3/+8AWP/6AFr/6wAWAAb/9gAK//YAEv/2ABT/9gAW//sAF//IABj/9QAZ/9MAGv/hABz/vAAg//sAIv/7ACP/+gAs//sAMf/zADP/6QA0/+8ANv/qAFH/ugBS/7oAYf+8AGP/vAADAEv/uQBU/+gAV//jAAMAGf/NACP/9QAz/98ABQAZ/+IAG//aACP/9QAz//QANf/jAAEAKf/IAAMAF//TABn/+gAc/+AAMwAE/94ABf/mAAb/5gAH/+YACP/mAAn/5gAK/+YAC//mAAz/5gAN//UADv/mAA//5gAQ/+YAEf/mABL/5gAT/+YAFP/mABX/5gAW/+cAF/+0ABj/5QAZ/9YAGv/dABv/3gAc/8AAHf/eAB7/4AAf/+MAIP/hACH/4QAi/+EAI//mACX/4wAm/+MAJ//jACj/4wAp/+MAKv/jACv/4wAs/+EALf/jAC7/4QAv/+MAMP/iADH/5gAy/+MAM//iADT/4gA1/+cANv/iADf/5QABABn/7wAFABn/5AAb/+kAI//7ADP/+gA1/+YAAgJ3AAACeAAAAAECcP/IAAICcAAAAnj/2gACAMgABAAAAOIBBAAEABcAAP/K/9YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/wf+3//f/9//0/93/4/9x/+7/5f/eAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/8H/ugAAAAAAAP/uAAD/uP/y//r/8//4/+X/5v/l//r/2wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP+3AAAAAAAAAAD/1//rAAAAAAAAAAD/8v9w/+3/9f/7AAEACwBCAEMARABFAEYAUQBSAGcAaABpAHEAAgAFAEIAQwABAEYARgACAFEAUgADAGcAaQACAHEAcQACAAIAHQAEAAQADAAGAAYAAwAKAAoABAANAA0ADQASABIABAAUABQABAAWABYADgAXABcAAQAYABgABQAaABoABgAcABwAAgAdAB0ADwAeAB4AEAAgACAAEgAhACEAFAAiACIAEgAkACQAFQAsACwAEgAuAC4AFAAwADAAFgAxADEACQA0ADQACgA2ADYACwA3ADcAEQBCAEMAEwBGAEYABwBRAFIACABnAGkABwBxAHEABwACAAgAAgAKCAAAAQB0AAQAAAA1AJwAxgEIARYBPAFGAdwCMAIwAe4B9AICAjACMAKkAjYCpALGAtwC8gMQAxoDxAPOBDgEWgRoBaoEigSgBMoFLAVWBToFUAVWBVYFfAWqBjIF2AX2BiAGMgZUBs4G8Ac6B1gHcgeEB8oH2AACAAYABAAgAAAAIgAlAB0AKAA3ACEAVABUADEAVwBXADIAagBrADMACgAZ/8cAI//4ADP/7wBI/90AUP/pAFz/7wBe/9EAX//sAGr/2QBr/+gAEAAE//YADf/zABf/8wAZ//UAGv/9ABv/8wAc/+cAJP/3ADP//QA0//0ANf/7ADb//QBQ//oAXP/vAF7/+ABf/+cAAwAj//sAM//yAGv/9QAJABn/9AAb/+sANf/9AEv/+QBQ//gAWf/zAFz/6ABe//cAX//lAAIAI//9ADP/9wAlAAT/4AAG//gACv/4AA3/7QAS//gAFP/4ABb/+AAb//0AHv/iACD/7wAh/+4AIv/vACP/+QAk/+sAKv/sACv/7AAs/+8ALf/sAC7/7gAv/+wAMP/wADH/+gAy/+4AM//3ADT/9AA1/+wANv/1ADf/7gBC/7wAQ/+8AEb//ABL/+AAZP+8AGX/vABo//wAaf/8AHb/vAAEABn/+AAj//oAM//5AF7/+wABACP/+AADACP/+wAz/+kAa//3AAsAGf/GACP//QAz/9UASP+pAFD/9QBc//cAXv+4AF//9ABq/6gAa/+wAHf/0QABACP/9gAbAAT/4wAN/+kAGf/5ABv/7wAc/+wAHf/6AB7/+wAg//0AIf/7ACL//QAk//0ALP/9AC7/+wBC/7IAQ/+yAEb/+ABL/9wAWf/7AFz/7QBe//oAX//rAGT/sgBl/7IAaP/4AGn/+AB2/7IAgf/4AAgAGf/0ABv/7QBL//gAUP/6AFn/+QBc/+kAXv/2AF//5gAFABn/9wAb//YAXP/zAF7/+QBf//IABQAZ//gAG//7ACP/9wAz//cANf/4AAcAI//xADP/wAA1/7sAS//NAFT/6ABX/+0Aa//6AAIAI//4AEv/+AAqAAT/5QAG//UACv/0AA3/6AAS//QAFP/0ABb/+AAe/+YAIP/gACH/4QAi/+AAI//8ACT/3AAq/+YAK//mACz/4AAt/+YALv/hAC//5gAw/+cAMv/qADP/+AA0//cANf/5ADb/+AA3//MAQv/NAEP/zQBE//MARf/zAEb/4gBL/9gAVP/yAFf/7QBk/80AZf/NAGj/4gBp/+IAa//6AHb/zQCB/+UAgv/vAAIAS//lAFf/+wAaAAb/7gAK/+0AEv/tABT/7QAe//gAIP/rACH/7gAi/+sAI//8ACT/7wAq//gAK//4ACz/6wAt//gALv/uAC//+AAx//YAMv/wADP/5wA0/+gANv/mAEb/2wBo/9sAaf/bAGv/+ACB/+kACAAj/+4AM//ZADX/2QBIAAgAS/+/AFT/3QBX/9wAa//qAAMAI//8ADP/9ABr//oACAAZ/+cAM//6AEj//QBQ//EAXP/4AF7/2wBf//cAav/0AAUAGf/0AFD/+ABc//MAXv/0AF//8AAKABn/4gAb//gAM//4ADX//QBQ/+0AWf/6AFz/6ABe/90AX//rAGr/8gAYAAT/5AAN/+oAF//mABv/9QAc//kAHf/3ACD/9wAh//gAIv/3ACT/+wAs//cALv/4AEL/2ABD/9gARv/YAEv/5QBX//gAZP/YAGX/2ABo/9gAaf/YAHb/2ACB/+AAgv/uAAMAGf/4ACcAEwBe//kABQAZ//gAUP/6AFz/9QBe//cAX//yAAEAd//IAAkAGf/jADP//ABI//0AUP/sAFn/+wBc/+wAXv/bAF//6gBq//AACwAZ/+AAG//rADP/9wA1//QASP/9AFD/6wBZ/+4AXP/hAF7/2gBf/9wAav/yAAsAGf/iABv/7AAz//gANf/1AEj/+ABQ/+gAWf/tAFz/4QBe/9sAX//dAGr/7wAHABv/5QBL/98AV//4AFn/+wBc/+sAXv/7AF//5QAKABn/6wAb//0AM//5ADX//QBQ//UAWf/5AFz/5wBe/+kAX//iAGr/9QAEABn/9gBc//oAXv/3AF//9wAIABn/5gAb//gAUP/1AFn/+wBc/+wAXv/pAF//6wBq//UAHgAE/+8ADf/oABf/wAAZ//gAG//nABz/2QAd//MAHv/4ACD/9wAh//gAIv/3ACT/9wAs//cALv/4ADD/+wBC/98AQ//fAEb/9ABL/+wAUP/4AFn/+wBc/+cAXv/3AF//4gBk/98AZf/fAGj/9ABp//QAdv/fAIH/9AAIABn/9wAb/+cAS//vAFD/+ABZ//gAXP/mAF7/9wBf/+EAEgAN//0AF/+8ABn/+gAc/9oAHv/9ACD/9AAh//QAIv/0ACT/9gAs//QALv/0AEb/4gBc//MAXv/5AF//8ABo/+IAaf/iAIH/5gAHABn/+AAb/+cAS//rAFD/+ABc/+oAXv/3AF//5QAGABn/8wBQ//oAXP/yAF7/9ABf/+8Aav/7AAQADf/6ABf/8wAZ//oAHP/kABEABv/6AAr/+gAS//oAFP/6ABf/2QAY//sAGf/hABr/7QAc/8sAMf/6ADP/9QA0//gANv/1AFH/0QBS/9EAYf/SAGP/0gADAAT/5QAN/+wAHf/7AAcABP/mAA3/6gAX//gAGf/6ABv/+AAc/+oAHf/1AAIHUAAEAAAHZggkACAAHQAA//r/9f/9//b/9//x/+P//f/7//X/8f/zAAAAAAAA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CE4IVAhaCGAIZghsCJYIcgh4CH4IrgiECIoIkAiWCJwIogioCK4ItAi6CMAIxgjMCNII2AkgCN4I5AjqCPAI9gj8CQIJCAkOCRQJGgkgCSYAAAksAAAJMgl6CTgJegk+CUQJSgnCCVAJVglcCWIJaAluCXQJegmACYYJjAmSCZgJngmkCaoJsAm2CbwJwgnICc4J1AnaCeAJ5gnsCfIJ+An+CgQKCgoQChYKHAoiCigKLgo0CjoKQApGCkwMegpSAAAKWAAACl4AAApkAAAKagpwCnYKfAqCCogKjgqUCpoKoAqmCqwKsgq4Cr4KxArKCtAK1grcCuIK6AruCvQK+gsACwYLfgsMAAALEgAACxgLHgskCyoLMAs2CzwLQgtIAAALTgAAC1QLWgtgC2YLbAtyC3gLfguEC4oLkAuWC5wLoguoC64LtAu6C8ALxgvMAAAL0gAAC9gAAAveAAAL5AAAC+oAAAvwC/YL/AykDAIMCAwODBQMGgwgDCYMLAwyDDgMPgxEDEoMUAxWAAAMXAAADGIAAAxoDG4MdAx6DIAMhgyMAAAMkgyYDJ4MpAyqDLAMtgy8DMIMyAzODNQM2gzgDOYAAAzsAAAM8gAADPgAAAz+DQQNCgABAP//6wABAQAB6gABAHH/nAABAGwC+gABAI//nAABAHMDAQABAGwD/QABAH4EBwABAHv+mQABAJD+mAABAJEDKAABAI8DMgABAMID0AABAKYD2QABAbr/nAABAbgBuAABAcf/nAABAb0BvAABALP/nAABALcBmwABAJP/nAABAJIBzQABAJX/nAABAJ4B0QABALABvQABAJn/nAABALkBvgABAbP+xAABAbYBwwABAbL+xgABAbABxwABAK4BoAABAGr+vwABAJABywABAH7+0AABAK0BxAABAbL+TAABAcMBxwABAcb+RwABAb8BxwABAK/+SAABALMBmwABAIT+SgABAJEBwAABALP+QwABAKcBsQABALf+gQABAL8BbgABAcD/lQABAaoB3AABAbn/lQABAaoB5QABAK7/nAABALMCaAABAI7/nAABAJgCjQABAJj/mgABALwCigABAKL/nAABAKECkAABAa7/nAABAb7/nAABAa4CmwABAKj/nAABAK0C6wABAJb/nAABAJcDDQABAJz/nAABAOEDCwABAJf/nAABAJ0DBwABAZ4CwwABAaYCwwABALIC7QABAIsDBgABASn+WAABAPICAQABAQD+VwABAPAB/wABATv+wgABAMMB7AABAT3+ygABAM0B7AABAP7+WAABANwCAQABAQv+UwABAOIBvwABATj+SgABANcB5wABATb+SAABAMgB6gABAQX+UAABAPb+TAABANACAAABAL0B7AABAOb/nAABALkB6wABAN7+WgABANUC3AABAOf+WwABANYC7AABAMn/nAABAL4CygABAMP/nAABAL8CzgABASMCRQABAR7/lwABATECUwABAQP/mAABAQ0DAQABAP//lAABAVUDHQABATADhgABAVcDqAABAHf+zgABALoBpAABAGb+0gABAJIBpAABAG7+0AABANYBoAABAIn+6AABAJcBqAABAID+5AABAM4CcgABAJL+5AABANcCdQABAH/+8gABAJcCcwABAHP+3AABAJQCbgABAMYC9wABANoC+wABAID9fgABAIH9fwABAIH+0wABAM4C7gABAHn+5wABAJYC7gABAIn+4QABANYC7wABAH7+7QABAJMC7wABAzL/nQABA0MBpAABA0n/mgABA0YBmQABAYYBoAABAXf/nAABAYYBoQABAzT/nAABAzsC5wABAzz/nAABAzkC3wABAXn/nAABAXgC5gABAXH/nAABAXkC5wABA27/nQABA8sBzgABA3v/nAABA8cByQABAbP/nAABAgMBzQABAar/nAABAgEB0AABA3P/nAABA9ACowABA3r/nAABA9ECoQABAaH/nAABAhACnQABAab/nAABAhMCmwABAhQByAABAW7/nAABAhIBygABARn/nAABAc8BwAABARv/nAABAc4BxQABAVz/nAABAeQCjAABAWL/nAABAegCjQABAUL/nAABAawCjgABATP/nAABAawCjwABAQr+DQABAQMB6wABARn+CwABASoB8wABASz/nAABASgB8QABANT/oAABAOUCCwABANL+IQABARUCsAABAOn+EQABASUCqQABASn/nAABASQCsgABALH/nAABAO4CsgABAZD/nAABAnQDPgABAr0CxgABAN7/nAABANkCygABAOQDRAABAZz/nAABAmkDpgABAZH/nAABAsUDKwABAOv/nAABAN0DKAABALn/nAABAOQDqwABAan/mAABAm4CcAABAZ3/mAABAsMB+AABAOj/nAABAOAB9AABAOoCaAABATX+uQABAc0BzQABAS7+tgABAc0BygABASX+uwABAc4ClwABASX+ugABAc8CjwABAOP/nAABAOECvgABAM3/nAABAN0DNwABAbICpwABAbgCowABALUC8QABAK4C4wABAaT/mgABAhMCkwABAhkCjAABAhz/nAABAUUB0QABAa3/mgABAhkCjgABAib/nAABAR4BzwABAMn/mQABAJ4C7AABATb/mgABAHwCdwABAKT/mwABAKQC1wABAIr/mwABAI8CzgABARr/nAABAIQCkAABAaf/mAABAgQDCQABAa7/mAABAgADDgABAjv/nAABAT0CZQABAbn/mAABAgsDBwABAhb/nAABATcCXQABAMP/mQABAH8DRgABAV//nAABAGcCvgABAH//mQABAHgDKwABAHf/mQABAIMDMQABASr/nAABAGcCzQABAWr+5QABAS8BhgABAWH+8AABATsBiwABAKH/nAABAKgC+gABAKIDAQABASoB1AABATwBnQABALYEDQABAKUEDwABAYP/qQABAUgBzQABAav/nAABAVYBxgABARz/nAABAR0ByQABARb/nAABARsB0AABAWX+5gABAV8B9QABAT3+8gABAWEB+AABAKv/nAABALMCZAABAJH/nAABAL4CgwABAWf+4QABAVkBYgABAWj+3wABAWABnwABAPr/lgABAOsCHwABAPr/zgABAQACTQABAPX+5gABAQoBvQABAQwCNAABAOUDqAABANgDxQABAPD/nAABANUCHQABAQX/ywABATIBkQABAPP+0QABAQABdQABAIP+FgABAJEB2QABAO0DhQABAPMDfwABASv/nAABAQkCLgABAVH+lgABAToBvAABAWX/lgABAUYCCAABAST/nAABAUkCJAABAPH/nAABAO0C4gABAPT/zgABAOoDGQABAP3/nAABAPgC6gABAQv/rQABAS8CTAABAPL+zQABAPIBzAABAPf+zAABAO4B1AABAPgDJAABAQMDLwABAQAC/wABAP0C+wABAPoDLQABAPkDPAABAXX+5wABAMABjQABAVwBAgABAWz+RAABAMABigABAWX+BQABAU4A/wABAVL99QABAUUAwAABAKr+0wABAK8BoQABAJL+0wABAKABvAABAKT+xgABAKkBvwABALT+xgABAL8BqwABANgDCAABAPYCygABAO0CIAABALL/nAABAL8DIgABAIb/nAABAJoDYgABAKP/nAABAKsDOwABAMACpgABAXP+7QABAMYBmQABAWT+owABAXUA/AABAU3+pAABAToAyQABAKz+ygABALsBoQABAIb+ywABAJ8ByAABAKz+xgABAJ8BuAABAKf+xwABALABtQABATYCBAABATYAvAABAWIDAQABAWMDCQABAGP/nAABAGAA5QAFAAAAAQAIAAEADAAoAAIAMgCYAAIABACDAIQAAAKYApgAAgKkAqUAAwKpArwABQACAAECHAJiAAAAGQABC4QAAQuEAAELlgABC5YAAQuWAAELigAACoQAAQuWAAAKhAABC5YAAQuQAAAKhAABC5YAAQuWAAAKhAABC5YAAQuWAAELlgABC5YAAQuWAAELlgABC5YAAQuWAAELlgABC5YARwCQALIA1AD2ARgBOgFcAX4BoAHCAeQCBgIoAkoCbAKOArAC0gL0AxYDOANaA3wDngPAA+IEBAQmBEgEagSMBKgEygTmBQgFKgVMBW4FkAWsBc4F8AYSBjQGVgZ4BpQGtgbSBvQHFgc4B1oHfAeeB8AH4ggECCYISAhqCIwIrgjQCPIJFAk2CVIJdAmWCbgAAgAKABAAFgAcAAEBlv+0AAEBtAMaAAEAiP9wAAEAewKsAAIACgAQABYAHAABAZr/qwABAb0DGAABAHz/eAABAHwCswACAAoAEAAWABwAAQGU/7gAAQG5Ax0AAQB9/5AAAQCbA+MAAgAKABAAFgAcAAEBtv+nAAEBxQMhAAEAnP+PAAEAmwQFAAIACgAQABYAHAABAbb/ogABAakDCwABAMT+UwABAIkCoQACAAoAEAAWABwAAQHd/5wAAQGzAxsAAQDc/mMAAQCFArgAAgAKABAAFgAcAAEBr/+9AAEBywM2AAEAjP92AAEAhgNfAAIACgAQABYAHAABAar/swABAdADMAABAJb/dwABAKQDYAACAAoAEAAWABwAAQGd/7QAAQHqA2AAAQCa/2IAAQCgA6QAAgAKABAAFgAcAAEC4f8sAAECgQHvAAEBWf6jAAEAvAGdAAIACgAQABYAHAABAvL/QgABAoYB5gABAV3+qwABALsBnQACAAoAEAAWABwAAQL+/s4AAQJ1AbgAAQFY/roAAQC8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AbIBsQABAbUAAwG5AbgBtwAFAb0BvAG7AcABvwAFAcUBwwHBAcABvwABAcAAAQHCAAEBxAACAccBxgABAccABQHPAc0BywHKAckAAQHMAAEBzgACAdEB0AADAdUB1AHTAAMB2QHYAdcAAwHdAdwB2wADAeEB4AHfAAEB4wADAecB5gHlAAEB6QADAe0B7AHrAAEB7wADAfMB8gHxAAEB9QABAfcAAQH5AAEB+wABAgEAAwIGAgUCAwABAgQAAgIIAgcAAwINAgwCCgABAgsAAQIOAAMC0wLUAtIAAwIUAhMCEQABAhIAAgIWAhUAAQIYAAECGgABAh0AAQIfAAECIQABAiMAAQIrAAECOQABAjsAAQI9AAECQQABAkMAAQJFAAECSQABAksAAQJNAAECUgABAlQAAQJWAAECegABAmwAAQJ7AAEAbQAmAMMAyAEcASEBNgE4AToBPAE+AUABRwFKAUwBTwFSAVUBWAFbAV4BYgFmAWoBbgFyAXQBdgF4AXoBfAF9AYABggGEAYYBiAGMAZABlAGYAZwBoAGkAagBrAGwAbQBtgG6AbsBvAG9Ab4BvwHBAcMBxQHGAcgBywHNAc8B0gHWAdoB3gHiAeQB6AHqAe4B8AH0AfYB+AH6AgACAgIDAgYCCQIKAg0CDwIQAhECFAIXAhkCHAIeAiACIgIkAjgCOgI8AkACQgJEAkgCSgJMAlECUwJVAnQCdgJ3AAYAAAACAAoAHAADAAAAAQisAAEALgABAAAADgADAAAAAQiaAAIAFAAcAAEAAAAOAAEAAgLPAtAAAgABAsICzQAAAAQAAAABAAgAAQCWAAgAFgAgACoANAA+AEgAUgBcAAEABAK6AAICswABAAQCtAACArMAAQAEArUAAgKzAAEABAK2AAICswABAAQCtwACArMAAQAEArgAAgKzAAEABAK5AAICswAHABAAFgAcACIAKAAuADQCugACAqkCtAACAq0CtQACAq4CtgACAq8CtwACArACuAACArECuQACArIAAgACAqkCqQAAAq0CswABAAEAAAABAAgAAQe+ANkAAQAAAAEACAABAAYAAQABAAQAwwDIARwBIQABAAAAAQAIAAIADAADAnoCbAJ7AAEAAwJ0AnYCdwABAAAAAQAIAAIApAAkAUMBSgFPAVUBWwFhAWUBaQFtAXEBiwGPAZMBlwGbAZ8BowGnAasBrwGzAbkBvQHFAc8B1QHZAd0B4QHnAe0B8wIGAg0C0wIUAAEAAAABAAgAAgBOACQBQgFJAU4BVAFaAWABZAFoAWwBcAGKAY4BkgGWAZoBngGiAaYBqgGuAbIBuAG8AcMBzQHUAdgB3AHgAeYB7AHyAgUCDALUAhMAAQAkAUABRwFMAVIBWAFeAWIBZgFqAW4BiAGMAZABlAGYAZwBoAGkAagBrAGwAbYBugG+AcgB0gHWAdoB3gHkAeoB8AICAgkCDwIQAAEAAAABAAgAAgCgAE0BNwE5ATsBPQE/AUEBSAFNAVMBWQFfAWMBZwFrAW8BcwF1AXcBegF9AYEBgwGGAYkBjQGRAZUBmQGdAaEBpQGpAa0BsQG1AbcBuwHBAcsB0wHXAdsB3wHjAeUB6QHrAe8B8QH1AfcB+QH7AgECAwIKAtICEQIYAhoCHQIfAiECIwIrAjkCOwI9AkECQwJFAkkCSwJNAlICVAJWAAEATQE2ATgBOgE8AT4BQAFHAUwBUgFYAV4BYgFmAWoBbgFyAXQBdgF4AXwBgAGCAYQBiAGMAZABlAGYAZwBoAGkAagBrAGwAbQBtgG6Ab4ByAHSAdYB2gHeAeIB5AHoAeoB7gHwAfQB9gH4AfoCAAICAgkCDwIQAhcCGQIcAh4CIAIiAiQCOAI6AjwCQAJCAkQCSAJKAkwCUQJTAlUABAAIAAEACAABAGAAAwCaAAwANgAFAAwAEgAYAB4AJAIdAAIBNwIfAAIBOQIhAAIBOwIjAAIBPQIrAAIBPwAFAAwAEgAYAB4AJAIcAAIBNwIeAAIBOQIgAAIBOwIiAAIBPQIkAAIBPwABAAMBNgHUAdUABAAJAAEACAABAh4AEQAoADYAWAB6AJwAvgDgAQIBJAFGAWgBigGkAcYB6AHyAhQAAQAEAmMABAHVAdQB5QAEAAoAEAAWABwCJwACAgECKAACAgMCKQACAgoCKgACAhEABAAKABAAFgAcAiwAAgIBAi0AAgIDAi4AAgIKAi8AAgIRAAQACgAQABYAHAIwAAICAQIxAAICAwIyAAICCgIzAAICEQAEAAoAEAAWABwCNAACAgECNQACAgMCNgACAgoCNwACAhEABAAKABAAFgAcAjkAAgIBAjsAAgIDAj0AAgIKAj8AAgIRAAQACgAQABYAHAI4AAICAQI6AAICAwI8AAICCgI+AAICEQAEAAoAEAAWABwCQQACAgECQwACAgMCRQACAgoCRwACAhEABAAKABAAFgAcAkAAAgIBAkIAAgIDAkQAAgIKAkYAAgIRAAQACgAQABYAHAJJAAICAQJLAAICAwJNAAICCgJPAAICEQAEAAoAEAAWABwCSAACAgECSgACAgMCTAACAgoCTgACAhEAAwAIAA4AFAJSAAICAQJUAAICAwJWAAICCgAEAAoAEAAWABwCUQACAgECUwACAgMCVQACAgoCVwACAhEABAAKABAAFgAcAlgAAgIBAlkAAgIDAloAAgIKAlsAAgIRAAEABAJdAAICEQAEAAoAEAAWABwCXgACAgECXwACAgMCYAACAgoCYQACAhEAAQAEAmIAAgIRAAEAEQE2AUkBTgFUAVoBigGLAY4BjwGSAZMBlgGXAeACBQIMAhMAAQAJAAEACAACACgAEQHAAcIBxAHHAcABwAHCAcQBxwHHAcoBzAHOAdECBAILAhIAAQARAboBuwG8Ab0BvgG/AcEBwwHFAcYByAHLAc0BzwIDAgoCEQABAAkAAQAIAAIAIgAOAcABwgHEAccBwAHAAcIBxAHHAccBygHMAc4B0QABAA4BugG7AbwBvQG+Ab8BwQHDAcUBxgHIAcsBzQHPAAYACQAKABoAPABWAHIAmAC+AQABIgFgAZoAAwABABIAAQHsAAAAAQAAAA8AAgACAXgBfwAAAYQBhwAIAAMAAAABAfAAAQASAAEAAAAQAAEAAgGGAYcAAwAAAAEB1gABABIAAQAAABEAAQADAVQBWgIMAAMAAAABABIAAQAcAAEAAAARAAEAAwFPAgYCFAABAAMBTgIFAhMAAwABABIAAQGUAAAAAQAAABIAAQAIATwBPQE+AT8CIgIjAiQCKwADAAAAAQB2AAEAEgABAAAAEgABABYBNgE4AToBPAE+AUoBSwFPAVEBVQFWAVsBXAHhAfgB+QIGAggCDQIOAhQCFgADAAAAAQA0AAEAEgABAAAAEgABAAYBeAF5AXwBfwGEAYUAAwAAAAEAEgABACIAAQAAABIAAQAGAXgBegF8AX0BhAGGAAEADAFiAWYBagFuAaABpAG2Ad4CAAICAgkCEAADAAEAEgABAC4AAAABAAAAEgACAAQBNgE/AAABhAGHAAoCHAIkAA4CKwIrABcAAQAEAb4BxQHIAc8AAwABABIAAQA0AAAAAQAAABIAAgAFATYBPwAAAXwBfwAKAYQBhwAOAhwCJAASAisCKwAbAAEAAgG6Ab0AAQAAAAEACAABAAYA1QABAAEAJgABAAkAAQAIAAIAFAAHAUsBUQFWAVwCCAIOAhYAAQAHAUoBTwFVAVsCBgINAhQAAQAJAAEACAACAAwAAwFXAV0CDgABAAMBVQFbAg0AAQAJAAEACAABAAYAAQABAAYBTwFVAVsCBgINAhQAAQAJAAEACAACACQADwFXAV0BeQF7AX8BfgGFAYcBvwHGAb8BxgHJAdACDgABAA8BVQFbAXgBegF8AX0BhAGGAboBvQG+AcUByAHPAg0AAAAAAAEAAAAAClExXk1eMEBoN0RvQHh0MnU3VWpyTUo0WDJYRUA=) format("truetype");
-    font-weight: 400; font-style: normal; font-display: swap;
-}
-@font-face {
-    font-family: "PeydaReport";
-    src: url(data:font/truetype;charset=utf-8;base64,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AowAPgKMAD4CjAA+AowAPgKMAD4D5QARA+UAEQPlABED5QARAkoABwJKAAcCSgAHAkoABwIUACQCFAAkAhQAJAHsAB8B7AAfAewAHwHsAB8B7AAfAewAHwHsAB8B7AAfAewAGQMeAB8BugAgAboAGAG6ACABugAgAlUAJQIdAB8CHQAfAhEAHwIQAB8CEQAfAfEAHwIQAB8B8QAfAhAAHwIQAB8CEAAdAhoAIAIaACACGgAgAjgAGwD9ADkBEAA5ATj/zgE7ABkA9QA0ARL/+gD0/+UA/f/nAggAOQEHAD4BB/+5AQcALQEH/9kCOAA5AjgAOQI4ADkCOAA2AjgAOQIIACACCAAgAggAIAIIACACCAAgAggAIAIIACACCAAgA08AIAIdADgBmgA5AZr//AGaADABvgAgAb4AGgG+ACABvgAgAlUALAGPABoBj//ZAY8AGgGPABoCOAA1AjgANQI4ADUCOAA1AjgANQI4ADUCOAA1AjgANQMKABADCgAQAwoAEAMKABAB8wAMAfMADAHzAAwB1gAoAdYAKAHWACgB0wAxANoANAEIADUA0f/UARX/5gDq/+UBCgAGATb/7QFL/+0BS//QAUr/ywNiADQDgQA0AX7/8gFN//IBff/yAc3/8gJD//IDYgA0A4EANAF+//IBTf/yAc3/8gNiADQDgQA0AX7/8gF9//IBzf/yAkP/8gNiADQDgQA0AX7/8gF9//IBzf/yAgX/8gNiADQDgQA0AX7/8gF9//IBzf/yAfP/8gNiADQDgQA0AX7/8gFN//ICrwA2Ar4ANgKt//ICmf/yAr0ANgK+ADYCrf/yApn/8gKrADYCvgA2Aq3/8gKX//ICrwA2Ar4ANgKt//ICmf/yAjgANgJPADYCOAA2Ak8ANgI4ADYCTwA2AWj/2AEj/9oBiv/YAUX/2gFo/9gBiv/YAUX/2gEj/9oBaP/YAYr/2AFo/9gBiv/YAWj/2AEj/9oBxv/YAUX/2gSoADQE0wA2AwL/8gLh//IEqAA0BNMANgMC//IC4f/yBN8ANAUEADQDRf/yAx3/8gTfADQFBAA0A0X/8gMd//IC4gA2Aw4ANgLi//ICtv/yAuIANgMOADYC4v/yArb/8gI6ADYCdgA2Akb/8QHv//ICOgA2AnYANgJG//EB7//yA2YANgOyADYB9P/yAeP/8gNmADYDsgA2AfT/8gHj//IDZgA2A7IANgH0//IB4//yAssANgLjADYCywA2AuMANgH0//IB4//yA2MANgOBADYCAf/yAZj/8gOCADQDgwA0BGIANgPpADQEpQA2AgH/8gN2//IBmP/yAZj/8gMz//IDggA0A4QANARiADYD6QA0BKUANgIB//IDdv/NAZj/8gGY//IDM//NAskANQMCADUBVv/yAQ//8gLLADUDBAA1AVb/8gEP//ICsgA0AuAANAI1//ICEf/yAskANAL5ADQBfv/yAU3/8gLJADQC+QA0AfoANAIMADYCfv/yAwP/8gH6ADQCDAA2AfoANAI7ACoCXf/yAU3/8gH6ADQCDAA2AwP/8gJUADIDQf/yAwP/8gH6ADQCDAA2AfoANAI7ACoB9gAyAgkAMgH2ADICBgAyAfYAMgIGADIB9gAyAgYAMgLnADQC6AA0AucANALoADQCmgA0AX7/8gF9//IBzf/yAe//8gLoABYC6QA0ApoANAF+//IBTf/yAc3/8gLoABQC5wA0AugANAKaADQBfv/yAX3/8gHN//IB5v/yAmYANAKaADQCywA0AvoANAC0AAACLwAlAmwAJQIvAAgCbAAOAi8AJQJsACUCUv/7Aov/9wIv/+QDlwA0BAUANAObADQDmwA0A6AACwObADQCbP/UA/8ANAP/ADQEBAA5A/8ANAObADQDmwA0A54ANAObADQDnAA0A5wANAOcADQDnAA0BUkANAVsADQFSQA0BWwANAVJADQFbAA0BUkANAVsADQFSQA0BWwANAVJADQFbAA0BUkANAVsADQFSQA0BWwANAWLADQFrgA0BYsANAWuADQFiwA0BbAANAWLADQFrgA0Ba4ANAWLADQFrgA0BYsANAWuADQFiwA0Ba4ANAWLADQDmwA0A5cANAOXADQDlwA0BAUANAQFADQDlwA0A5cANAOXAC0DlwA0BAUANAUPADQBXwAtAQ4AKgEfADkA8wAjAi8AJwLzACcB1QAyAp4AIgItABkCZAANAmQADQIMAB4B6gA0APMAIwIvACcC8wAnAo0AJwKcACICUQAnAmQADQJkAA0CDAAeAlIAKQJkAA0COgAAB30AAAAAAAAAAAAAAAAAAAAAAAACOgAAAjoAAAJfAAACXwAAAn4AAAK3AAACYQAAAqsAAAKZAAACbAAAAwUAAAFKABkBDgAt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AGEAQgBvAGwAZAAzAC4AMAAwADAAOwBLAEgARABNADsAUABlAHkAZABhAC0AQgBvAGwAZABQAGUAeQBkAGEAIABCAG8AbABkAFYAZQByAHMAaQBvAG4AIAAzAC4AMAAwADAAUABlAHkAZABhAC0AQgBvAGwAZABQAGUAeQBkAGEAIABpAHMAIABhACAAdAByAGEAZABlAG0AYQByAGsAIABvAGYAIAB3AHcAdwAuAGYAbwBuAHQAaQByAGEAbgAuAGMAbwBtAE4AYQBzAGUAcgAgAEsAaABhAGQAZQBtAFQAbwAgAHUAcwBlACAAdABoAGkAcwAgAGYAbwBuAHQALAAgAGkAdAAgAGkAcwAgAG4AZQBjAGUAcwBzAGEAcgB5ACAAdABvACAAbwBiAHQAYQBpAG4AIAB0AGgAZQAgAGwAaQBjAGUAbgBzAGUAIABmAHIAbwBtACAAdwB3AHcALgBmAG8AbgB0AGkAcgBhAG4ALgBjAG8AbQB3AHcAdwAuAGYAbwBuAHQAaQByAGEAbgAuAGMAbwBtAGgAdAB0AHAAcwA6AC8ALwBkAHIAaQBiAGIAYgBsAGUALgBjAG8AbQAvAG4AYQBzAGUAcgBrAGgAYQBkAGUAbQBmAG8AbgB0AGkAcgBhAG4ALgBjAG8AbQAvAGwAaQBjAGUAbgBzAGUAcwAAAAIAAAAAAAD/nAAyAAAAAAAAAAAAAAAAAAAAAAAAAAAC1gAAAAEAAgADACQAJQAmACcAKAApACoAKwAsAC0ALgAvADAAMQAyADMANAA1ADYANwA4ADkAOgA7ADwAPQBEAEUARgBHAEgASQBKAEsATABNAE4ATwBQAFEAUgBTAFQAVQBWAFcAWABZAFoAWwBcAF0AEwAUABUAFgAXABgAGQAaABsAHAARAA8AHQAeABAADgANAEEA2QASAB8AIAAhAAQAIgAKAAUABgAjAAcACAAJAAsADABeAF8AYAA+AD8AQAC2ALcAtAC1AMQAxQCHAEIAsgCzAIwAigCLAL0AhACFAJYA7wCTAPAAuADoAKsAwwCjAKIAgwC8AIgAhgCCAMIAYQC+AL8BAgEDAMkBBADHAGIArQEFAQYAYwCuAJAA/QD/AGQBBwDpAQgBCQBlAQoAyADKAQsAywEMAQ0BDgD4AQ8BEAERAMwAzQDOAPoAzwESARMBFAEVARYBFwDiARgBGQEaAGYBGwDQANEAZwDTARwBHQCRAK8AsADtAR4BHwEgASEA5AD7ASIBIwEkASUBJgEnANQA1QBoANYBKAEpASoBKwEsAS0BLgEvAOsBMAC7ATEBMgDmATMAaQE0AGsAbABqATUBNgBuAG0AoAD+AQAAbwE3AOoBOAEBAHABOQByAHMBOgBxATsBPAE9APkBPgE/AUAA1wB0AHYAdwFBAHUBQgFDAUQBRQFGAUcA4wFIAUkBSgB4AUsAeQB7AHwAegFMAU0AoQB9ALEA7gFOAU8BUAFRAOUA/AFSAIkBUwFUAVUBVgB+AIAAgQB/AVcBWAFZAVoBWwFcAV0BXgDsAV8AugFgAOcBYQFiAWMBZAFlAWYBZwFoAWkBagFrAWwBbQFuAW8BcAFxAXIBcwF0AXUBdgF3AXgBeQF6AXsBfAF9AX4BfwGAAYEBggGDAYQBhQGGAYcBiAGJAYoBiwGMAY0BjgGPAZABkQGSAZMBlAGVAZYBlwGYAZkBmgGbAZwBnQGeAZ8BoAGhAaIBowGkAaUBpgGnAagBqQGqAasBrAGtAa4BrwGwAbEBsgGzAbQBtQG2AbcBuAG5AboBuwG8Ab0BvgG/AcABwQHCAcMBxAHFAcYBxwHIAckBygHLAcwBzQHOAc8B0AHRAdIB0wHUAdUB1gHXAdgB2QHaAdsB3AHdAd4B3wHgAeEB4gHjAeQB5QHmAecB6AHpAeoB6wHsAe0B7gHvAfAB8QHyAfMB9AH1AfYB9wH4AfkB+gH7AfwB/QH+Af8CAAIBAgICAwIEAgUCBgIHAggCCQIKAgsCDAINAg4CDwIQAhECEgITAhQCFQIWAhcCGAIZAhoCGwIcAh0CHgIfAiACIQIiAiMCJAIlAiYCJwIoAikCKgIrAiwCLQIuAi8CMAIxAjICMwI0AjUCNgI3AjgCOQI6AjsCPAI9Aj4CPwJAAkECQgJDAkQCRQJGAkcCSAJJAkoCSwJMAk0CTgJPAlACUQJSAlMCVAJVAlYCVwJYAlkCWgJbAlwCXQJeAl8CYAJhAmICYwJkAmUCZgJnAmgCaQJqAmsCbAJtAm4CbwJwAnECcgJzAnQCdQJ2AncCeAJ5AnoCewJ8An0CfgJ/AoACgQKCAoMChAKFAoYChwKIAokCigKLAowCjQKOAo8CkAKRApICkwKUApUClgKXApgCmQKaApsCnAKdAp4CnwKgAqECogKjAqQCpQKmAqcCqAKpAqoCqwKsAq0CrgKvArACsQKyArMCtAK1ArYCtwK4ArkCugK7ArwCvQK+Ar8CwACpAKoCwQLCAsMCxALFAsYCxwLIAskCygLLAswCzQLOAs8C0ALRAtIC0wLUAtUC1gLXAtgC2QLaAtsC3ALdAt4C3wLgAuEC4gLjAuQC5QLmAucC6ALpAuoC6wLsAu0C7gLvAvAC8QLyAvMC9AL1AvYC9wL4AvkC+gL7AOEC/AL9Av4C/wd1bmkwNjVBB3VuaTA2NUIGQWJyZXZlB0FtYWNyb24HQW9nb25lawpDZG90YWNjZW50BkRjYXJvbgZEY3JvYXQGRWNhcm9uCkVkb3RhY2NlbnQHRW1hY3JvbgdFb2dvbmVrB3VuaTAxOEYHdW5pMDEyMgpHZG90YWNjZW50BEhiYXIHSW1hY3JvbgdJb2dvbmVrB3VuaTAxMzYGTGFjdXRlBkxjYXJvbgd1bmkwMTNCBk5hY3V0ZQZOY2Fyb24HdW5pMDE0NQNFbmcNT2h1bmdhcnVtbGF1dAdPbWFjcm9uBlJhY3V0ZQZSY2Fyb24HdW5pMDE1NgZTYWN1dGUHdW5pMDIxOAd1bmkxRTlFBFRiYXIGVGNhcm9uB3VuaTAxNjIHdW5pMDIxQQ1VaHVuZ2FydW1sYXV0B1VtYWNyb24HVW9nb25lawVVcmluZwZXYWN1dGULV2NpcmN1bWZsZXgJV2RpZXJlc2lzBldncmF2ZQtZY2lyY3VtZmxleAZZZ3JhdmUGWmFjdXRlClpkb3RhY2NlbnQGYWJyZXZlB2FtYWNyb24HYW9nb25lawpjZG90YWNjZW50BmRjYXJvbgZlY2Fyb24KZWRvdGFjY2VudAdlbWFjcm9uB2VvZ29uZWsHdW5pMDI1OQd1bmkwMTIzCmdkb3RhY2NlbnQEaGJhcglpLmxvY2xUUksHaW1hY3Jvbgdpb2dvbmVrB3VuaTAxMzcGbGFjdXRlBmxjYXJvbgd1bmkwMTNDBm5hY3V0ZQZuY2Fyb24HdW5pMDE0NgNlbmcNb2h1bmdhcnVtbGF1dAdvbWFjcm9uBnJhY3V0ZQZyY2Fyb24HdW5pMDE1NwZzYWN1dGUHdW5pMDIxOQR0YmFyBnRjYXJvbgd1bmkwMTYzB3VuaTAyMUINdWh1bmdhcnVtbGF1dAd1bWFjcm9uB3VvZ29uZWsFdXJpbmcGd2FjdXRlC3djaXJjdW1mbGV4CXdkaWVyZXNpcwZ3Z3JhdmULeWNpcmN1bWZsZXgGemFjdXRlCnpkb3RhY2NlbnQHdW5pMDYyMQd1bmkwNjI3DHVuaTA2MjcuZmluYQd1bmkwNjIzDHVuaTA2MjMuZmluYQd1bmkwNjI1DHVuaTA2MjUuZmluYQd1bmkwNjIyDHVuaTA2MjIuZmluYQd1bmkwNjcxDHVuaTA2NzEuZmluYQd1bmkwNjZFDHVuaTA2NkUuZmluYQx1bmkwNjZFLm1lZGkMdW5pMDY2RS5pbml0EHVuaTA2NkUuaW5pdC5hbHQRdW5pMDY2RS5pbml0LmFsdDIRdW5pMDY2RS5pbml0LmFsdDMHdW5pMDYyOAx1bmkwNjI4LmZpbmEMdW5pMDYyOC5tZWRpDHVuaTA2MjguaW5pdBB1bmkwNjI4LmluaXQuYWx0B3VuaTA2N0UMdW5pMDY3RS5maW5hDHVuaTA2N0UubWVkaQx1bmkwNjdFLmluaXQQdW5pMDY3RS5pbml0LmFsdBF1bmkwNjdFLmluaXQuYWx0Mgd1bmkwNjJBDHVuaTA2MkEuZmluYQx1bmkwNjJBLm1lZGkMdW5pMDYyQS5pbml0EHVuaTA2MkEuaW5pdC5hbHQRdW5pMDYyQS5pbml0LmFsdDIHdW5pMDYyQgx1bmkwNjJCLmZpbmEMdW5pMDYyQi5tZWRpDHVuaTA2MkIuaW5pdBB1bmkwNjJCLmluaXQuYWx0EXVuaTA2MkIuaW5pdC5hbHQyB3VuaTA2NzkMdW5pMDY3OS5maW5hDHVuaTA2NzkubWVkaQx1bmkwNjc5LmluaXQHdW5pMDYyQwx1bmkwNjJDLmZpbmEMdW5pMDYyQy5tZWRpDHVuaTA2MkMuaW5pdAd1bmkwNjg2DHVuaTA2ODYuZmluYQx1bmkwNjg2Lm1lZGkMdW5pMDY4Ni5pbml0B3VuaTA2MkQMdW5pMDYyRC5maW5hDHVuaTA2MkQubWVkaQx1bmkwNjJELmluaXQHdW5pMDYyRQx1bmkwNjJFLmZpbmEMdW5pMDYyRS5tZWRpDHVuaTA2MkUuaW5pdAd1bmkwNjJGDHVuaTA2MkYuZmluYQd1bmkwNjMwDHVuaTA2MzAuZmluYQd1bmkwNjg4DHVuaTA2ODguZmluYQd1bmkwNjMxC3VuaTA2MzEuYWx0DHVuaTA2MzEuZmluYRB1bmkwNjMxLmZpbmEuYWx0B3VuaTA2MzIMdW5pMDYzMi5maW5hEHVuaTA2MzIuZmluYS5hbHQLdW5pMDYzMi5hbHQHdW5pMDY5MQx1bmkwNjkxLmZpbmEHdW5pMDY5NQx1bmkwNjk1LmZpbmEHdW5pMDY5OAt1bmkwNjk4LmFsdAx1bmkwNjk4LmZpbmEQdW5pMDY5OC5maW5hLmFsdAd1bmkwNjMzDHVuaTA2MzMuZmluYQx1bmkwNjMzLm1lZGkMdW5pMDYzMy5pbml0B3VuaTA2MzQMdW5pMDYzNC5maW5hDHVuaTA2MzQubWVkaQx1bmkwNjM0LmluaXQHdW5pMDYzNQx1bmkwNjM1LmZpbmEMdW5pMDYzNS5tZWRpDHVuaTA2MzUuaW5pdAd1bmkwNjM2DHVuaTA2MzYuZmluYQx1bmkwNjM2Lm1lZGkMdW5pMDYzNi5pbml0B3VuaTA2MzcMdW5pMDYzNy5maW5hDHVuaTA2MzcubWVkaQx1bmkwNjM3LmluaXQHdW5pMDYzOAx1bmkwNjM4LmZpbmEMdW5pMDYzOC5tZWRpDHVuaTA2MzguaW5pdAd1bmkwNjM5DHVuaTA2MzkuZmluYQx1bmkwNjM5Lm1lZGkMdW5pMDYzOS5pbml0B3VuaTA2M0EMdW5pMDYzQS5maW5hDHVuaTA2M0EubWVkaQx1bmkwNjNBLmluaXQHdW5pMDY0MQx1bmkwNjQxLmZpbmEMdW5pMDY0MS5tZWRpDHVuaTA2NDEuaW5pdAd1bmkwNkE0DHVuaTA2QTQuZmluYQx1bmkwNkE0Lm1lZGkMdW5pMDZBNC5pbml0B3VuaTA2QTEMdW5pMDZBMS5maW5hDHVuaTA2QTEubWVkaQx1bmkwNkExLmluaXQHdW5pMDY2Rgx1bmkwNjZGLmZpbmEHdW5pMDY0Mgx1bmkwNjQyLmZpbmEMdW5pMDY0Mi5tZWRpDHVuaTA2NDIuaW5pdAd1bmkwNjQzDHVuaTA2NDMuZmluYQx1bmkwNjQzLm1lZGkMdW5pMDY0My5pbml0B3VuaTA2QTkLdW5pMDZBOS5hbHQMdW5pMDZBOS5zczAxDHVuaTA2QTkuZmluYRF1bmkwNkE5LmZpbmEuc3MwMQx1bmkwNkE5Lm1lZGkRdW5pMDZBOS5tZWRpLnNzMDEMdW5pMDZBOS5pbml0EHVuaTA2QTkuaW5pdC5hbHQRdW5pMDZBOS5pbml0LnNzMDEHdW5pMDZBRgt1bmkwNkFGLmFsdAx1bmkwNkFGLnNzMDEMdW5pMDZBRi5maW5hEXVuaTA2QUYuZmluYS5zczAxDHVuaTA2QUYubWVkaRF1bmkwNkFGLm1lZGkuc3MwMQx1bmkwNkFGLmluaXQQdW5pMDZBRi5pbml0LmFsdBF1bmkwNkFGLmluaXQuc3MwMQd1bmkwNjQ0DHVuaTA2NDQuZmluYQx1bmkwNjQ0Lm1lZGkMdW5pMDY0NC5pbml0B3VuaTA2QjUMdW5pMDZCNS5maW5hDHVuaTA2QjUubWVkaQx1bmkwNkI1LmluaXQHdW5pMDY0NQx1bmkwNjQ1LmZpbmEMdW5pMDY0NS5tZWRpDHVuaTA2NDUuaW5pdAd1bmkwNjQ2DHVuaTA2NDYuZmluYQx1bmkwNjQ2Lm1lZGkMdW5pMDY0Ni5pbml0B3VuaTA2QkEMdW5pMDZCQS5maW5hB3VuaTA2NDcMdW5pMDY0Ny5maW5hDHVuaTA2NDcubWVkaQx1bmkwNjQ3LmluaXQHdW5pMDZDMAx1bmkwNkMwLmZpbmEHdW5pMDZDMQx1bmkwNkMxLmZpbmEMdW5pMDZDMS5tZWRpDHVuaTA2QzEuaW5pdAd1bmkwNkMyDHVuaTA2QzIuZmluYQd1bmkwNkJFDHVuaTA2QkUuZmluYQx1bmkwNkJFLm1lZGkMdW5pMDZCRS5pbml0B3VuaTA2MjkMdW5pMDYyOS5maW5hB3VuaTA2QzMMdW5pMDZDMy5maW5hB3VuaTA2NDgMdW5pMDY0OC5maW5hB3VuaTA2MjQMdW5pMDYyNC5maW5hB3VuaTA2QzYMdW5pMDZDNi5maW5hB3VuaTA2QzcMdW5pMDZDNy5maW5hB3VuaTA2NDkMdW5pMDY0OS5maW5hB3VuaTA2NEEMdW5pMDY0QS5maW5hEXVuaTA2NEEuZmluYS5zczAxDHVuaTA2NEEubWVkaQx1bmkwNjRBLmluaXQQdW5pMDY0QS5pbml0LmFsdBF1bmkwNjRBLmluaXQuYWx0Mgd1bmkwNjI2DHVuaTA2MjYuZmluYRF1bmkwNjI2LmZpbmEuc3MwMQx1bmkwNjI2Lm1lZGkMdW5pMDYyNi5pbml0EHVuaTA2MjYuaW5pdC5hbHQHdW5pMDZDRQd1bmkwNkNDDHVuaTA2Q0MuZmluYRF1bmkwNkNDLmZpbmEuc3MwMQx1bmkwNkNDLm1lZGkMdW5pMDZDQy5pbml0EHVuaTA2Q0MuaW5pdC5hbHQRdW5pMDZDQy5pbml0LmFsdDIHdW5pMDZEMgx1bmkwNkQyLmZpbmEHdW5pMDc2OQx1bmkwNzY5LmZpbmEHdW5pMDY0MAt1bmkwNjQ0MDYyNxB1bmkwNjQ0MDYyNy5maW5hC3VuaTA2NDQwNjIzEHVuaTA2NDQwNjIzLmZpbmELdW5pMDY0NDA2MjUQdW5pMDY0NDA2MjUuZmluYQt1bmkwNjQ0MDYyMhB1bmkwNjQ0MDYyMi5maW5hC3VuaTA2NDQwNjcxEHVuaTA2NkUwNkNDLmZpbmEVdW5pMDY2RTA2Q0MuX2ZpbmEuYWx0EHVuaTA2MjgwNjQ5LmZpbmEQdW5pMDYyODA2NEEuZmluYRB1bmkwNjI4MDYyNi5maW5hEHVuaTA2MjgwNkNDLmZpbmEQdW5pMDY0NDA2NzEuZmluYRB1bmkwNjdFMDY0OS5maW5hEHVuaTA2N0UwNjRBLmZpbmEQdW5pMDY3RTA2MjYuZmluYRB1bmkwNjdFMDZDQy5maW5hEHVuaTA2MkEwNjQ5LmZpbmEQdW5pMDYyQTA2NEEuZmluYRB1bmkwNjJBMDYyNi5maW5hEHVuaTA2MkEwNkNDLmZpbmEQdW5pMDYyQjA2NDkuZmluYRB1bmkwNjJCMDY0QS5maW5hEHVuaTA2MkIwNjI2LmZpbmEQdW5pMDYyQjA2Q0MuZmluYQt1bmkwNjMzMDY0ORB1bmkwNjMzMDY0OS5maW5hC3VuaTA2MzMwNjRBEHVuaTA2MzMwNjRBLmZpbmELdW5pMDYzMzA2MjYQdW5pMDYzMzA2MjYuZmluYQt1bmkwNjMzMDZDQxB1bmkwNjMzMDZDQy5maW5hC3VuaTA2MzQwNjQ5EHVuaTA2MzQwNjQ5LmZpbmELdW5pMDYzNDA2NEEQdW5pMDYzNDA2NEEuZmluYQt1bmkwNjM0MDYyNhB1bmkwNjM0MDYyNi5maW5hC3VuaTA2MzQwNkNDEHVuaTA2MzQwNkNDLmZpbmELdW5pMDYzNTA2NDkQdW5pMDYzNTA2NDkuZmluYQt1bmkwNjM1MDY0QRB1bmkwNjM1MDY0QS5maW5hC3VuaTA2MzUwNjI2EHVuaTA2MzUwNjI2LmZpbmELdW5pMDYzNTA2Q0MQdW5pMDYzNTA2Q0MuZmluYRp1bmkwNjM2X2ZhcnNpX3VuaTA2Q0MuZmluYQt1bmkwNjM2MDY0ORB1bmkwNjM2MDY0OS5maW5hC3VuaTA2MzYwNjRBEHVuaTA2MzYwNjRBLmZpbmELdW5pMDYzNjA2MjYQdW5pMDYzNjA2MjYuZmluYQt1bmkwNjM2MDZDQxB1bmkwNjQ2MDY0OS5maW5hEHVuaTA2NDYwNjRBLmZpbmEQdW5pMDY0NjA2MjYuZmluYRB1bmkwNjQ2MDZDQy5maW5hEHVuaTA2NEEwNjRBLmZpbmEQdW5pMDY0QTA2Q0MuZmluYRB1bmkwNjI2MDY0OS5maW5hEHVuaTA2MjYwNjRBLmZpbmEQdW5pMDYyNjA2MjYuZmluYRB1bmkwNjI2MDZDQy5maW5hEHVuaTA2Q0MwNkNDLmZpbmEHdW5pRkRGMgd1bmkwNjZCB3VuaTA2NkMHdW5pMDY2MAd1bmkwNjYxB3VuaTA2NjIHdW5pMDY2Mwd1bmkwNjY0B3VuaTA2NjUHdW5pMDY2Ngd1bmkwNjY3B3VuaTA2NjgHdW5pMDY2OQd1bmkwNkYwB3VuaTA2RjEHdW5pMDZGMgd1bmkwNkYzB3VuaTA2RjQHdW5pMDZGNQd1bmkwNkY2B3VuaTA2RjcHdW5pMDZGOAd1bmkwNkY5DHVuaTA2RjQudXJkdQx1bmkwNkY3LnVyZHUHdW5pMzAwMAd1bmkyMDVGB3VuaTIwMEUHdW5pMjAwRgd1bmkyMDBEB3VuaTIwMEMHdW5pMjAwMQd1bmkyMDAzB3VuaTIwMDAHdW5pMjAwMgd1bmkyMDA1B3VuaTIwMEEHdW5pMjAyRgd1bmkyMDA2B3VuaTIwMDkHdW5pMjAwNAd1bmkyMDBCB3VuaTA2RDQHdW5pMDYwQwd1bmkwNjFCB3VuaTA2MUYHdW5pMDY2RAd1bmlGRDNFB3VuaUZEM0YHdW5pRkRGQwd1bmkwNjZBB3VuaTA2MTUKZG90YWJvdmVhcgpkb3RiZWxvd2FyC2RvdGNlbnRlcmFyFnR3b2RvdHN2ZXJ0aWNhbGFib3ZlYXIWdHdvZG90c3ZlcnRpY2FsYmVsb3dhchh0d29kb3RzaG9yaXpvbnRhbGFib3ZlYXIYdHdvZG90c2hvcml6b250YWxiZWxvd2FyFHRocmVlZG90c2Rvd25hYm92ZWFyFHRocmVlZG90c2Rvd25iZWxvd2FyEnRocmVlZG90c3VwYWJvdmVhchJ0aHJlZWRvdHN1cGJlbG93YXIHd2FzbGFhcgttaW5pS2VoZWhhchFnYWZzYXJrYXNoYWJvdmVhchVnYWZzYXJrYXNoYWJvdmVhci5hbHQSZ2Fmc2Fya2FzaGNlbnRlcmFyB3VuaTA2NzAHdW5pMDY1Ngd1bmkwNjU0B3VuaTA2NTUHdW5pMDY0Qgd1bmkwNjRDB3VuaTA2NEQHdW5pMDY0RQd1bmkwNjRGB3VuaTA2NTAHdW5pMDY1MQt1bmkwNjUxMDY0Qgt1bmkwNjUxMDY0Qwt1bmkwNjUxMDY0RAt1bmkwNjUxMDY0RQt1bmkwNjUxMDY0Rgt1bmkwNjUxMDY1MAt1bmkwNjUxMDY3MAd1bmkwNjUyB3VuaTA2NTMIc2FyZXlhYXIRc2V2ZW5zYW1sbC5ib3R0b20Qc2V2ZW5zbWFsbC5hYm92ZQ55ZWhzYW1sLmJvdHRvbQ15ZWhzbWFsLmFib3ZlB3VuaTAzMDgHdW5pMDMwNwlncmF2ZWNvbWIJYWN1dGVjb21iB3VuaTAzMEIHdW5pMDMwMgd1bmkwMzBDB3VuaTAzMDYHdW5pMDMwQQl0aWxkZWNvbWIHdW5pMDMwNAd1bmkwMzEyB3VuaTAzMjYHdW5pMDMyNwd1bmkwMzI4DHVuaTA2Y2UuZmluYQx1bmkwNmNlLmluaXQMdW5pMDZjZS5tZWRpDHVuaTA2ZDUuZmluYQAAAQACAA4AAAAAAAAANgACAAYAgwCEAAMBNQIbAAECHAJjAAICmAK8AAMCwgLQAAMC0gLVAAEAAQACAAAADAAAABgAAQAEAqoCrAKvArIAAQAVAIMAhAKYAqQCpQKpAqsCrQKuArACsQKzArQCtQK2ArcCuAK5AroCuwK8AAEAAAAKAH4AugADREZMVAAUYXJhYgAYbGF0bgAuAFQAAAAKAAFVUkQgAFAAAP//AAMAAAADAAQALgAHQVpFIAA6Q1JUIAA6S0FaIAA6TU9MIAA6Uk9NIAA6VEFUIAA6VFJLIAA6AAD//wADAAEAAgAEAAD//wADAAAAAgAEAAVrZXJuACBrZXJuACBtYXJrACptYXJrACpta21rADQAAAADAAAAAQACAAAAAwADAAQABQAAAAIABgAHAAgAEgXyFvgZmhpOJ5Qx8DJsAAIACAACAAoEKgABAEQABAAAAB0C5ALkAIIAggLyAIgAtgEYARgBJgGAAYoB/AIKAnwC1gLWAuQC5ALyAvIDCAMOAxwD6gPwBAYEEAQWAAEAHQBCAEMARABFAEYASABLAFEAUgBYAFkAWgBcAF0AXgBhAGMAZABlAGgAaQB3AHgAeQCBAIICcAJ2AncAAQAZ//gACwAE/+gADf/7ABcADQAdAAUAIP/xACH/7wAi//EAJP/yACz/8QAu/+8AMP/1ABgABP/eAAb/8AAK/+0ADf/0ABL/7QAU/+0AHv/gACD/2wAh/9sAIv/bACT/3QAq/+kAK//pACz/2wAt/+kALv/bAC//6QAw/+AAMv/rADP/7wA0//AANv/uADf/6gBLAAAAAwBL/78AVP/3AFf/7wAWAAb/8QAK//AAEv/wABT/8AAe//AAIP/rACH/7AAi/+sAI//zACcAHAAq//EAK//xACz/6wAt//EALv/sAC//8QAw//MAMv/wADP/8wA0/+4ANv/zAFr/8gACAFwABABfAAQAHAAEAAoABv/6AAr/9wAS//cAFP/3ABYABQAe//wAIP/0ACH/9gAi//QAIwAFACcAGwAqAAsAKwALACz/9AAtAAsALv/2AC8ACwAwAAsAMQAJADL/+QAz//sANP/3ADUACQA2//oANwAIAFgABABa//gAAwBZ//IAXP/4AF//7wAcAAQACwAG//UACv/wABL/8AAU//AAFgAFAB7/9gAg/+oAIf/rACL/6gAj//gAJwALACoADQArAA0ALP/qAC0ADQAu/+sALwANADAADQAx//wAMv/zADP/8gA0//EANQAJADb/8QA3AAoAWAAEAFr/7wAWAAb/6AAK/+YAEv/mABT/5gAW//MAF//JABj/5AAZ/9IAGv/cABz/uAAg//MAIv/zACP/8AAs//MAMf/uADP/7AA0//AANv/rAFH/tQBS/7UAYf+8AGP/vAADAEv/tgBU/+gAV//tAAMAGf/eACP/9AAz/+8ABQAZ/+wAG//kACP/9gAz//kANf/tAAEAKf+7AAMAF//rABkABAAc/+cAMwAE//sABf/5AAb/9gAH//kACP/5AAn/+QAK//QAC//5AAz/+QANAAYADv/5AA//+QAQ//kAEf/5ABL/9AAT//kAFP/0ABX/+QAW//0AF//PABj/8wAZ/+QAGv/rABv/+AAc/80AHf/6AB7/8wAf//QAIP/vACH/7wAi/+8AI//wACX/9AAm//QAJ//0ACj/9AAp//QAKv/0ACv/9AAs/+8ALf/0AC7/7wAv//QAMP/yADH/8AAy//EAM//sADT/7wA1//QANv/pADf/8wABABn/+QAFABn/6wAb/+4AI//zADMABAA1/+0AAgJ3AAACeAAAAAECcP+PAAICcAAAAnj/tQACAMgABAAAAOIBBAAEABcAAP/U/94AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/y/+8AAUABf/4/+cAEf+O//X/9f/sAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/8v/wwAAAAAAAP/zAAD/y//6AAT/+AAF//X/8v/xAAT/2wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/KAAAAAAAAAAD/6P/5AAAAAAAAAAD/9/+P//b/+gACAAEACwBCAEMARABFAEYAUQBSAGcAaABpAHEAAgAFAEIAQwABAEYARgACAFEAUgADAGcAaQACAHEAcQACAAIAHQAEAAQADAAGAAYAAwAKAAoABAANAA0ADQASABIABAAUABQABAAWABYADgAXABcAAQAYABgABQAaABoABgAcABwAAgAdAB0ADwAeAB4AEAAgACAAEgAhACEAFAAiACIAEgAkACQAFQAsACwAEgAuAC4AFAAwADAAFgAxADEACQA0ADQACgA2ADYACwA3ADcAEQBCAEMAEwBGAEYABwBRAFIACABnAGkABwBxAHEABwACAAgAAgAKCAAAAQB0AAQAAAA1AJwAxgEIARYBPAFGAdwCMAIwAe4B9AICAjACMAKkAjYCpALGAtwC8gMQAxoDxAPOBDgEWgRoBaoEigSgBMoFLAVWBToFUAVWBVYFfAWqBjIF2AX2BiAGMgZUBs4G8Ac6B1gHcgeEB8oH2AACAAYABAAgAAAAIgAlAB0AKAA3ACEAVABUADEAVwBXADIAagBrADMACgAZ/7IAI//3ADP/9ABI/+kAUP/3AFwACgBe/9gAXwALAGr/5wBr//IAEAAE//kADQAJABcACQAZ//gAGgABABv/9gAc/+sAJP/6ADMAAgA0AAIANQACADYAAgBQAAQAXAAKAF7/6wBf//gAAwAj//wAMwAAAGsABgAJABn/9wAb/+8ANQABAEv/7QBQAAQAWf/yAFz/+wBe/+kAX//yAAIAIwABADMABQAlAAT/8QAGAAUACgAFAA3//gASAAUAFAAFABYABQAbAAIAHv/4ACD/8AAh/+8AIv/wACP//AAk/+sAKv/xACv/8QAs//AALf/xAC7/7wAv//EAMP/xADEABAAy//UAMwAFADT//gA1AAIANv//ADf/+wBC/9kAQ//ZAEb/9QBL/9YAZP/ZAGX/2QBo//UAaf/1AHb/2QAEABn/+QAj//oAM//8AF7/8wABACP/+AADACP/8QAz//MAawAFAAsAGf/LACP/9gAz/+YASP+8AFAABgBcAAUAXv+3AF8ABwBq/7sAa//NAHcAGwABACP/9gAbAAT/8wAN//8AGf/4ABv/7wAc/+wAHQAEAB7/+wAgAAIAIQACACIAAgAkAAIALAACAC4AAgBC/80AQ//NAEYABABL/9kAWf/zAFz/+wBe//AAX//4AGT/zQBl/80AaAAEAGkABAB2/80AgQAEAAgAGf/3ABv/8ABL/+4AUAAEAFn/7wBc//oAXv/oAF//8AAFABn/+AAb//YAXAAIAF7/7QBfAAgABQAZ//kAG//7ACP/9gAz//wANf/5AAcAI//wADP/2AA1/9oAS//QAFT/9gBX//sAawAEAAIAI//4AEv/6wAqAAT/5gAG//gACv/3AA3//gAS//cAFP/3ABb/+AAe/+sAIP/kACH/5gAi/+QAI//3ACT/5gAq/+0AK//tACz/5AAt/+0ALv/mAC//7QAw/+sAMv/yADP/+wA0//gANf/6ADb/+wA3//IAQv/eAEP/3gBE//gARf/4AEb/7ABL/9kAVP/1AFf/9ABk/94AZf/eAGj/7ABp/+wAawAEAHb/3gCB/+oAgv/5AAIAS//iAFcAAwAaAAb/8QAK//AAEv/wABT/8AAe//gAIP/kACH/6wAi/+QAI//1ACT/6gAq//gAK//4ACz/5AAt//gALv/rAC//+AAx//UAMv/sADP/7AA0/+kANv/rAEb/4wBo/+MAaf/jAGsABACB//AACAAj/+cAM//j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AKP/nAABALUCywABAKv/mwABAPQCyAABALL/nAABALoC1AABAbL/nAABAbUDFgABAcv/nAABAbMDFgABALf/nAABALoDUQABALIDbgABAKz/nAABAQMDaQABAKL/nAABALwDXwABAYsDJAABAZ8DIwABALsDWQABAIkDZAABARD+XAABAOcCNwABAOL+WwABAOUCNAABAUz+mgABAL4CIQABAU3+qAABAMYCIQABAPD+WQABAN0CNQABAOz+VQABAN4CGgABAT/+BwABANECHAABAT3+AgABAMkCGwABAPX+SgABANkCNAABAPD+QgABANgCNAABAQf/nAABALwCIQABAPL/nAABALcCIQABALz+WwABANwDJAABANr+WgABAN0DQgABALv/nAABAMcDGQABALb/nAABAMUDIAABAQz/jQABATAChAABAR3/kQABAU0ClwABAQ//lAABAQoDRwABAP3/jQABAU8DYwABATkD6AABAWoECgABAIr+ywABAN8B2AABAHn+0wABALEB2wABAHP+wwABAPYB1AABAKv+7gABALIB5AABAKP+4QABAOkCtQABAKj+3gABAPUCuQABAKL+/QABALMCswABAJf+0gABALgCqAABAOQDQwABAPgDTQABAJz9aAABAJ/9ZwABAJ3+yQABAOcDSAABAJX+4gABAK4DSAABAKj+4gABAPcDSQABAJz+7QABAKgDSAABA0L/nAABA0sB2gABA1//mwABA1MBzQABAWr/nAABAYcB3AABAX7/nAABAYcB3gABA0n/nAABAzgDRQABA03/nAABAzUDOAABAYT/nAABAWgDRAABAXb/nAABAWgDRgABA4n/nAABA+ECAgABA4//nAABA9oB+QABAcP/nAABAhsCAAABAhcCBwABA4P/nAABA9kC5wABA5T/nAABA90C4gABAar/nAABAh4C3QABAbz/nAABAiMC1QABAV3/nAABAisB9gABAWH/nAABAiwB+QABAR3/nAABAf0B5wABAR7/nAABAfsB8AABAUD/nAABAeACzgABAVb/nAABAecCzgABAUj/nAABAb0C0QABATT/nAABAcIC1QABARr99wABARwCHAABAPz+BQABATACKgABASn/nAABASkCKQABAPD/nQABAOwCPwABAMf+GwABASgC9gABANX+FwABATEC6QABASL/nAABASIC/QABAPIC+AABAnkDlAABArYDAAABAOwDCQABAPoDoQABAaL/nAABAmgEJQABAZD/nAABAscDhwABAPv/nAABAPYDgwABALn/nAABAPQEJAABAa//mAABAnICvQABAZz/mAABAssCLAABAPT/nAABAPwCJAABAP0CsAABAV3+tgABAdICBwABAVD+sgABAdECAQABAT7+uwABAdIC0AABAT7+uQABAdYCwAABAPX/nAABAPkC8gABAM3/nAABAOQDhAABAcIC1gABAcoC0gABAK8DCwABAKsDDgABAaX/mQABAgECvQABAg8CrgABAiD/nAABASYCFAABAbj/mQABAg4CsgABAiL/nAABARICBAABANn/mQABAKADEgABAVL/mwABAH8CpgABAMr/mgABAKMDAwABAJf/mgABAJQDAgABATD/nAABAJMCxAABAav/mAABAeYDPAABAbr/mAABAd8DRQABAi7/nAABAPQCnwABAc//mAABAeQDPQABAfX/nAABAN8CnAABAM3/mQABAH4DgAABAX//nAABAFQDAgABAHv/mQABAGEDYAABAH//mQABAIQDbwABAS//nAABAF4DHwABAW3+3gABASUBlwABAWP+5AABASUBnwABAKf/nAABAKoDFgABAIb/nAABAJsDIwABAQ4CMQABASEBxQABALUEPQABAJ4ETgABAYr/tgABAVICAAABAb//nAABAXIB8gABARn/nAABARsB+AABARb/nAABARoCBQABAWv+2gABAWMCRwABAVD+5wABAWgCSgABAL7/nAABAMkCngABAJD/nAABAMsCxwABAWz+1AABAWcBvQABAWv+0AABAWcB0gABAQD/mgABAPkCTAABAO3/zgABAPACcwABAQX+8wABAQcB6wABATACdQABAOkD8QABANcEBgABAPH/nAABANwCUQABARD/yQABATUBvAABAQz+ygABAQ8BlwABAIr97wABAJoB/gABAOYD3AABAP8D1AABAVH/nAABAR8CdAABAUT+lQABATACAgABAY//mgABAVgCVwABAUn/nAABAVwCbQABAPD/nAABAOkDKAABAP7/zgABAPMDcgABAQT/nAABAQIDMQABART/vQABAS0ChwABAPX+xQABAPkB/QABAP7+wwABAPgCDgABAPUDcwABAQ8DiAABAP8DTwABAP4DQwABAPMDfwABAPADnAABAWj+vAABAMUBnwABAWX+lwABAXcBLAABAXj+DAABANABlwABAXL96AABAV8BJwABAUT9yQABAUEA+AABALf+twABALIB3gABAKj+uAABALYB8wABANn+owABAMEB8QABAMf+oQABALoBzwABAM8DKwABAPcDHQABAOMCdgABAL//nAABAM8DegABAJP/nAABAKcDzQABAK//nAABALcDhAABALACxAABAXT+ygABAMoBrwABAWj+mAABAYwBJwABAU7+iwABASoBCQABAL3+qAABAMkB3QABAKP+rAABALQCCAABAN7+oQABAL0B6AABALf+pQABAMwB4wABATYCLAABATYA7wABAWcDegABAWgDiwABAFn/nAABAFMBQAAFAAAAAQAIAAEADAAoAAIAMgCYAAIABACDAIQAAAKYApgAAgKkAqUAAwKpArwABQACAAECHAJiAAAAGQABC2wAAQtsAAELeAABC3gAAQt4AAELeAAACmYAAQt4AAAKZgABC3gAAQtyAAAKZgABC3gAAQt4AAAKZgABC3gAAQt4AAELeAABC3gAAQt4AAELeAABC3gAAQt4AAELeAABC3gARwCQALIA1AD2ARgBOgFcAX4BoAHCAeQCBgIoAkoCbAKOArAC0gLuAxADMgNUA3YDmAO6A9wD/gQgBEIEZASGBKIExATgBQIFJAVGBWIFhAWmBcgF6gYMBi4GSgZsBogGpAbABtwG+AcaBzYHWAd6B5wHvgfgCAIIJAhGCGgIigisCM4I8AkSCTQJVgl4CZoAAgAKABAAFgAcAAEBmf+1AAEBwwNIAAEAd/90AAEAagLXAAIACgAQABYAHAABAar/sAABAdcDIgABAHL/fAABAG4C0QACAAoAEAAWABwAAQGZ/7kAAQHVAy4AAQBn/4MAAQCKBBsAAgAKABAAFgAcAAEB0f+yAAEB3QNDAAEAlv+CAAEAkgQ6AAIACgAQABYAHAABAdH/pwABAc0DKAABAMP+NQABAH0CwwACAAoAEAAWABwAAQH//5wAAQHUAzcAAQDi/icAAQB7As8AAgAKABAAFgAcAAEByP/KAAEB+gM/AAEAkv9yAAEApwOdAAIACgAQABYAHAABAcz/sQABAfADQAABAJr/bQABALEDoAACAAoAEAAWABwAAQGt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AAMBiwGKAYkAAwGPAY4BjQADAZMBkgGRAAMBlwGWAZUAAwGbAZoBmQADAZ8BngGdAAMBowGiAaEAAwGnAaYBpQADAasBqgGpAAMBrwGuAa0AAwGzAbIBsQABAbUAAwG5AbgBtwAFAb0BvAG7AcABvwAFAcUBwwHBAcABvwABAcAAAQHCAAEBxAACAccBxgABAccABQHPAc0BywHKAckAAQHMAAEBzgACAdEB0AADAdUB1AHTAAMB2QHYAdcAAwHdAdwB2wADAeEB4AHfAAEB4wADAecB5gHlAAEB6QADAe0B7AHrAAEB7wADAfMB8gHxAAEB9QABAfcAAQH5AAEB+wABAgEAAwIGAgUCAwABAgQAAgIIAgcAAwINAgwCCgABAgsAAQIOAAMC0wLUAtIAAwIUAhMCEQABAhIAAgIWAhUAAQIYAAECGgABAh0AAQIfAAECIQABAiMAAQIrAAECOQABAjsAAQI9AAECQQABAkMAAQJFAAECSQABAksAAQJNAAECUgABAlQAAQJWAAECegABAmwAAQJ7AAEAbQAmAMMAyAEcASEBNgE4AToBPAE+AUABRwFKAUwBTwFSAVUBWAFbAV4BYgFmAWoBbgFyAXQBdgF4AXoBfAF9AYABggGEAYYBiAGMAZABlAGYAZwBoAGkAagBrAGwAbQBtgG6AbsBvAG9Ab4BvwHBAcMBxQHGAcgBywHNAc8B0gHWAdoB3gHiAeQB6AHqAe4B8AH0AfYB+AH6AgACAgIDAgYCCQIKAg0CDwIQAhECFAIXAhkCHAIeAiACIgIkAjgCOgI8AkACQgJEAkgCSgJMAlECUwJVAnQCdgJ3AAYAAAACAAoAHAADAAAAAQisAAEALgABAAAADgADAAAAAQiaAAIAFAAcAAEAAAAOAAEAAgLPAtAAAgABAsICzQAAAAQAAAABAAgAAQCWAAgAFgAgACoANAA+AEgAUgBcAAEABAK6AAICswABAAQCtAACArMAAQAEArUAAgKzAAEABAK2AAICswABAAQCtwACArMAAQAEArgAAgKzAAEABAK5AAICswAHABAAFgAcACIAKAAuADQCugACAqkCtAACAq0CtQACAq4CtgACAq8CtwACArACuAACArECuQACArIAAgACAqkCqQAAAq0CswABAAEAAAABAAgAAQe+ANkAAQAAAAEACAABAAYAAQABAAQAwwDIARwBIQABAAAAAQAIAAIADAADAnoCbAJ7AAEAAwJ0AnYCdwABAAAAAQAIAAIApAAkAUMBSgFPAVUBWwFhAWUBaQFtAXEBiwGPAZMBlwGbAZ8BowGnAasBrwGzAbkBvQHFAc8B1QHZAd0B4QHnAe0B8wIGAg0C0wIUAAEAAAABAAgAAgBOACQBQgFJAU4BVAFaAWABZAFoAWwBcAGKAY4BkgGWAZoBngGiAaYBqgGuAbIBuAG8AcMBzQHUAdgB3AHgAeYB7AHyAgUCDALUAhMAAQAkAUABRwFMAVIBWAFeAWIBZgFqAW4BiAGMAZABlAGYAZwBoAGkAagBrAGwAbYBugG+AcgB0gHWAdoB3gHkAeoB8AICAgkCDwIQAAEAAAABAAgAAgCgAE0BNwE5ATsBPQE/AUEBSAFNAVMBWQFfAWMBZwFrAW8BcwF1AXcBegF9AYEBgwGGAYkBjQGRAZUBmQGdAaEBpQGpAa0BsQG1AbcBuwHBAcsB0wHXAdsB3wHjAeUB6QHrAe8B8QH1AfcB+QH7AgECAwIKAtICEQIYAhoCHQIfAiECIwIrAjkCOwI9AkECQwJFAkkCSwJNAlICVAJWAAEATQE2ATgBOgE8AT4BQAFHAUwBUgFYAV4BYgFmAWoBbgFyAXQBdgF4AXwBgAGCAYQBiAGMAZABlAGYAZwBoAGkAagBrAGwAbQBtgG6Ab4ByAHSAdYB2gHeAeIB5AHoAeoB7gHwAfQB9gH4AfoCAAICAgkCDwIQAhcCGQIcAh4CIAIiAiQCOAI6AjwCQAJCAkQCSAJKAkwCUQJTAlUABAAIAAEACAABAGAAAwCaAAwANgAFAAwAEgAYAB4AJAIdAAIBNwIfAAIBOQIhAAIBOwIjAAIBPQIrAAIBPwAFAAwAEgAYAB4AJAIcAAIBNwIeAAIBOQIgAAIBOwIiAAIBPQIkAAIBPwABAAMBNgHUAdUABAAJAAEACAABAh4AEQAoADYAWAB6AJwAvgDgAQIBJAFGAWgBigGkAcYB6AHyAhQAAQAEAmMABAHVAdQB5QAEAAoAEAAWABwCJwACAgECKAACAgMCKQACAgoCKgACAhEABAAKABAAFgAcAiwAAgIBAi0AAgIDAi4AAgIKAi8AAgIRAAQACgAQABYAHAIwAAICAQIxAAICAwIyAAICCgIzAAICEQAEAAoAEAAWABwCNAACAgECNQACAgMCNgACAgoCNwACAhEABAAKABAAFgAcAjkAAgIBAjsAAgIDAj0AAgIKAj8AAgIRAAQACgAQABYAHAI4AAICAQI6AAICAwI8AAICCgI+AAICEQAEAAoAEAAWABwCQQACAgECQwACAgMCRQACAgoCRwACAhEABAAKABAAFgAcAkAAAgIBAkIAAgIDAkQAAgIKAkYAAgIRAAQACgAQABYAHAJJAAICAQJLAAICAwJNAAICCgJPAAICEQAEAAoAEAAWABwCSAACAgECSgACAgMCTAACAgoCTgACAhEAAwAIAA4AFAJSAAICAQJUAAICAwJWAAICCgAEAAoAEAAWABwCUQACAgECUwACAgMCVQACAgoCVwACAhEABAAKABAAFgAcAlgAAgIBAlkAAgIDAloAAgIKAlsAAgIRAAEABAJdAAICEQAEAAoAEAAWABwCXgACAgECXwACAgMCYAACAgoCYQACAhEAAQAEAmIAAgIRAAEAEQE2AUkBTgFUAVoBigGLAY4BjwGSAZMBlgGXAeACBQIMAhMAAQAJAAEACAACACgAEQHAAcIBxAHHAcABwAHCAcQBxwHHAcoBzAHOAdECBAILAhIAAQARAboBuwG8Ab0BvgG/AcEBwwHFAcYByAHLAc0BzwIDAgoCEQABAAkAAQAIAAIAIgAOAcABwgHEAccBwAHAAcIBxAHHAccBygHMAc4B0QABAA4BugG7AbwBvQG+Ab8BwQHDAcUBxgHIAcsBzQHPAAYACQAKABoAPABWAHIAmAC+AQABIgFgAZoAAwABABIAAQHsAAAAAQAAAA8AAgACAXgBfwAAAYQBhwAIAAMAAAABAfAAAQASAAEAAAAQAAEAAgGGAYcAAwAAAAEB1gABABIAAQAAABEAAQADAVQBWgIMAAMAAAABABIAAQAcAAEAAAARAAEAAwFPAgYCFAABAAMBTgIFAhMAAwABABIAAQGUAAAAAQAAABIAAQAIATwBPQE+AT8CIgIjAiQCKwADAAAAAQB2AAEAEgABAAAAEgABABYBNgE4AToBPAE+AUoBSwFPAVEBVQFWAVsBXAHhAfgB+QIGAggCDQIOAhQCFgADAAAAAQA0AAEAEgABAAAAEgABAAYBeAF5AXwBfwGEAYUAAwAAAAEAEgABACIAAQAAABIAAQAGAXgBegF8AX0BhAGGAAEADAFiAWYBagFuAaABpAG2Ad4CAAICAgkCEAADAAEAEgABAC4AAAABAAAAEgACAAQBNgE/AAABhAGHAAoCHAIkAA4CKwIrABcAAQAEAb4BxQHIAc8AAwABABIAAQA0AAAAAQAAABIAAgAFATYBPwAAAXwBfwAKAYQBhwAOAhwCJAASAisCKwAbAAEAAgG6Ab0AAQAAAAEACAABAAYA1QABAAEAJgABAAkAAQAIAAIAFAAHAUsBUQFWAVwCCAIOAhYAAQAHAUoBTwFVAVsCBgINAhQAAQAJAAEACAACAAwAAwFXAV0CDgABAAMBVQFbAg0AAQAJAAEACAABAAYAAQABAAYBTwFVAVsCBgINAhQAAQAJAAEACAACACQADwFXAV0BeQF7AX8BfgGFAYcBvwHGAb8BxgHJAdACDgABAA8BVQFbAXgBegF8AX0BhAGGAboBvQG+AcUByAHPAg0AAAAAAAEAAAAA) format("truetype");
-    font-weight: 700; font-style: normal; font-display: swap;
-}
-* { font-family: "PeydaReport", "Peyda", "IRANSans", "Tahoma", "Arial", sans-serif !important; box-sizing: border-box; }
-body { margin: 0; padding: 14px; background: #f5f5f5; color: #000; font-size: 14px; }
-a { color: #16509D; text-decoration: none; }
-.brand-header { background: #16509D; color: #fff; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.brand-header h2 { margin: 0; font-size: 15px; font-weight: bold; }
-.brand-header img { height: 32px; }
-.toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-.btn-action, .btn { background: #16509D; color: #fff; border: 2px solid #16509D; border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: bold; cursor: pointer; display: inline-block; }
-.btn-action:hover, .btn:hover { background: #113e7a; }
-.btn { background: #fff; color: #16509D; }
-.btn:hover { background: #f5f5f5; }
-.btn-sms { background: #fff; color: #16509D; border: 2px solid #16509D; border-radius: 6px; padding: 4px 10px; font-size: 14px; font-weight: bold; }
-.help-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: center; justify-content: center; }
-.help-overlay.open { display: flex; }
-.help-modal { background: #fff; border-radius: 10px; max-width: 720px; width: 92%; max-height: 84vh; overflow-y: auto; }
-.help-modal-header { display: flex; justify-content: space-between; align-items: center; background: #16509D; color: #fff; padding: 12px 16px; border-radius: 10px 10px 0 0; font-size: 15px; font-weight: bold; }
-.help-close { background: transparent; border: none; color: #fff; font-size: 16px; cursor: pointer; }
-.help-modal-body { padding: 16px; text-align: right; font-size: 14px; line-height: 1.8; }
-.help-modal-body ul { padding-right: 20px; }
-.list-toolbar { margin-bottom: 12px; }
-.search-form { display: flex; gap: 8px; }
-.search { flex: 1; border: 1px solid #666; border-radius: 8px; padding: 9px 12px; font-size: 14px; }
-.pager { display: flex; align-items: center; gap: 10px; justify-content: center; margin-top: 12px; font-size: 14px; color: #666; }
-.profile-hero { background: #fff; border: 1px solid #666; border-radius: 14px; padding: 16px; display: flex; gap: 16px; align-items: flex-start; margin-bottom: 14px; }
-.profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: #f5f5f5; border: 2px solid #16509D; display: grid; place-items: center; font-size: 26px; flex-shrink: 0; }
-.profile-meta { flex: 1; }
-.profile-meta h1 { margin: 0 0 8px; font-size: 15px; }
-.meta-row { display: flex; flex-wrap: wrap; gap: 8px 18px; color: #666; font-size: 14px; }
-.meta-row b { color: #000; }
-.profile-actions { display: flex; gap: 8px; flex-wrap: wrap; align-self: flex-start; }
-.tabs { display: flex; gap: 6px; overflow-x: auto; border-bottom: 2px solid #666; margin-bottom: 12px; }
-.tab { white-space: nowrap; border: none; background: transparent; padding: 10px 14px; font-size: 14px; font-weight: bold; color: #666; cursor: pointer; border-bottom: 3px solid transparent; }
-.tab.active { color: #16509D; border-bottom-color: #16509D; }
-.tabpane.hidden { display: none; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 14px; }
-.field { padding: 8px 0; border-bottom: 1px dashed #666; }
-.field label { display: block; font-size: 14px; color: #666; margin-bottom: 4px; }
-.field div { font-size: 14px; }
-.table-wrap { overflow: auto; border: 2px solid #000; border-radius: 8px; background: #fff; margin-bottom: 12px; }
-table.main-table { width: auto; min-width: 100%; border-collapse: collapse; text-align: center; }
-table.main-table thead th { position: sticky; top: 0; background: #16509D; color: #fff; border: 1px dashed #666; padding: 10px 8px; font-size: 15px; font-weight: bold; white-space: nowrap; width: 1%; cursor: pointer; user-select: none; }
-table.main-table thead th.sort-asc::after { content: ' ▲'; }
-table.main-table thead th.sort-desc::after { content: ' ▼'; }
-table.main-table tbody td { border: 1px dashed #666; padding: 8px; font-size: 14px; white-space: nowrap; width: 1%; }
-table.main-table tbody tr:nth-child(even) { background: #f5f5f5; }
-.name-cell { text-align: right; font-weight: bold; }
-.empty-row, .empty-state { padding: 24px !important; color: #666; text-align: center; }
-.badge-status { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 14px; font-weight: bold; background: #f5f5f5; border: 1px solid #666; }
-.link-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #fff; border: 1px solid #666; border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; }
-.link-card h4 { margin: 0 0 4px; font-size: 15px; font-weight: bold; }
-.link-card p { margin: 0; font-size: 14px; color: #666; }
-.footer { text-align: center; color: #666; font-size: 14px; margin-top: 14px; }
-@media (max-width: 760px) {
-  .grid-2 { grid-template-columns: 1fr; }
-  .profile-hero { flex-direction: column; }
-  .link-card { flex-direction: column; align-items: flex-start; }
-}
-]]
-
--- =========================================
--- JAVASCRIPT
--- =========================================
-local JS = [[
-function initTabs() {
-  var buttons = document.querySelectorAll('.tab');
-  buttons.forEach(function (b) {
-    b.addEventListener('click', function () {
-      buttons.forEach(function (x) { x.classList.remove('active'); });
-      document.querySelectorAll('.tabpane').forEach(function (p) { p.classList.add('hidden'); });
-      b.classList.add('active');
-      document.getElementById('tab-' + b.dataset.tab).classList.remove('hidden');
-    });
-  });
-}
-function initSortableTables() {
-  document.querySelectorAll('table.main-table').forEach(function (table) {
-    var headers = table.querySelectorAll('thead th');
-    headers.forEach(function (th, colIndex) {
-      th.addEventListener('click', function () {
-        var dir = th.classList.contains('sort-asc') ? 'desc' : 'asc';
-        headers.forEach(function (h) { h.classList.remove('sort-asc', 'sort-desc'); });
-        th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
-        var tbody = table.tBodies[0];
-        var rows = Array.prototype.slice.call(tbody.rows);
-        rows.sort(function (a, b) {
-          var av = a.cells[colIndex] ? a.cells[colIndex].innerText.trim() : '';
-          var bv = b.cells[colIndex] ? b.cells[colIndex].innerText.trim() : '';
-          var an = parseFloat(av.replace(/,/g, '')), bn = parseFloat(bv.replace(/,/g, ''));
-          var cmp;
-          if (!isNaN(an) && !isNaN(bn)) { cmp = an - bn; } else { cmp = av.localeCompare(bv, 'fa'); }
-          return dir === 'asc' ? cmp : -cmp;
-        });
-        rows.forEach(function (r) { tbody.appendChild(r); });
-      });
-    });
-  });
-}
-function openHelpModal() { document.getElementById('helpModalOverlay').classList.add('open'); }
-function closeHelpModal() { document.getElementById('helpModalOverlay').classList.remove('open'); }
-document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeHelpModal(); });
-function toggleFullScreen() {
-  var el = document.documentElement;
-  if (!document.fullscreenElement) { el.requestFullscreen && el.requestFullscreen(); }
-  else { document.exitFullscreen && document.exitFullscreen(); }
-}
-initTabs();
-initSortableTables();
-]]
-
-local HELP_HTML = [[
-<p><strong>این صفحه چیست؟</strong> نمای بازطراحی‌شده ماژول مشتری (CRM) تیم‌یار — همان قابلیت‌های موجود، با UI جدید.</p>
-<ul>
-  <li><b>لیست مشتریان</b> — جستجو بر اساس شناسه یا نام؛ کلیک روی هر ردیف برای مشاهده پروفایل کامل.</li>
-  <li><b>تب‌های فروش/خرید/پروژه/رویدادها/مطلع/برگزیده/توضیحات</b> — داده واقعی از دیتابیس تیم‌یار.</li>
-  <li><b>تب «سایر (لینک‌ها)»</b> — اقدام، اسناد، ایمیل، گفتگو، پیامک، نظرسنجی، فایل‌های صوتی: در فاز ۱ این بات فقط لینک مستقیم به همان صفحه در تیم‌یار باز می‌شود.</li>
-  <li>کلیک روی هدر ستون‌های جدول برای مرتب‌سازی صعودی/نزولی.</li>
-  <li>دکمه «بررسی/ویرایش کامل» شما را به فرم کامل ویرایش مشتری در تیم‌یار می‌برد.</li>
-</ul>
-<p>نسخه: v01 — فاز ۱ (Read + Links). برای گزارش ایراد یا درخواست قابلیت جدید با سازنده بات هماهنگ کنید.</p>
-]]
-
--- =========================================
--- HTML PAGE ASSEMBLY
--- =========================================
-local function render_page()
-    local body
-    local page_title
-    if customer_id == nil then
-        body = render_list_view()
-        page_title = "لیست مشتریان"
-    else
-        body = render_profile_view()
-        page_title = "پروفایل مشتری"
-    end
-
-    local generated_at = fetch_generated_at()
-
-    return string.format([[
-<!DOCTYPE html>
-<html dir="rtl" lang="fa">
-<head>
-<meta charset="UTF-8">
-<title>CRM مشتریان</title>
-<style>%s</style>
-</head>
-<body>
-<div id="reportRoot">
-  <div class="brand-header">
-    <h2>CRM مشتریان — %s</h2>
-    <img src="data:image/png;base64,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" alt="140">
-  </div>
-
-  <div class="toolbar">
-    %s
-    <button type="button" class="btn-action" onclick="toggleFullScreen()">تمام صفحه</button>
-    <button type="button" class="btn-action" onclick="openHelpModal()">راهنما</button>
-  </div>
-
-  <div id="helpModalOverlay" class="help-overlay" onclick="if(event.target===this){closeHelpModal();}">
-    <div class="help-modal">
-      <div class="help-modal-header">
-        <strong>راهنمای ماژول مشتری</strong>
-        <button type="button" class="help-close" onclick="closeHelpModal()">✕</button>
-      </div>
-      <div class="help-modal-body">%s</div>
-    </div>
-  </div>
-
-  %s
-
-  <div class="footer">CRM مشتریان — v01 — تولید: %s</div>
-</div>
-<script>%s</script>
-</body>
-</html>
-]], CSS, escape_html(page_title),
-    customer_id ~= nil and '<a class="btn" href="?">← بازگشت به لیست</a>' or "",
-    HELP_HTML, body, escape_html(generated_at), JS)
-end
-
--- =========================================
--- MAIN
--- =========================================
-local ok, page_or_err = pcall(render_page)
-if not ok then
-    teamyar.write_log("crm_customer_ui_bot fatal error: " .. tostring(page_or_err))
-    teamyar.write_result([[
-<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="UTF-8"><title>خطا</title></head>
-<body style="font-family:tahoma;padding:2rem;text-align:center;font-size:14px;">
-<h2 style="color:#16509D;font-size:15px;">خطایی در بارگذاری صفحه رخ داد. لطفاً دوباره تلاش کنید.</h2>
-</body></html>
-]])
-else
-    teamyar.write_result(page_or_err)
 end
