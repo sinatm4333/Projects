@@ -1198,9 +1198,19 @@
     var wrap = tbl.closest('.table-wrap');
     if (!wrap || wrap.previousElementSibling && wrap.previousElementSibling.classList && wrap.previousElementSibling.classList.contains('table-filter')) { return; }
     var bar = el('div', { 'class': 'table-filter' });
-    bar.innerHTML = '<input type="search" placeholder="فیلتر در این جدول…" aria-label="فیلتر جدول"><span class="note" data-role="tf-count"></span><button type="button" class="btn small secondary" data-role="tf-cols" title="پنهان/نمایش ستون‌های این جدول">ستون‌ها</button>';
+    // کنترل «مرتب‌سازی» (ستون + جهت) — برای موبایل که سرستون دیده نمی‌شود و به‌عنوان راه دوم روی دسکتاپ
+    var sortOpts = '<option value="">مرتب‌سازی…</option>' + ths.map(function (th, i) { return (labels[i] && (th.hasAttribute('data-sort') || th.hasAttribute('data-lsort'))) ? '<option value="' + i + '">' + esc(labels[i]) + '</option>' : ''; }).join('');
+    bar.innerHTML = '<input type="search" placeholder="فیلتر در این جدول…" aria-label="فیلتر جدول"><span class="note" data-role="tf-count"></span>' +
+      '<span class="tf-sort"><select data-role="tf-sort" aria-label="مرتب‌سازی">' + sortOpts + '</select><button type="button" class="icon-btn" data-role="tf-dir" data-dir="asc" title="جهت مرتب‌سازی">↑ صعودی</button></span>' +
+      '<button type="button" class="btn small secondary" data-role="tf-cols" title="پنهان/نمایش ستون‌های این جدول">ستون‌ها</button>';
     wrap.parentNode.insertBefore(bar, wrap);
     wrap.classList.add('cardable');
+    var sortSel = q('[data-role="tf-sort"]', bar), dirBtn = q('[data-role="tf-dir"]', bar);
+    function applySortControl() { var i = parseInt(sortSel.value, 10); if (isNaN(i)) { return; } sortByHeader(tbl, ths[i], dirBtn.getAttribute('data-dir')); }
+    sortSel.addEventListener('change', applySortControl);
+    dirBtn.addEventListener('click', function () { var d = dirBtn.getAttribute('data-dir') === 'asc' ? 'desc' : 'asc'; dirBtn.setAttribute('data-dir', d); dirBtn.textContent = d === 'asc' ? '↑ صعودی' : '↓ نزولی'; applySortControl(); });
+    // هم‌گام‌سازی کنترل با وضعیت فعلی سرستون‌ها (سورت سروری لیست)
+    ths.forEach(function (th, i) { if (th.classList.contains('sort-asc') || th.classList.contains('sort-desc')) { sortSel.value = String(i); var d = th.classList.contains('sort-asc') ? 'asc' : 'desc'; dirBtn.setAttribute('data-dir', d); dirBtn.textContent = d === 'asc' ? '↑ صعودی' : '↓ نزولی'; } });
     // پنهان‌کردن ستون‌های ناخواستهٔ همین جدول (به‌جز ستون تیک و عملیات)؛ ذخیره بر اساس امضای سرستون‌ها
     var sig = 'tcols:' + labels.filter(Boolean).join('|').slice(0, 200);
     function applyHidden() {
@@ -1285,14 +1295,11 @@
     }
     return head + '<div class="empty">—</div>';
   }
-  // مرتب‌سازی سمت کلاینت برای جدول‌های تب‌ها
-  root.addEventListener('click', function (e) {
-    var th = e.target.closest('th[data-lsort]');
-    if (!th) { return; }
-    var tbl = th.closest('table'), idx = Array.prototype.indexOf.call(th.parentNode.children, th);
-    var dir = th.classList.contains('sort-asc') ? 'desc' : 'asc';
-    qa('th', tbl).forEach(function (h) { h.classList.remove('sort-asc', 'sort-desc'); });
-    th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+  // مرتب‌سازی سمت کلاینت (صفحهٔ جاری) — هم از کلیک سرستون، هم از کنترل «مرتب‌سازی» بالای جدول (موبایل)
+  function clientSortTable(tbl, idx, dir) {
+    var ths = qa('thead th', tbl), th = ths[idx];
+    ths.forEach(function (h) { h.classList.remove('sort-asc', 'sort-desc'); });
+    if (th) { th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc'); }
     var tb = tbl.tBodies[0], rows = Array.prototype.slice.call(tb.rows);
     rows.sort(function (a, b) {
       var av = a.cells[idx] ? a.cells[idx].innerText.trim() : '', bv = b.cells[idx] ? b.cells[idx].innerText.trim() : '';
@@ -1301,6 +1308,16 @@
       return dir === 'asc' ? cmp : -cmp;
     });
     rows.forEach(function (r) { tb.appendChild(r); });
+  }
+  // سورت یک ستون از روی سرستون آن: ستون‌های سروری لیست (data-sort) => درخواست سرور؛ بقیه => کلاینت
+  function sortByHeader(tbl, th, dir) {
+    if (th.hasAttribute('data-sort')) { go(listHash({ sort: th.getAttribute('data-sort'), dir: dir, page: 1 })); return; }
+    clientSortTable(tbl, Array.prototype.indexOf.call(th.parentNode.children, th), dir);
+  }
+  root.addEventListener('click', function (e) {
+    var th = e.target.closest('th[data-lsort]');
+    if (!th) { return; }
+    clientSortTable(th.closest('table'), Array.prototype.indexOf.call(th.parentNode.children, th), th.classList.contains('sort-asc') ? 'desc' : 'asc');
   });
 
   /* ============================== pickers ============================== */
@@ -1476,7 +1493,7 @@
       '<li><b>تب‌های بالای لیست:</b> همه / حقیقی / حقوقی / برگزیده (برگزیده‌های شما) / مطلع (مشتریانی که شما مطلع آن‌ها هستید) / رویدادها (مشتریان دارای رویداد تقویم).</li>' +
       '<li><b>جستجو:</b> شناسه، نام، تلفن همراه (۱۰ رقم آخر)، کد ملی، ایمیل و نام کسب‌وکار. Enter یا دکمهٔ جستجو.</li>' +
       '<li><b>فیلتر پیشرفته:</b> چند شرط با «و»؛ فیلدهای متنی، تاریخ شمسی (مثلاً 1405/06/01 یا «در طی N روز اخیر»)، نوع، جنسیت، تأیید، رده و پرچم‌ها (دارای فاکتور/رویداد/اقدام). فیلترها را می‌توانید ذخیره و لینکشان را با همکاران به اشتراک بگذارید.</li>' +
-      '<li><b>ستون‌ها:</b> با «انتخاب ستون‌ها» ستون‌های دلخواه را نشان دهید؛ کلیک روی سرستون، مرتب‌سازی سمت سرور است.</li>' +
+      '<li><b>ستون‌ها و مرتب‌سازی:</b> با «انتخاب ستون‌ها» هر فیلد جزئیات مشتری را به لیست اضافه کنید؛ کلیک روی هر سرستون (نشانهٔ ⇅) مرتب می‌کند — ستون‌های اصلی سمت سرور روی همهٔ مشتریان، ستون‌های محاسبه‌ای روی صفحهٔ جاری. روی موبایل که سرستون دیده نمی‌شود، از کنترل «مرتب‌سازی…» و دکمهٔ جهت (↑/↓) بالای هر جدول استفاده کنید؛ دکمهٔ «ستون‌ها» هم ستون‌های همان جدول را پنهان می‌کند.</li>' +
       '<li><b>انتخاب گروهی:</b> با تیک ردیف‌ها نوار عملیات ظاهر می‌شود: برگزیده، تغییر رده، تأیید، انتقال به حذف‌شده‌ها/بازگرداندن/حذف نهایی و خروجی Excel انتخاب‌شده‌ها. هر رکورد جدا اجرا و نتیجه‌اش (موفق/ناموفق) شمرده می‌شود؛ دکمهٔ توقف دارد.</li>' +
       '<li><b>عملیات هر ردیف:</b> 👁 بررسی، ✎ ویرایش، ★ برگزیده، ✎+ توضیحات جدید، ✉ پیامک، 🌐 نمایش در سایت، ⋯ منوی بیشتر (مطلع، رده، اشتراک، چاپ، پرینت پاکتی، تأیید، حذف).</li>' +
       '<li><b>🌐 نمایش در سایت:</b> اجرای بات ۴۸۶ برای مشتریانی که در توضیحاتشان «شناسه سایت:…» ثبت شده؛ صفحهٔ مشتری در پنل سایت داخل پنجره باز می‌شود و با «باز کردن در تب جدید» جدا هم می‌شود. در هدر پروفایل، عملیات ردیف، منوی ⋯ و تب ابزارها در دسترس است. ورود به سایت (بات ۳۹۸) هنگام باز شدن ماژول در پس‌زمینه انجام می‌شود و پیش از هر نمایش هم بررسی می‌شود؛ اگر باز هم فرم ورود سایت را دیدید، «ورود مجدد به سایت» را بزنید.</li>' +

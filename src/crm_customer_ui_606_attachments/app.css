@@ -236,8 +236,14 @@ table.grid .row-actions { display: inline-flex; gap: 4px; }
 .chooser-item input { margin: 0 0 0 4px; }
 
 /* ---------- table filter bar (قانون: هر جدول فیلتر + سورت دارد) ---------- */
-.table-filter { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.table-filter { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
 .table-filter input { flex: 1; min-width: 160px; max-width: 420px; }
+.tf-sort { display: inline-flex; gap: 4px; align-items: center; }
+.tf-sort select { max-width: 200px; padding: 5px 8px; }
+/* نشانهٔ «قابل سورت» روی سرستون‌هایی که هنوز سورت نشده‌اند (قانون: هر جدول سورت دارد) */
+table.grid thead th[data-sort]:not(.sort-asc):not(.sort-desc)::after,
+table.grid thead th[data-lsort]:not(.sort-asc):not(.sort-desc)::after { content: " ⇅"; font-size: 14px; opacity: .6; }
+@media (max-width: 700px) { .table-filter input { max-width: none; min-width: 100%; } .tf-sort { flex: 1; } .tf-sort select { max-width: none; flex: 1; } }
 .cat-select { max-width: 260px; }
 
 /* ---------- mobile-first (قانون: همهٔ ظاهرها موبایل‌محور) ---------- */
