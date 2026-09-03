@@ -91,8 +91,8 @@
                      "default_input":  {
 
                                        },
-                     "command_bytes":  18411,
-                     "synced_at":  "2026-08-12 12:35:59"
+                     "command_bytes":  58998,
+                     "synced_at":  "2026-09-01 16:05:00"
                  },
                  {
                      "id":  565,
@@ -116,6 +116,29 @@
                                        },
                      "command_bytes":  52062,
                      "synced_at":  "2026-08-12 12:33:52"
+                 },
+                 {
+                     "id":  568,
+                     "cat_id":  59,
+                     "name":  "ارسال گروهی به سامانه مودیان",
+                     "description":  "",
+                     "run_path":  "2/send_group_moadian",
+                     "run_id":  "2",
+                     "run_slug":  "send_group_moadian",
+                     "run_url":  "https://erp.bimehland.com/bot/run/2/send_group_moadian?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=568\u0026cat_id=59\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  2486,
+                     "categories":  "Sale",
+                     "local_src":  "src/send_group_moadian_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  23205,
+                     "synced_at":  "2026-09-01 11:58:40"
                  },
                  {
                      "id":  569,
@@ -557,8 +580,8 @@
                      "default_input":  {
 
                                        },
-                     "command_bytes":  239206,
-                     "synced_at":  "2026-08-12 13:31:06"
+                     "command_bytes":  26709,
+                     "synced_at":  "2026-09-01 14:20:00"
                  },
                  {
                      "id":  601,
@@ -674,6 +697,213 @@
                                        },
                      "command_bytes":  9814,
                      "synced_at":  "2026-07-25 10:53:40"
+                 },
+                 {
+                     "id":  620,
+                     "cat_id":  79,
+                     "name":  "sales_settlement_backfill_queue",
+                     "description":  "",
+                     "run_path":  "443/sales_settlement_backfill_queue",
+                     "run_id":  "443",
+                     "run_slug":  "sales_settlement_backfill_queue",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/sales_settlement_backfill_queue?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=620\u0026cat_id=79\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  53,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/sales_settlement_backfill_queue_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  29027,
+                     "synced_at":  "2026-09-03 08:53:14"
+                 },
+                 {
+                     "id":  633,
+                     "cat_id":  79,
+                     "name":  "ماژول اقدام",
+                     "description":  "Deployed from action_module_report_bot.lua",
+                     "run_path":  "443/action_module",
+                     "run_id":  "443",
+                     "run_slug":  "action_module",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/action_module?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=633\u0026cat_id=79\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  98,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/action_module_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  334296,
+                     "synced_at":  "2026-09-02 18:44:12"
+                 },
+                 {
+                     "id":  637,
+                     "cat_id":  80,
+                     "name":  "ارسال/ابطال/اصلاح گروهی به سامانه مودیان[Module]",
+                     "description":  "در توضیحات خروجی بات های ارسال و ابطال و اصلاح و استعلام ثبت می شود \r\nآنچه ارسال کرده ایم جی سون فاکتور با ساختار سامانه مودیان می باشد و آنچه دریافت کرده ایم خروجی api از سامانه می باشد",
+                     "run_path":  "2/send_group_moadian_m",
+                     "run_id":  "2",
+                     "run_slug":  "send_group_moadian_m",
+                     "run_url":  "https://erp.bimehland.com/bot/run/2/send_group_moadian_m?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=637\u0026cat_id=80\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  18,
+                     "categories":  "Moadian",
+                     "local_src":  "src/send_group_moadian_m_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  59209,
+                     "synced_at":  "2026-09-01 11:58:40"
+                 },
+                 {
+                     "id":  639,
+                     "cat_id":  79,
+                     "name":  "تسویه فاکتورهای برگشت از فروش",
+                     "description":  "تسویه خودکار فاکتورهای برگشت از فروش (کپی بات 620)",
+                     "run_path":  "443/sales_return_settlement_backfill_queue",
+                     "run_id":  "443",
+                     "run_slug":  "sales_return_settlement_backfill_queue",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/sales_return_settlement_backfill_queue?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=639\u0026cat_id=79\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  0,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/sales_return_settlement_backfill_queue_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  27296,
+                     "synced_at":  "2026-09-02 18:51:42"
+                 },
+                 {
+                     "id":  640,
+                     "cat_id":  79,
+                     "name":  "ثبت تعدادی و ثبت حسابداری گروهی حواله‌های فروش",
+                     "description":  "Deployed from warehouse_issue_bulk_signoff_report_bot.lua",
+                     "run_path":  "443/wh_issue_bulk_signoff",
+                     "run_id":  "443",
+                     "run_slug":  "wh_issue_bulk_signoff",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/wh_issue_bulk_signoff?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=640\u0026cat_id=79\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  0,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/warehouse_issue_bulk_signoff_report_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  245651,
+                     "synced_at":  "2026-09-02 18:56:45"
+                 },
+                 {
+                     "id":  641,
+                     "cat_id":  79,
+                     "name":  "پروب موقت تسویه (تشخیص خطا)",
+                     "description":  "بات موقت تشخیص خطای create_settlement روی فاکتور برگشت از فروش",
+                     "run_path":  "443/temp_settlement_api_probe",
+                     "run_id":  "443",
+                     "run_slug":  "temp_settlement_api_probe",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/temp_settlement_api_probe?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=641\u0026cat_id=79\u0026tab=0",
+                     "result_type":  0,
+                     "run_count":  0,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/temp_settlement_api_probe_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  2634,
+                     "synced_at":  "2026-09-02 19:04:13"
+                 },
+                 {
+                     "id":  642,
+                     "cat_id":  79,
+                     "name":  "راهبر تسویه برگشت از فروش",
+                     "description":  "تسویه فاکتور برگشت از فروش روی فرم خود صفحه - تکی و گروهی",
+                     "run_path":  "443/sales_return_settlement_ui_driver",
+                     "run_id":  "443",
+                     "run_slug":  "sales_return_settlement_ui_driver",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/sales_return_settlement_ui_driver?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=642\u0026cat_id=79\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  23,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/sales_return_settlement_ui_driver_report_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  234984,
+                     "synced_at":  "2026-09-03 01:25:55"
+                 },
+                 {
+                     "id":  643,
+                     "cat_id":  79,
+                     "name":  "دستور پرداخت بین بانکی (ساتنا) — چاپ روی فرم بانک",
+                     "description":  "Deployed from bank_satna_payment_order_form_bot.lua",
+                     "run_path":  "443/bank_satna_payment_order_form",
+                     "run_id":  "443",
+                     "run_slug":  "bank_satna_payment_order_form",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/bank_satna_payment_order_form?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=643\u0026cat_id=79\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  0,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/bank_satna_payment_order_form_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  258298,
+                     "synced_at":  "2026-09-03 01:01:31"
+                 },
+                 {
+                     "id":  644,
+                     "cat_id":  79,
+                     "name":  "داشبورد عملکرد کاربران واحد مالی",
+                     "description":  "Deployed from finance_activity_dashboard_v01_bot.lua",
+                     "run_path":  "443/finance_activity_dashboard_v01",
+                     "run_id":  "443",
+                     "run_slug":  "finance_activity_dashboard_v01",
+                     "run_url":  "https://erp.bimehland.com/bot/run/443/finance_activity_dashboard_v01?ver=0",
+                     "view_url":  "https://erp.bimehland.com/?page=/bot/command/view\u0026id=644\u0026cat_id=79\u0026tab=0",
+                     "result_type":  1,
+                     "run_count":  0,
+                     "categories":  "آنالیزور بات",
+                     "local_src":  "src/finance_activity_dashboard_v01_bot.lua",
+                     "input_fields":  [
+
+                                      ],
+                     "default_input":  {
+
+                                       },
+                     "command_bytes":  263220,
+                     "synced_at":  "2026-09-03 12:33:03"
                  },
                  {
                      "id":  698,
