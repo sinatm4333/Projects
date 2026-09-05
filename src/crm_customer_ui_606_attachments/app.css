@@ -205,6 +205,10 @@ table.grid .row-actions { display: inline-flex; gap: 4px; }
 .modal-foot { padding: 10px 14px; border-top: 1px solid var(--g2); display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap; }
 .modal-body ul { padding-right: 20px; }
 
+/* ---------- sms compose ---------- */
+.crm606-root textarea { width: 100%; min-height: 110px; resize: vertical; line-height: 1.8; }
+.form-grid .fld select { width: 100%; }
+
 /* ---------- site view (bot 486) modal ---------- */
 .site-frame-wrap { position: relative; min-height: 60vh; }
 .site-frame-wrap .loading { position: absolute; inset: 0; display: grid; place-items: center; }

@@ -488,6 +488,7 @@
     html += '<div data-role="adv-panel" class="' + (L.adv.length ? '' : 'hidden') + '"></div>';
     html += '<div class="chips" data-role="chips"></div>';
     html += '<div class="bulk-bar" data-role="bulk"><b><span data-role="sel-count">0</span> مشتری انتخاب شده</b>' +
+      '<button type="button" class="btn small" data-act="bulk-sms">✉ پیامک گروهی</button>' +
       '<button type="button" class="btn small" data-act="bulk-fav">★ برگزیده</button>' +
       '<button type="button" class="btn small" data-act="bulk-unfav">☆ حذف از برگزیده</button>' +
       '<button type="button" class="btn small" data-act="bulk-category">تغییر رده</button>' +
@@ -575,7 +576,7 @@
         '<a class="icon-btn" href="#/edit/' + esc(r.id) + '" title="ویرایش">✎</a>' +
         '<button type="button" class="icon-btn' + (r.is_fav ? ' on' : '') + '" data-act="fav" data-id="' + esc(r.id) + '" data-on="' + (r.is_fav ? 1 : 0) + '" title="برگزیده">★</button>' +
         '<button type="button" class="icon-btn" data-act="comment" data-id="' + esc(r.id) + '" data-name="' + esc(r.name) + '" title="توضیحات جدید">✎+</button>' +
-        (r.mobile ? '<a class="icon-btn" href="sms:' + esc(r.mobile) + '" title="پیامک">✉</a>' : '') +
+        (r.mobile ? '<button type="button" class="icon-btn" data-act="sms" data-id="' + esc(r.id) + '" data-name="' + esc(r.name) + '" data-mobile="' + esc(r.mobile) + '" title="ارسال پیامک">✉</button>' : '') +
         (hasSiteId(r.comment) ? '<button type="button" class="icon-btn" data-act="site" data-id="' + esc(r.id) + '" data-name="' + esc(r.name) + '" title="نمایش در سایت (بات ۴۸۶)">🌐</button>' : '') +
         '<button type="button" class="icon-btn" data-act="row-menu" data-id="' + esc(r.id) + '" title="بیشتر">⋯</button>' +
         '</div></td></tr>';
@@ -712,6 +713,15 @@
       case 'fav': toggleFavorite(id, a.getAttribute('data-on') === '1', a); break;
       case 'comment': openCommentModal(id, a.getAttribute('data-name')); break;
       case 'site': openSiteModal(id, a.getAttribute('data-name')); break;
+      case 'sms': {
+        var c0 = (state.client.data && state.client.data.id === id) ? state.client.data : null;
+        var nums = c0 ? c0.mobiles.map(function (m) { return m.value; }) : [a.getAttribute('data-mobile')];
+        var row0 = state.listRows.filter(function (x) { return x.id === id; })[0];
+        if (!c0 && row0 && row0.mobiles_all) { nums = row0.mobiles_all.split('، ').filter(Boolean); }
+        openSmsModal(id, a.getAttribute('data-name'), nums, a.getAttribute('data-mobile'));
+        break;
+      }
+      case 'bulk-sms': openBulkSmsModal(selectedIds()); break;
       case 'row-menu': showRowMenu(id); break;
       case 'bulk-clear': state.selected = {}; renderTable(); break;
       case 'bulk-fav': bulkNative(selectedIds(), function (cid) { return nativeCall('/crm/index/set_favorite/', { id: cid, favorite: 1 }); }, 'افزودن به برگزیده'); break;
@@ -927,6 +937,69 @@
     q('[data-f="comment"]', body).focus();
   }
 
+  /* ============================== sms (API /api/sms/send) ============================== */
+  var smsBoxesCache = null;
+  function loadSmsBoxes() {
+    if (smsBoxesCache) { return Promise.resolve(smsBoxesCache); }
+    return api('sms_boxes').then(function (d) { smsBoxesCache = asArray(d.boxes); return smsBoxesCache; });
+  }
+  function smsCounterText(txt) {
+    // پیامک فارسی: ۷۰ نویسه در یک بخش، بعد از آن هر بخش ۶۷ نویسه
+    var n = txt.length, parts = n === 0 ? 0 : (n <= 70 ? 1 : Math.ceil(n / 67));
+    return fmtNum(n) + ' نویسه — ' + fmtNum(parts) + ' بخش';
+  }
+  function boxOptions(boxes, selected) {
+    return boxes.map(function (b) { return '<option value="' + b.id + '"' + ((selected ? String(selected) === String(b.id) : b.is_default) ? ' selected' : '') + '>' + esc(b.name) + (b.is_default ? ' (پیش‌فرض)' : '') + '</option>'; }).join('');
+  }
+  // نگارش و ارسال پیامک برای یک مشتری: انتخاب شماره (از شماره‌های ثبت‌شده) + صندوق + متن؛ ارسال از سرور بات با API
+  function openSmsModal(id, name, mobiles, preselect) {
+    var nums = asArray(mobiles).filter(Boolean);
+    if (!nums.length) { toast('برای این مشتری شمارهٔ همراهی ثبت نشده است', true); return; }
+    loadSmsBoxes().then(function (boxes) {
+      var body = openModal('ارسال پیامک — ' + (name || ('مشتری ' + id)),
+        '<div class="form-grid">' +
+        '<div class="fld"><label class="req">شماره گیرنده</label><select data-f="mobile">' + nums.map(function (m) { return '<option value="' + esc(m) + '"' + (m === preselect ? ' selected' : '') + '>' + esc(m) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="fld"><label>صندوق پیامک</label><select data-f="box">' + boxOptions(boxes, store('sms_box')) + '</select></div>' +
+        '<div class="fld full"><label class="req">متن پیامک</label><textarea data-f="content" rows="5" maxlength="1000" placeholder="متن پیامک…"></textarea><div class="note" data-f="counter">۰ نویسه</div></div>' +
+        '</div><p class="note">ارسال از طریق API رسمی پیامک تیم‌یار (/api/sms/send) انجام می‌شود و در تب «پیامک» مشتری و صندوق انتخابی ثبت می‌شود.</p>',
+        [{ label: 'ارسال پیامک', onClick: function (btn) {
+          var content = q('[data-f="content"]', body).value.trim();
+          if (!content) { toast('متن پیامک خالی است', true); return; }
+          var mobile = q('[data-f="mobile"]', body).value, box = q('[data-f="box"]', body).value;
+          store('sms_box', box);
+          btn.disabled = true; btn.textContent = 'در حال ارسال…';
+          api('sms_send', { id: id, mobile: mobile, box_id: box, content: content }).then(function (d) {
+            toast('پیامک به ' + d.mobile + ' ارسال شد' + (asArray(d.message_ids).length ? ' (شناسهٔ ' + d.message_ids.join('، ') + ')' : ''));
+            closeModal();
+            if (state.view === 'client' && state.client.id === id) { state.client.tabs.sms = null; state.client.counts = null; if (state.client.tab === 'sms') { renderPane(); } }
+          }).catch(function (e) { btn.disabled = false; btn.textContent = 'ارسال پیامک'; toast(e.message, true); });
+        } }, { label: 'لغو', cls: 'secondary' }]);
+      var ta = q('[data-f="content"]', body), counter = q('[data-f="counter"]', body);
+      ta.addEventListener('input', function () { counter.textContent = smsCounterText(ta.value); });
+      ta.focus();
+    }).catch(function (e) { toast('صندوق‌های پیامک: ' + e.message, true); });
+  }
+  // پیامک گروهی به مشتریان انتخاب‌شدهٔ لیست: یک متن، برای هر مشتری جدا ارسال و شمارش موفق/ناموفق (اولین شمارهٔ هر مشتری)
+  function openBulkSmsModal(ids) {
+    if (!ids.length) { toast('مشتری‌ای انتخاب نشده است', true); return; }
+    loadSmsBoxes().then(function (boxes) {
+      var body = openModal('پیامک گروهی به ' + fmtNum(ids.length) + ' مشتری',
+        '<div class="form-grid"><div class="fld"><label>صندوق پیامک</label><select data-f="box">' + boxOptions(boxes, store('sms_box')) + '</select></div>' +
+        '<div class="fld full"><label class="req">متن پیامک</label><textarea data-f="content" rows="5" maxlength="1000"></textarea><div class="note" data-f="counter">۰ نویسه</div></div></div>' +
+        '<p class="note">برای هر مشتری به اولین شمارهٔ همراه ثبت‌شده ارسال می‌شود؛ مشتریان بدون شماره «ناموفق» شمرده می‌شوند. هر ارسال جدا اعتبارسنجی و شمارش می‌شود و دکمهٔ توقف دارد.</p>',
+        [{ label: 'ارسال به همه', onClick: function () {
+          var content = q('[data-f="content"]', body).value.trim(), box = q('[data-f="box"]', body).value;
+          if (!content) { toast('متن پیامک خالی است', true); return; }
+          store('sms_box', box);
+          closeModal();
+          bulkNative(ids, function (cid) { return api('sms_send', { id: cid, box_id: box, content: content }); }, 'ارسال پیامک گروهی');
+        } }, { label: 'لغو', cls: 'secondary' }]);
+      var ta = q('[data-f="content"]', body), counter = q('[data-f="counter"]', body);
+      ta.addEventListener('input', function () { counter.textContent = smsCounterText(ta.value); });
+      ta.focus();
+    }).catch(function (e) { toast('صندوق‌های پیامک: ' + e.message, true); });
+  }
+
   /* ============================== excel export ============================== */
   function exportRows(rows, name) {
     if (!rows.length) { toast('ردیفی برای خروجی وجود ندارد', true); return; }
@@ -1015,7 +1088,7 @@
       '<button type="button" class="btn small secondary" data-act="comment" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '">✎+ توضیحات جدید</button>' +
       (hasSiteId(c.comment) ? '<button type="button" class="btn small" data-act="site" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '" title="اجرای بات نمایش مشتری در سایت">🌐 نمایش در سایت</button>' : '<button type="button" class="btn small secondary" disabled title="در توضیحات این مشتری «شناسه سایت» ثبت نشده است">🌐 نمایش در سایت</button>') +
       '</div><div class="row">' +
-      (mobile ? '<a class="btn small secondary" href="tel:' + esc(mobile) + '">☎ تماس</a><a class="btn small secondary" href="sms:' + esc(mobile) + '">✉ پیامک</a>' : '') +
+      (mobile ? '<a class="btn small secondary" href="tel:' + esc(mobile) + '">☎ تماس</a><button type="button" class="btn small secondary" data-act="sms" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '">✉ پیامک</button>' : '') +
       (email ? '<a class="btn small secondary" href="mailto:' + esc(email) + '">@ ایمیل</a>' : '') +
       '<a class="btn small secondary" href="' + esc(c.links.events) + '" target="_blank" rel="noopener">📅 رویداد جدید ↗</a>' +
       '<a class="btn small secondary" href="' + esc(c.links.todo) + '" target="_blank" rel="noopener">☑ اقدام جدید ↗</a>' +
@@ -1109,7 +1182,7 @@
     pairs.push(['توضیحات', c.comment]); pairs.push(['شناسهٔ درون‌ریزی', c.import_id]); pairs.push(['دامنه', c.domain]);
     html += dl(pairs);
     html += '<div class="section-title">اطلاعات تماس</div><div class="cards">';
-    html += '<div class="card"><div class="t">تلفن همراه</div>' + (c.mobiles.length ? c.mobiles.map(function (m) { return '<div><a href="tel:' + esc(m.value) + '">' + esc(m.value) + '</a> <a class="icon-btn" href="sms:' + esc(m.value) + '">پیامک</a></div>'; }).join('') : '<div class="s">—</div>') + '</div>';
+    html += '<div class="card"><div class="t">تلفن همراه</div>' + (c.mobiles.length ? c.mobiles.map(function (m) { return '<div><a href="tel:' + esc(m.value) + '">' + esc(m.value) + '</a> <button type="button" class="icon-btn" data-act="sms" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '" data-mobile="' + esc(m.value) + '">پیامک</button></div>'; }).join('') : '<div class="s">—</div>') + '</div>';
     html += '<div class="card"><div class="t">ایمیل</div>' + (c.emails.length ? c.emails.map(function (m) { return '<div><a href="mailto:' + esc(m.value) + '">' + esc(m.value) + '</a>' + (m.verified ? ' <span class="badge accent">تأیید شده</span>' : '') + '</div>'; }).join('') : '<div class="s">—</div>') + '</div>';
     html += '<div class="card"><div class="t">تلفن‌ها</div>' + (c.phones.length ? c.phones.map(function (m) { return '<div>' + esc(m.type_label) + ': <a href="tel:' + esc(m.value) + '">' + esc(m.value) + '</a></div>'; }).join('') : '<div class="s">—</div>') + '</div>';
     html += '<div class="card"><div class="t">' + (c.type === 4 ? 'شناسهٔ ملی' : 'کد ملی') + '</div>' + (c.national_codes.length ? c.national_codes.map(function (m) { return '<div>' + esc(m.value) + '</div>'; }).join('') : '<div class="s">—</div>') + '</div>';
@@ -1257,7 +1330,7 @@
     if (tab === 'comments') { head += '<button type="button" class="btn small" data-act="comment" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '">✎+ توضیحات جدید</button>'; }
     if (tab === 'todo') { head += link(c.links.todo, '☑ اقدام جدید ↗').replace('<a ', '<a class="btn small" '); }
     if (tab === 'events') { head += link(c.links.events, '📅 رویداد جدید ↗').replace('<a ', '<a class="btn small" '); }
-    if (tab === 'sms' && c.mobiles[0]) { head += '<a class="btn small" href="sms:' + esc(c.mobiles[0].value) + '">✉ پیامک جدید</a>'; }
+    if (tab === 'sms' && c.mobiles[0]) { head += '<button type="button" class="btn small" data-act="sms" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '">✉ پیامک جدید</button>'; }
     if (tab === 'emails' && c.emails[0]) { head += '<a class="btn small" href="mailto:' + esc(c.emails[0].value) + '">@ ایمیل جدید</a>'; }
     head += '<button type="button" class="btn small secondary" data-act="reload-tab">⟳</button>' + (nativeLink ? link(nativeLink, 'در تیم‌یار ↗').replace('<a ', '<a class="btn small secondary" ') : '') + '</div></div>';
 
@@ -1496,6 +1569,7 @@
       '<li><b>ستون‌ها و مرتب‌سازی:</b> با «انتخاب ستون‌ها» هر فیلد جزئیات مشتری را به لیست اضافه کنید؛ کلیک روی هر سرستون (نشانهٔ ⇅) مرتب می‌کند — ستون‌های اصلی سمت سرور روی همهٔ مشتریان، ستون‌های محاسبه‌ای روی صفحهٔ جاری. روی موبایل که سرستون دیده نمی‌شود، از کنترل «مرتب‌سازی…» و دکمهٔ جهت (↑/↓) بالای هر جدول استفاده کنید؛ دکمهٔ «ستون‌ها» هم ستون‌های همان جدول را پنهان می‌کند.</li>' +
       '<li><b>انتخاب گروهی:</b> با تیک ردیف‌ها نوار عملیات ظاهر می‌شود: برگزیده، تغییر رده، تأیید، انتقال به حذف‌شده‌ها/بازگرداندن/حذف نهایی و خروجی Excel انتخاب‌شده‌ها. هر رکورد جدا اجرا و نتیجه‌اش (موفق/ناموفق) شمرده می‌شود؛ دکمهٔ توقف دارد.</li>' +
       '<li><b>عملیات هر ردیف:</b> 👁 بررسی، ✎ ویرایش، ★ برگزیده، ✎+ توضیحات جدید، ✉ پیامک، 🌐 نمایش در سایت، ⋯ منوی بیشتر (مطلع، رده، اشتراک، چاپ، پرینت پاکتی، تأیید، حذف).</li>' +
+      '<li><b>✉ پیامک:</b> در هدر پروفایل، کارت شماره‌های همراه، تب پیامک و عملیات ردیف، پنجرهٔ نگارش باز می‌شود: انتخاب شمارهٔ گیرنده از شماره‌های ثبت‌شدهٔ مشتری، صندوق پیامک (پیش‌فرض قابل تغییر و به‌خاطرسپاری) و متن با شمارندهٔ نویسه/بخش. ارسال با API رسمی پیامک تیم‌یار انجام و در تب «پیامک» مشتری ثبت می‌شود. با انتخاب چند ردیف، «پیامک گروهی» یک متن را به همه (اولین شمارهٔ هر مشتری) با شمارندهٔ موفق/ناموفق و دکمهٔ توقف می‌فرستد.</li>' +
       '<li><b>🌐 نمایش در سایت:</b> اجرای بات ۴۸۶ برای مشتریانی که در توضیحاتشان «شناسه سایت:…» ثبت شده؛ صفحهٔ مشتری در پنل سایت داخل پنجره باز می‌شود و با «باز کردن در تب جدید» جدا هم می‌شود. در هدر پروفایل، عملیات ردیف، منوی ⋯ و تب ابزارها در دسترس است. ورود به سایت (بات ۳۹۸) هنگام باز شدن ماژول در پس‌زمینه انجام می‌شود و پیش از هر نمایش هم بررسی می‌شود؛ اگر باز هم فرم ورود سایت را دیدید، «ورود مجدد به سایت» را بزنید.</li>' +
       '<li><b>پروفایل مشتری:</b> هدر با اطلاعات کلیدی و دکمه‌های سریع، شاخص‌ها (فروش خالص، فاکتورها، برگشت، آخرین فاکتور، اقدام‌های باز، رویدادها، توضیحات، مطلعین) و تب‌ها: بررسی، رابط‌ها، رده/بخش، مطلع، فروش (با زیرتب نوع و جمع مبلغ)، خرید، اقدام، توضیحات، اسناد، ایمیل، پیامک، گفتگو، رویدادها، نظرسنجی، پروژه، فایل‌های صوتی، تاریخچه و ابزارها. سرستون جدول‌های تب‌ها مرتب‌سازی سمت کلاینت دارند.</li>' +
       '<li><b>ویرایش / مشتری جدید:</b> فرم چندتبی (عمومی، تماس، جزئیات، آدرس، سایر). قبل از ثبت خلاصه تأیید می‌شود و ثبت از طریق API رسمی ماژول مشتری انجام می‌شود؛ هر خطای اعتبارسنجی کل ثبت را متوقف می‌کند (ثبت ناقص انجام نمی‌شود).</li>' +

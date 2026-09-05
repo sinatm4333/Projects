@@ -1,5 +1,6 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/13 09:30
+-- Last Edit = 1405/06/14 10:10
+-- version= 6.0 (درخواست کاربر: ارسال واقعی پیامک از پروفایل/لیست با /api/sms/send (ماژول ۱۶) — پنجرهٔ نگارش با انتخاب شماره و صندوق، شمارندهٔ نویسه، ارسال گروهی از انتخاب لیست)
 -- version= 5.3 (بازخورد کاربر: سورت قابل مشاهده روی همهٔ سرستون‌ها (نشانهٔ ⇅) + کنترل «مرتب‌سازی» ستون/جهت بالای هر جدول برای موبایل که سرستون ندارد)
 -- version= 5.2 (اعتبار لاگین سایت = ۲ روز (نشست mobile140) و ذخیره در localStorage — بات ۳۹۸ فقط بعد از انقضا یا با «ورود مجدد» دوباره اجرا می‌شود)
 -- version= 5.1 (پیشنهاد کاربر: اجرای خودکار بات ۳۹۸ (لاگین سایت) در پس‌زمینه هنگام باز شدن ماژول و پیش از «نمایش در سایت» + دکمهٔ ورود مجدد)
@@ -48,7 +49,7 @@ local CONFIG = {
     DB_SCHEMA        = "0000000",
     BASE_URL         = "https://erp.bimehland.com",
     BOT_RUN_PATH     = "443/crm_customer_ui_v01",
-    ASSET_VERSION    = "5.3.0",
+    ASSET_VERSION    = "6.0.0",
     CRM_MODULE_ID    = 14,
     -- بات ۴۸۶ «show crm saite»: با client_id، صفحهٔ مشتری در سایت (mobile140.com/dashboard/users/customer/<شناسه سایت>) را
     -- از روی crm_info.COMMENT («شناسه سایت:NNN») در iframe نشان می‌دهد. GET با query هم کار می‌کند (تست زنده ۱۴۰۵/۰۶/۱۲).
@@ -1636,6 +1637,57 @@ local function action_relation_get(relation)
 end
 
 -- =========================================
+-- SMS (ماژول ۱۶) — ارسال پیامک از پروفایل/لیست با API رسمی؛ همان payload تأییدشدهٔ بات‌های ۵۰۱/۳۷۱/۳۵۲
+-- =========================================
+local SMS_MAX_CHARS = 1000
+local SMS_MODULE_SENDER = 26 -- «باتی»: همان module_id که بات‌های پیامکی این سامانه ارسال می‌کنند
+
+local function action_sms_boxes()
+    local rows = fetch_rows("SELECT ID, NAME, IS_DEFAULT FROM sms_box WHERE ENABLE = 1 ORDER BY IS_DEFAULT DESC, ID", {}) or {}
+    return { ok = true, boxes = rows_to_objects(rows, function(r) return { id = to_int(r[1]), name = nz(r[2], "صندوق " .. tostring(r[1])), is_default = to_int(r[3]) == 1 } end) }
+end
+
+local function action_sms_send()
+    local client_id = to_positive_int(inp("id"))
+    local content = trim(inp("content") or "")
+    local box_id = to_positive_int(inp("box_id"))
+    local mobile = digits_only(inp("mobile"))
+    if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
+    if content == "" then return { ok = false, error = "متن پیامک خالی است" } end
+    if #content > SMS_MAX_CHARS then return { ok = false, error = "متن پیامک بیش از حد بلند است" } end
+    -- اعتبارسنجی: مشتری فعال باشد، شماره متعلق به همان مشتری باشد (یا اولین شمارهٔ ثبت‌شده‌اش)، صندوق فعال باشد
+    local exists = fetch_scalar("SELECT COUNT(*) FROM crm_info WHERE ID = ? AND DELETED = 0", { client_id })
+    if tonumber(exists) ~= 1 then return { ok = false, error = "مشتری یافت نشد یا حذف شده است" } end
+    local mobile_rows = fetch_rows("SELECT MOBILE, COUNTRY_CODE FROM profile_mobile WHERE USER_ID = ? ORDER BY ID", { client_id }) or {}
+    if #mobile_rows == 0 then return { ok = false, error = "برای این مشتری شمارهٔ همراهی ثبت نشده است" } end
+    local chosen, country = nil, 364
+    for _, r in ipairs(mobile_rows) do
+        local m = digits_only(r[1])
+        if mobile == "" or m == mobile or m:sub(-10) == mobile:sub(-10) then chosen = m; country = to_int(r[2]) or 364; break end
+    end
+    if chosen == nil then return { ok = false, error = "شمارهٔ انتخاب‌شده متعلق به این مشتری نیست" } end
+    if box_id ~= nil then
+        local box_ok = fetch_scalar("SELECT COUNT(*) FROM sms_box WHERE ID = ? AND ENABLE = 1", { box_id })
+        if tonumber(box_ok) ~= 1 then return { ok = false, error = "صندوق پیامک نامعتبر است" } end
+    end
+    local payload = { module_id = SMS_MODULE_SENDER, messages = { { content = content, send_to = { mobile_numbers = { { value = chosen, country = country } } } } } }
+    if box_id ~= nil then payload.box_id = box_id end
+    local ok, res = pcall(function() return teamyar.call_api(16, "/api/sms/send", payload) end)
+    if not ok or _G.type(res) ~= "table" then
+        teamyar.write_log("crm_customer_ui sms_send call error: " .. tostring(res))
+        return { ok = false, error = "خطا در فراخوانی سرویس پیامک: " .. tostring(res) }
+    end
+    if res.success ~= true then
+        local msg = res.error
+        if _G.type(msg) == "table" then msg = msg.message or json.encode(msg) end
+        return { ok = false, error = "ارسال ناموفق: " .. tostring(msg or "خطای نامشخص"), api = res }
+    end
+    local ids = (res.data and res.data.message_ids) or {}
+    teamyar.write_log("crm_customer_ui sms_send ok client=" .. client_id .. " to=" .. chosen .. " by user=" .. current_user_id .. " ids=" .. json.encode(ids))
+    return { ok = true, mobile = chosen, message_ids = ids }
+end
+
+-- =========================================
 -- SHELL HTML
 -- =========================================
 local function render_shell()
@@ -1701,6 +1753,8 @@ local ACTIONS = {
     assign_get    = function() return action_relation_get("assign") end,
     responsible_get = function() return action_relation_get("responsible") end,
     whoami        = function() return { ok = true, user_id = current_user_id, version = CONFIG.ASSET_VERSION } end,
+    sms_boxes     = action_sms_boxes,
+    sms_send      = action_sms_send,
 }
 
 local function main()
