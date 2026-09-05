@@ -489,6 +489,7 @@
     html += '<div class="chips" data-role="chips"></div>';
     html += '<div class="bulk-bar" data-role="bulk"><b><span data-role="sel-count">0</span> مشتری انتخاب شده</b>' +
       '<button type="button" class="btn small" data-act="bulk-sms">✉ پیامک گروهی</button>' +
+      '<button type="button" class="btn small" data-act="bulk-email">@ ایمیل گروهی</button>' +
       '<button type="button" class="btn small" data-act="bulk-fav">★ برگزیده</button>' +
       '<button type="button" class="btn small" data-act="bulk-unfav">☆ حذف از برگزیده</button>' +
       '<button type="button" class="btn small" data-act="bulk-category">تغییر رده</button>' +
@@ -577,6 +578,7 @@
         '<button type="button" class="icon-btn' + (r.is_fav ? ' on' : '') + '" data-act="fav" data-id="' + esc(r.id) + '" data-on="' + (r.is_fav ? 1 : 0) + '" title="برگزیده">★</button>' +
         '<button type="button" class="icon-btn" data-act="comment" data-id="' + esc(r.id) + '" data-name="' + esc(r.name) + '" title="توضیحات جدید">✎+</button>' +
         (r.mobile ? '<button type="button" class="icon-btn" data-act="sms" data-id="' + esc(r.id) + '" data-name="' + esc(r.name) + '" data-mobile="' + esc(r.mobile) + '" title="ارسال پیامک">✉</button>' : '') +
+        (r.email ? '<button type="button" class="icon-btn" data-act="email" data-id="' + esc(r.id) + '" data-name="' + esc(r.name) + '" data-address="' + esc(r.email) + '" title="ارسال ایمیل">@</button>' : '') +
         (hasSiteId(r.comment) ? '<button type="button" class="icon-btn" data-act="site" data-id="' + esc(r.id) + '" data-name="' + esc(r.name) + '" title="نمایش در سایت (بات ۴۸۶)">🌐</button>' : '') +
         '<button type="button" class="icon-btn" data-act="row-menu" data-id="' + esc(r.id) + '" title="بیشتر">⋯</button>' +
         '</div></td></tr>';
@@ -722,6 +724,15 @@
         break;
       }
       case 'bulk-sms': openBulkSmsModal(selectedIds()); break;
+      case 'email': {
+        var c1 = (state.client.data && state.client.data.id === id) ? state.client.data : null;
+        var addrs = c1 ? c1.emails.map(function (m) { return m.value; }) : [a.getAttribute('data-address')];
+        var row1 = state.listRows.filter(function (x) { return x.id === id; })[0];
+        if (!c1 && row1 && row1.emails_all) { addrs = row1.emails_all.split('، ').filter(Boolean); }
+        openEmailModal(id, a.getAttribute('data-name'), addrs, a.getAttribute('data-address'));
+        break;
+      }
+      case 'bulk-email': openBulkEmailModal(selectedIds()); break;
       case 'row-menu': showRowMenu(id); break;
       case 'bulk-clear': state.selected = {}; renderTable(); break;
       case 'bulk-fav': bulkNative(selectedIds(), function (cid) { return nativeCall('/crm/index/set_favorite/', { id: cid, favorite: 1 }); }, 'افزودن به برگزیده'); break;
@@ -1000,6 +1011,62 @@
     }).catch(function (e) { toast('صندوق‌های پیامک: ' + e.message, true); });
   }
 
+  /* ============================== email (API /api/email/emailmsgadd) ============================== */
+  var emailBoxesCache = null;
+  function loadEmailBoxes() {
+    if (emailBoxesCache) { return Promise.resolve(emailBoxesCache); }
+    return api('email_boxes').then(function (d) { emailBoxesCache = asArray(d.boxes); return emailBoxesCache; });
+  }
+  function emailBoxOptions(boxes, selected) {
+    var opts = '<option value="">صندوق پیش‌فرض تیم‌یار</option>';
+    return opts + boxes.map(function (b) { return '<option value="' + b.id + '"' + ((selected ? String(selected) === String(b.id) : b.is_default) ? ' selected' : '') + '>' + esc(b.name || b.email) + ' — ' + esc(b.email) + (b.is_default ? ' (پیش‌فرض)' : '') + '</option>'; }).join('');
+  }
+  function emailFormHtml(boxes, addressesHtml) {
+    return '<div class="form-grid">' + (addressesHtml || '') +
+      '<div class="fld"><label>صندوق فرستنده</label><select data-f="box">' + emailBoxOptions(boxes, store('email_box')) + '</select></div>' +
+      '<div class="fld full"><label class="req">موضوع</label><input type="text" data-f="subject" maxlength="200"></div>' +
+      '<div class="fld full"><label class="req">متن ایمیل</label><textarea data-f="content" rows="8" placeholder="متن ایمیل… (متن ساده؛ خطوط جدید حفظ می‌شوند)"></textarea></div></div>';
+  }
+  // نگارش و ارسال ایمیل برای یک مشتری: گیرنده از ایمیل‌های ثبت‌شده، صندوق شخصی فرستنده، موضوع، متن؛ ارسال از سرور بات با API
+  function openEmailModal(id, name, emails, preselect) {
+    var addrs = asArray(emails).filter(Boolean);
+    if (!addrs.length) { toast('برای این مشتری ایمیلی ثبت نشده است', true); return; }
+    loadEmailBoxes().then(function (boxes) {
+      if (!boxes.length) { toast('برای شما صندوق ایمیلی در ماژول پست تعریف نشده؛ ارسال با صندوق پیش‌فرض تیم‌یار انجام می‌شود', false); }
+      var body = openModal('ارسال ایمیل — ' + (name || ('مشتری ' + id)), emailFormHtml(boxes,
+        '<div class="fld"><label class="req">گیرنده</label><select data-f="address">' + addrs.map(function (a) { return '<option value="' + esc(a) + '"' + (a === preselect ? ' selected' : '') + '>' + esc(a) + '</option>'; }).join('') + '</select></div>') +
+        '<p class="note">ارسال از طریق API رسمی پست تیم‌یار (/api/email/emailmsgadd) انجام می‌شود و ایمیل در صندوق فرستنده ثبت می‌شود.</p>',
+        [{ label: 'ارسال ایمیل', onClick: function (btn) {
+          var subject = q('[data-f="subject"]', body).value.trim(), content = q('[data-f="content"]', body).value.trim();
+          if (!subject) { toast('موضوع ایمیل خالی است', true); return; }
+          if (!content) { toast('متن ایمیل خالی است', true); return; }
+          var box = q('[data-f="box"]', body).value; store('email_box', box);
+          btn.disabled = true; btn.textContent = 'در حال ارسال…';
+          api('email_send', { id: id, address: q('[data-f="address"]', body).value, box_id: box || undefined, subject: subject, content: content }).then(function (d) {
+            toast('ایمیل به ' + d.address + ' ارسال شد' + (d.message_id ? ' (شناسهٔ ' + d.message_id + ')' : ''));
+            closeModal();
+            if (state.view === 'client' && state.client.id === id) { state.client.tabs.emails = null; state.client.counts = null; if (state.client.tab === 'emails') { renderPane(); } }
+          }).catch(function (e) { btn.disabled = false; btn.textContent = 'ارسال ایمیل'; toast(e.message, true); });
+        } }, { label: 'لغو', cls: 'secondary' }], { wide: true });
+      q('[data-f="subject"]', body).focus();
+    }).catch(function (e) { toast('صندوق‌های ایمیل: ' + e.message, true); });
+  }
+  // ایمیل گروهی به مشتریان انتخاب‌شدهٔ لیست (اولین ایمیل هر مشتری)؛ ارسال جدا و شمارش موفق/ناموفق
+  function openBulkEmailModal(ids) {
+    if (!ids.length) { toast('مشتری‌ای انتخاب نشده است', true); return; }
+    loadEmailBoxes().then(function (boxes) {
+      var body = openModal('ایمیل گروهی به ' + fmtNum(ids.length) + ' مشتری', emailFormHtml(boxes, '') +
+        '<p class="note">برای هر مشتری به اولین ایمیل ثبت‌شده ارسال می‌شود؛ مشتریان بدون ایمیل «ناموفق» شمرده می‌شوند. دکمهٔ توقف دارد.</p>',
+        [{ label: 'ارسال به همه', onClick: function () {
+          var subject = q('[data-f="subject"]', body).value.trim(), content = q('[data-f="content"]', body).value.trim(), box = q('[data-f="box"]', body).value;
+          if (!subject || !content) { toast('موضوع و متن الزامی است', true); return; }
+          store('email_box', box); closeModal();
+          bulkNative(ids, function (cid) { return api('email_send', { id: cid, box_id: box || undefined, subject: subject, content: content }); }, 'ارسال ایمیل گروهی');
+        } }, { label: 'لغو', cls: 'secondary' }], { wide: true });
+      q('[data-f="subject"]', body).focus();
+    }).catch(function (e) { toast('صندوق‌های ایمیل: ' + e.message, true); });
+  }
+
   /* ============================== excel export ============================== */
   function exportRows(rows, name) {
     if (!rows.length) { toast('ردیفی برای خروجی وجود ندارد', true); return; }
@@ -1089,7 +1156,7 @@
       (hasSiteId(c.comment) ? '<button type="button" class="btn small" data-act="site" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '" title="اجرای بات نمایش مشتری در سایت">🌐 نمایش در سایت</button>' : '<button type="button" class="btn small secondary" disabled title="در توضیحات این مشتری «شناسه سایت» ثبت نشده است">🌐 نمایش در سایت</button>') +
       '</div><div class="row">' +
       (mobile ? '<a class="btn small secondary" href="tel:' + esc(mobile) + '">☎ تماس</a><button type="button" class="btn small secondary" data-act="sms" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '">✉ پیامک</button>' : '') +
-      (email ? '<a class="btn small secondary" href="mailto:' + esc(email) + '">@ ایمیل</a>' : '') +
+      (email ? '<button type="button" class="btn small secondary" data-act="email" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '">@ ایمیل</button>' : '') +
       '<a class="btn small secondary" href="' + esc(c.links.events) + '" target="_blank" rel="noopener">📅 رویداد جدید ↗</a>' +
       '<a class="btn small secondary" href="' + esc(c.links.todo) + '" target="_blank" rel="noopener">☑ اقدام جدید ↗</a>' +
       '</div><div class="row">' +
@@ -1183,7 +1250,7 @@
     html += dl(pairs);
     html += '<div class="section-title">اطلاعات تماس</div><div class="cards">';
     html += '<div class="card"><div class="t">تلفن همراه</div>' + (c.mobiles.length ? c.mobiles.map(function (m) { return '<div><a href="tel:' + esc(m.value) + '">' + esc(m.value) + '</a> <button type="button" class="icon-btn" data-act="sms" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '" data-mobile="' + esc(m.value) + '">پیامک</button></div>'; }).join('') : '<div class="s">—</div>') + '</div>';
-    html += '<div class="card"><div class="t">ایمیل</div>' + (c.emails.length ? c.emails.map(function (m) { return '<div><a href="mailto:' + esc(m.value) + '">' + esc(m.value) + '</a>' + (m.verified ? ' <span class="badge accent">تأیید شده</span>' : '') + '</div>'; }).join('') : '<div class="s">—</div>') + '</div>';
+    html += '<div class="card"><div class="t">ایمیل</div>' + (c.emails.length ? c.emails.map(function (m) { return '<div><a href="mailto:' + esc(m.value) + '">' + esc(m.value) + '</a> <button type="button" class="icon-btn" data-act="email" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '" data-address="' + esc(m.value) + '">ارسال</button>' + (m.verified ? ' <span class="badge accent">تأیید شده</span>' : '') + '</div>'; }).join('') : '<div class="s">—</div>') + '</div>';
     html += '<div class="card"><div class="t">تلفن‌ها</div>' + (c.phones.length ? c.phones.map(function (m) { return '<div>' + esc(m.type_label) + ': <a href="tel:' + esc(m.value) + '">' + esc(m.value) + '</a></div>'; }).join('') : '<div class="s">—</div>') + '</div>';
     html += '<div class="card"><div class="t">' + (c.type === 4 ? 'شناسهٔ ملی' : 'کد ملی') + '</div>' + (c.national_codes.length ? c.national_codes.map(function (m) { return '<div>' + esc(m.value) + '</div>'; }).join('') : '<div class="s">—</div>') + '</div>';
     html += '</div>';
@@ -1331,7 +1398,7 @@
     if (tab === 'todo') { head += link(c.links.todo, '☑ اقدام جدید ↗').replace('<a ', '<a class="btn small" '); }
     if (tab === 'events') { head += link(c.links.events, '📅 رویداد جدید ↗').replace('<a ', '<a class="btn small" '); }
     if (tab === 'sms' && c.mobiles[0]) { head += '<button type="button" class="btn small" data-act="sms" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '">✉ پیامک جدید</button>'; }
-    if (tab === 'emails' && c.emails[0]) { head += '<a class="btn small" href="mailto:' + esc(c.emails[0].value) + '">@ ایمیل جدید</a>'; }
+    if (tab === 'emails' && c.emails[0]) { head += '<button type="button" class="btn small" data-act="email" data-id="' + esc(c.id) + '" data-name="' + esc(c.full_name) + '">@ ایمیل جدید</button>'; }
     head += '<button type="button" class="btn small secondary" data-act="reload-tab">⟳</button>' + (nativeLink ? link(nativeLink, 'در تیم‌یار ↗').replace('<a ', '<a class="btn small secondary" ') : '') + '</div></div>';
 
     if (tab === 'sales') {
@@ -1570,6 +1637,7 @@
       '<li><b>انتخاب گروهی:</b> با تیک ردیف‌ها نوار عملیات ظاهر می‌شود: برگزیده، تغییر رده، تأیید، انتقال به حذف‌شده‌ها/بازگرداندن/حذف نهایی و خروجی Excel انتخاب‌شده‌ها. هر رکورد جدا اجرا و نتیجه‌اش (موفق/ناموفق) شمرده می‌شود؛ دکمهٔ توقف دارد.</li>' +
       '<li><b>عملیات هر ردیف:</b> 👁 بررسی، ✎ ویرایش، ★ برگزیده، ✎+ توضیحات جدید، ✉ پیامک، 🌐 نمایش در سایت، ⋯ منوی بیشتر (مطلع، رده، اشتراک، چاپ، پرینت پاکتی، تأیید، حذف).</li>' +
       '<li><b>✉ پیامک:</b> در هدر پروفایل، کارت شماره‌های همراه، تب پیامک و عملیات ردیف، پنجرهٔ نگارش باز می‌شود: انتخاب شمارهٔ گیرنده از شماره‌های ثبت‌شدهٔ مشتری، صندوق پیامک (پیش‌فرض قابل تغییر و به‌خاطرسپاری) و متن با شمارندهٔ نویسه/بخش. ارسال با API رسمی پیامک تیم‌یار انجام و در تب «پیامک» مشتری ثبت می‌شود. با انتخاب چند ردیف، «پیامک گروهی» یک متن را به همه (اولین شمارهٔ هر مشتری) با شمارندهٔ موفق/ناموفق و دکمهٔ توقف می‌فرستد.</li>' +
+      '<li><b>@ ایمیل:</b> در هدر پروفایل، کارت ایمیل‌ها، تب ایمیل و عملیات ردیف، پنجرهٔ نگارش: گیرنده از ایمیل‌های ثبت‌شدهٔ مشتری، صندوق فرستنده (صندوق‌های شخصی شما در ماژول پست یا پیش‌فرض تیم‌یار)، موضوع و متن ساده. ارسال با API رسمی پست انجام می‌شود. «ایمیل گروهی» در نوار انتخاب، یک ایمیل را به اولین ایمیل هر مشتری انتخاب‌شده می‌فرستد.</li>' +
       '<li><b>🌐 نمایش در سایت:</b> اجرای بات ۴۸۶ برای مشتریانی که در توضیحاتشان «شناسه سایت:…» ثبت شده؛ صفحهٔ مشتری در پنل سایت داخل پنجره باز می‌شود و با «باز کردن در تب جدید» جدا هم می‌شود. در هدر پروفایل، عملیات ردیف، منوی ⋯ و تب ابزارها در دسترس است. ورود به سایت (بات ۳۹۸) هنگام باز شدن ماژول در پس‌زمینه انجام می‌شود و پیش از هر نمایش هم بررسی می‌شود؛ اگر باز هم فرم ورود سایت را دیدید، «ورود مجدد به سایت» را بزنید.</li>' +
       '<li><b>پروفایل مشتری:</b> هدر با اطلاعات کلیدی و دکمه‌های سریع، شاخص‌ها (فروش خالص، فاکتورها، برگشت، آخرین فاکتور، اقدام‌های باز، رویدادها، توضیحات، مطلعین) و تب‌ها: بررسی، رابط‌ها، رده/بخش، مطلع، فروش (با زیرتب نوع و جمع مبلغ)، خرید، اقدام، توضیحات، اسناد، ایمیل، پیامک، گفتگو، رویدادها، نظرسنجی، پروژه، فایل‌های صوتی، تاریخچه و ابزارها. سرستون جدول‌های تب‌ها مرتب‌سازی سمت کلاینت دارند.</li>' +
       '<li><b>ویرایش / مشتری جدید:</b> فرم چندتبی (عمومی، تماس، جزئیات، آدرس، سایر). قبل از ثبت خلاصه تأیید می‌شود و ثبت از طریق API رسمی ماژول مشتری انجام می‌شود؛ هر خطای اعتبارسنجی کل ثبت را متوقف می‌کند (ثبت ناقص انجام نمی‌شود).</li>' +

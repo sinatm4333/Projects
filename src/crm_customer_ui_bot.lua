@@ -1,5 +1,7 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/14 10:10
+-- Last Edit = 1405/06/14 11:30
+-- version= 7.1 (رفع: صندوق‌های ایمیل با TRASH_STATUS=1 (مثل info@) واقعاً فعال‌اند — فیلتر حذف شد؛ مرتب‌سازی صندوق‌ها بر اساس پیش‌فرض و تعداد ارسال)
+-- version= 7.0 (درخواست کاربر: ارسال واقعی ایمیل از پروفایل/لیست با /api/email/emailmsgadd (ماژول ۱۲) — پنجرهٔ نگارش با گیرنده از ایمیل‌های مشتری، صندوق شخصی کاربر، موضوع و متن؛ ایمیل گروهی)
 -- version= 6.0 (درخواست کاربر: ارسال واقعی پیامک از پروفایل/لیست با /api/sms/send (ماژول ۱۶) — پنجرهٔ نگارش با انتخاب شماره و صندوق، شمارندهٔ نویسه، ارسال گروهی از انتخاب لیست)
 -- version= 5.3 (بازخورد کاربر: سورت قابل مشاهده روی همهٔ سرستون‌ها (نشانهٔ ⇅) + کنترل «مرتب‌سازی» ستون/جهت بالای هر جدول برای موبایل که سرستون ندارد)
 -- version= 5.2 (اعتبار لاگین سایت = ۲ روز (نشست mobile140) و ذخیره در localStorage — بات ۳۹۸ فقط بعد از انقضا یا با «ورود مجدد» دوباره اجرا می‌شود)
@@ -49,7 +51,7 @@ local CONFIG = {
     DB_SCHEMA        = "0000000",
     BASE_URL         = "https://erp.bimehland.com",
     BOT_RUN_PATH     = "443/crm_customer_ui_v01",
-    ASSET_VERSION    = "6.0.0",
+    ASSET_VERSION    = "7.1.0",
     CRM_MODULE_ID    = 14,
     -- بات ۴۸۶ «show crm saite»: با client_id، صفحهٔ مشتری در سایت (mobile140.com/dashboard/users/customer/<شناسه سایت>) را
     -- از روی crm_info.COMMENT («شناسه سایت:NNN») در iframe نشان می‌دهد. GET با query هم کار می‌کند (تست زنده ۱۴۰۵/۰۶/۱۲).
@@ -1688,6 +1690,68 @@ local function action_sms_send()
 end
 
 -- =========================================
+-- EMAIL (ماژول ۱۲) — ارسال از پروفایل/لیست با /api/email/emailmsgadd (همان payload کارکردهٔ بات‌های ۳۵۲/۳۹۱/۴۴۲)
+-- =========================================
+local EMAIL_MAX_CHARS = 20000
+
+local function action_email_boxes()
+    -- صندوق‌های ایمیل کاربر جاری (email_box.AUTHOR_ID). TRASH_STATUS فیلتر نمی‌شود: صندوق ۱۹ (info@) با TRASH_STATUS=1
+    -- فعال‌ترین فرستنده است (۶۷۳ ارسال) — آن ستون «حذف‌شده» نیست. DEFAULT_BOX=1 پیش‌فرض؛ پرکارترین‌ها اول.
+    local rows = fetch_rows([[
+SELECT b.ID, b.NAME, b.EMAIL, b.DEFAULT_BOX,
+       (SELECT COUNT(*) FROM email_message m WHERE m.BOX_ID = b.ID AND m.SEND_FLAG = 1) AS sent
+FROM email_box b
+WHERE b.AUTHOR_ID = ? AND COALESCE(b.EMAIL,'') <> ''
+ORDER BY b.DEFAULT_BOX DESC, sent DESC, b.ID]], { current_user_id }) or {}
+    return { ok = true, boxes = rows_to_objects(rows, function(r) return { id = to_int(r[1]), name = nz(r[2], "") , email = nz(r[3], ""), is_default = to_int(r[4]) == 1 } end) }
+end
+
+local function action_email_send()
+    local client_id = to_positive_int(inp("id"))
+    local address = trim(inp("address") or "")
+    local subject = trim(inp("subject") or "")
+    local content = trim(inp("content") or "")
+    local box_id = to_positive_int(inp("box_id"))
+    if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
+    if subject == "" then return { ok = false, error = "موضوع ایمیل خالی است" } end
+    if content == "" then return { ok = false, error = "متن ایمیل خالی است" } end
+    if #content > EMAIL_MAX_CHARS then return { ok = false, error = "متن ایمیل بیش از حد بلند است" } end
+    local exists = fetch_scalar("SELECT COUNT(*) FROM crm_info WHERE ID = ? AND DELETED = 0", { client_id })
+    if tonumber(exists) ~= 1 then return { ok = false, error = "مشتری یافت نشد یا حذف شده است" } end
+    -- گیرنده باید یکی از ایمیل‌های ثبت‌شدهٔ همان مشتری باشد (خالی => اولین ایمیل)
+    local email_rows = fetch_rows("SELECT EMAIL FROM profile_email WHERE USER_ID = ? ORDER BY ID", { client_id }) or {}
+    if #email_rows == 0 then return { ok = false, error = "برای این مشتری ایمیلی ثبت نشده است" } end
+    local chosen = nil
+    for _, r in ipairs(email_rows) do
+        local e = trim(r[1] or "")
+        if e ~= "" and (address == "" or e:lower() == address:lower()) then chosen = e; break end
+    end
+    if chosen == nil then return { ok = false, error = "ایمیل انتخاب‌شده متعلق به این مشتری نیست" } end
+    if box_id ~= nil then
+        local box_ok = fetch_scalar("SELECT COUNT(*) FROM email_box WHERE ID = ? AND AUTHOR_ID = ? AND COALESCE(EMAIL,'') <> ''", { box_id, current_user_id })
+        if tonumber(box_ok) ~= 1 then return { ok = false, error = "صندوق ایمیل نامعتبر است یا متعلق به شما نیست" } end
+    end
+    -- متن ساده به HTML امن (خطوط جدید => <br>)؛ هیچ HTML خام کاربر عبور نمی‌کند
+    local html_content = escape_html(content):gsub("\r\n", "\n"):gsub("\n", "<br>")
+    local payload = { address = chosen, email_subject = subject, email_content = html_content }
+    if box_id ~= nil then payload.box_id = box_id end
+    local ok, res = pcall(function() return teamyar.call_api(12, "/api/email/emailmsgadd", payload) end)
+    if not ok or _G.type(res) ~= "table" then
+        teamyar.write_log("crm_customer_ui email_send call error: " .. tostring(res))
+        return { ok = false, error = "خطا در فراخوانی سرویس ایمیل: " .. tostring(res) }
+    end
+    if res.success ~= true then
+        local msg = res.error
+        if _G.type(msg) == "table" then msg = msg.message or json.encode(msg) end
+        local translations = { ERR_INVALID_BOX = "صندوق ایمیل نامعتبر است (تنظیمات ارسال صندوق را در ماژول پست بررسی کنید)", SUBJECT_EMPTY = "موضوع ایمیل خالی است" }
+        return { ok = false, error = "ارسال ناموفق: " .. (translations[tostring(msg)] or tostring(msg or "خطای نامشخص")), api = res }
+    end
+    local message_id = res.data and res.data.email_message_id or nil
+    teamyar.write_log("crm_customer_ui email_send ok client=" .. client_id .. " to=" .. chosen .. " by user=" .. current_user_id .. " msg=" .. tostring(message_id))
+    return { ok = true, address = chosen, message_id = message_id }
+end
+
+-- =========================================
 -- SHELL HTML
 -- =========================================
 local function render_shell()
@@ -1755,6 +1819,8 @@ local ACTIONS = {
     whoami        = function() return { ok = true, user_id = current_user_id, version = CONFIG.ASSET_VERSION } end,
     sms_boxes     = action_sms_boxes,
     sms_send      = action_sms_send,
+    email_boxes   = action_email_boxes,
+    email_send    = action_email_send,
 }
 
 local function main()
