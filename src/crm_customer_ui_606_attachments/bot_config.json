@@ -1,0 +1,11 @@
+{"info": [
+  {"name": "sms_users", "type": "string", "title": "پیامک — شناسهٔ کاربران مجاز (کاماجدا؛ خالی = هر کسی که به ماژول پیامک دسترسی دارد)", "disable": 0, "direction": "", "not_empty": 0, "range_length": {"value": null, "value2": null}, "dependency_dis": "", "dependency_dis_val": ""},
+  {"name": "sms_groups", "type": "string", "title": "پیامک — شناسهٔ گروه‌های مجاز (کاماجدا؛ اعضای گروه‌های پروفایل)", "disable": 0, "direction": "", "not_empty": 0, "range_length": {"value": null, "value2": null}, "dependency_dis": "", "dependency_dis_val": ""},
+  {"name": "email_users", "type": "string", "title": "ایمیل — شناسهٔ کاربران مجاز (کاماجدا؛ خالی = هر کسی که به ماژول پست دسترسی یا صندوق دارد)", "disable": 0, "direction": "", "not_empty": 0, "range_length": {"value": null, "value2": null}, "dependency_dis": "", "dependency_dis_val": ""},
+  {"name": "email_groups", "type": "string", "title": "ایمیل — شناسهٔ گروه‌های مجاز (کاماجدا)", "disable": 0, "direction": "", "not_empty": 0, "range_length": {"value": null, "value2": null}, "dependency_dis": "", "dependency_dis_val": ""}
+], "layout": {"col": "COL-1", "seperator": "", "width_title": 4}, "schema": {
+  "sms_users": {"type": "string", "validate": {"opr": 4, "value": null, "value2": null}, "not_empty": 0},
+  "sms_groups": {"type": "string", "validate": {"opr": 4, "value": null, "value2": null}, "not_empty": 0},
+  "email_users": {"type": "string", "validate": {"opr": 4, "value": null, "value2": null}, "not_empty": 0},
+  "email_groups": {"type": "string", "validate": {"opr": 4, "value": null, "value2": null}, "not_empty": 0}
+}, "default_value": {"sms_users": "", "sms_groups": "", "email_users": "", "email_groups": ""}}

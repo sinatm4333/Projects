@@ -1,5 +1,6 @@
 -- تحلیل و ایجاد توسط سینا مقدم 09121011778
--- Last Edit = 1405/06/14 12:20
+-- Last Edit = 1405/06/14 13:30
+-- version= 8.1 (درخواست کاربر: کنترل دسترسی ارسال پیامک/ایمیل — فهرست کاربران/گروه‌های مجاز از «پیکربندی بات»، fallback به دسترسی ماژول بومی؛ اعمال در سرور و پنهان‌سازی دکمه‌ها در UI)
 -- version= 8.0 (درخواست کاربر: سوییچ نمای جدولی/کارتی/خودکار برای همهٔ جدول‌ها (نوار بالا + کنار هر جدول، ذخیره در مرورگر) و حالت روز/شب با همان پالت)
 -- version= 7.1 (رفع: صندوق‌های ایمیل با TRASH_STATUS=1 (مثل info@) واقعاً فعال‌اند — فیلتر حذف شد؛ مرتب‌سازی صندوق‌ها بر اساس پیش‌فرض و تعداد ارسال)
 -- version= 7.0 (درخواست کاربر: ارسال واقعی ایمیل از پروفایل/لیست با /api/email/emailmsgadd (ماژول ۱۲) — پنجرهٔ نگارش با گیرنده از ایمیل‌های مشتری، صندوق شخصی کاربر، موضوع و متن؛ ایمیل گروهی)
@@ -52,7 +53,7 @@ local CONFIG = {
     DB_SCHEMA        = "0000000",
     BASE_URL         = "https://erp.bimehland.com",
     BOT_RUN_PATH     = "443/crm_customer_ui_v01",
-    ASSET_VERSION    = "8.0.0",
+    ASSET_VERSION    = "8.1.0",
     CRM_MODULE_ID    = 14,
     -- بات ۴۸۶ «show crm saite»: با client_id، صفحهٔ مشتری در سایت (mobile140.com/dashboard/users/customer/<شناسه سایت>) را
     -- از روی crm_info.COMMENT («شناسه سایت:NNN») در iframe نشان می‌دهد. GET با query هم کار می‌کند (تست زنده ۱۴۰۵/۰۶/۱۲).
@@ -357,6 +358,7 @@ local function inp(name) return scalar_input(input[name]) end
 
 local action = trim(inp("action") or inp("cu_action") or "")
 
+local permissions_summary -- تعریف در بخش ACCESS CONTROL (پایین‌تر)؛ اعلان پیشین چون action_tree زودتر آن را صدا می‌زند
 local current_user_id = 0
 do
     local ok, uinfo = pcall(function() return teamyar.get_user_info() end)
@@ -867,6 +869,7 @@ SELECT (SELECT COUNT(*) FROM crm_info WHERE DELETED = 0),
             person = tonumber(totals[7]) or 0, business = tonumber(totals[8]) or 0,
         },
         current_user_id = current_user_id,
+        perms = permissions_summary(),
     }
 end
 
@@ -1640,12 +1643,79 @@ local function action_relation_get(relation)
 end
 
 -- =========================================
+-- ACCESS CONTROL — حق ارسال پیامک/ایمیل (قابل تنظیم از پنل «پیکربندی بات»)
+-- =========================================
+-- دسترسی ماژول‌های بومی جداست (sms_ty_permission روی هر صندوق پیامک، email_ty_permission روی هر صندوق ایمیل)، ولی
+-- تحلیل زنده (۱۴۰۵/۰۶/۱۴) نشان داد بسیاری از فرستنده‌های واقعی هیچ ردیف مجوز روی صندوق ندارند و معنی بیت‌های PERM/ارث‌بری
+-- گروهی معلوم نیست — پس آن جدول‌ها «حق ارسال» را قابل‌اعتماد نمی‌گویند. قاعدهٔ این بات:
+--   ۱) اگر در پیکربندی بات فهرست مجاز تعریف شده باشد (sms_users/sms_groups، email_users/email_groups؛ شناسه‌های
+--      کاماجدا)، فقط همان کاربران یا اعضای همان گروه‌ها (profile_group_member) مجازند.
+--   ۲) در غیر این صورت (فهرست خالی) fallback = «دسترسی به ماژول»: داشتن هر ردیف در sms_ty_permission (پیامک) یا
+--      هر ردیف در email_ty_permission یا مالکیت یک صندوق ایمیل (ایمیل).
+-- کنترل هم در سرور (هر ارسال) و هم در UI (پنهان‌کردن دکمه‌ها) اعمال می‌شود؛ سرور مرجع است.
+local function parse_id_list(raw)
+    local ids = {}
+    for token in tostring(raw or ""):gmatch("%d+") do table.insert(ids, tonumber(token)) end
+    return ids
+end
+
+local access_config = nil
+local function get_access_config()
+    if access_config ~= nil then return access_config end
+    access_config = { sms_users = {}, sms_groups = {}, email_users = {}, email_groups = {} }
+    local ok, cfg = pcall(function() return teamyar.get_config() end)
+    if ok and _G.type(cfg) == "table" and _G.type(cfg.data) == "table" then
+        for key, _ in pairs(access_config) do access_config[key] = parse_id_list(cfg.data[key]) end
+    end
+    return access_config
+end
+
+local function user_in_lists(user_ids, group_ids)
+    for _, uid in ipairs(user_ids) do if uid == current_user_id then return true end end
+    if #group_ids > 0 then
+        local n = fetch_scalar("SELECT COUNT(*) FROM profile_group_member WHERE USER_ID = ? AND GROUP_ID IN " .. id_list_sql(group_ids), { current_user_id })
+        if tonumber(n) and tonumber(n) > 0 then return true end
+    end
+    return false
+end
+
+local perm_cache = {}
+local function can_send(kind)
+    if perm_cache[kind] ~= nil then return perm_cache[kind] end
+    local cfg = get_access_config()
+    local users, groups = cfg[kind .. "_users"], cfg[kind .. "_groups"]
+    local allowed
+    if #users > 0 or #groups > 0 then
+        allowed = user_in_lists(users, groups)
+    elseif kind == "sms" then
+        allowed = (tonumber(fetch_scalar("SELECT COUNT(*) FROM sms_ty_permission WHERE USER_ID = ?", { current_user_id })) or 0) > 0
+    else
+        allowed = (tonumber(fetch_scalar("SELECT (SELECT COUNT(*) FROM email_ty_permission WHERE USER_ID = ?) + (SELECT COUNT(*) FROM email_box WHERE AUTHOR_ID = ? AND COALESCE(EMAIL,'') <> '')", { current_user_id, current_user_id })) or 0) > 0
+    end
+    perm_cache[kind] = allowed and true or false
+    return perm_cache[kind]
+end
+
+permissions_summary = function()
+    local cfg = get_access_config()
+    return {
+        can_sms = can_send("sms"), can_email = can_send("email"),
+        sms_mode = (#cfg.sms_users > 0 or #cfg.sms_groups > 0) and "list" or "module",
+        email_mode = (#cfg.email_users > 0 or #cfg.email_groups > 0) and "list" or "module",
+    }
+end
+
+local ACCESS_DENIED_SMS = "شما مجوز ارسال پیامک از این ماژول را ندارید (تنظیم در پیکربندی بات یا دسترسی ماژول پیامک)"
+local ACCESS_DENIED_EMAIL = "شما مجوز ارسال ایمیل از این ماژول را ندارید (تنظیم در پیکربندی بات یا دسترسی ماژول پست)"
+
+-- =========================================
 -- SMS (ماژول ۱۶) — ارسال پیامک از پروفایل/لیست با API رسمی؛ همان payload تأییدشدهٔ بات‌های ۵۰۱/۳۷۱/۳۵۲
 -- =========================================
 local SMS_MAX_CHARS = 1000
 local SMS_MODULE_SENDER = 26 -- «باتی»: همان module_id که بات‌های پیامکی این سامانه ارسال می‌کنند
 
 local function action_sms_boxes()
+    if not can_send("sms") then return { ok = false, error = ACCESS_DENIED_SMS } end
     local rows = fetch_rows("SELECT ID, NAME, IS_DEFAULT FROM sms_box WHERE ENABLE = 1 ORDER BY IS_DEFAULT DESC, ID", {}) or {}
     return { ok = true, boxes = rows_to_objects(rows, function(r) return { id = to_int(r[1]), name = nz(r[2], "صندوق " .. tostring(r[1])), is_default = to_int(r[3]) == 1 } end) }
 end
@@ -1655,6 +1725,7 @@ local function action_sms_send()
     local content = trim(inp("content") or "")
     local box_id = to_positive_int(inp("box_id"))
     local mobile = digits_only(inp("mobile"))
+    if not can_send("sms") then return { ok = false, error = ACCESS_DENIED_SMS } end
     if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
     if content == "" then return { ok = false, error = "متن پیامک خالی است" } end
     if #content > SMS_MAX_CHARS then return { ok = false, error = "متن پیامک بیش از حد بلند است" } end
@@ -1696,6 +1767,7 @@ end
 local EMAIL_MAX_CHARS = 20000
 
 local function action_email_boxes()
+    if not can_send("email") then return { ok = false, error = ACCESS_DENIED_EMAIL } end
     -- صندوق‌های ایمیل کاربر جاری (email_box.AUTHOR_ID). TRASH_STATUS فیلتر نمی‌شود: صندوق ۱۹ (info@) با TRASH_STATUS=1
     -- فعال‌ترین فرستنده است (۶۷۳ ارسال) — آن ستون «حذف‌شده» نیست. DEFAULT_BOX=1 پیش‌فرض؛ پرکارترین‌ها اول.
     local rows = fetch_rows([[
@@ -1713,6 +1785,7 @@ local function action_email_send()
     local subject = trim(inp("subject") or "")
     local content = trim(inp("content") or "")
     local box_id = to_positive_int(inp("box_id"))
+    if not can_send("email") then return { ok = false, error = ACCESS_DENIED_EMAIL } end
     if client_id == nil then return { ok = false, error = "شناسهٔ مشتری نامعتبر است" } end
     if subject == "" then return { ok = false, error = "موضوع ایمیل خالی است" } end
     if content == "" then return { ok = false, error = "متن ایمیل خالی است" } end
@@ -1817,7 +1890,7 @@ local ACTIONS = {
     -- مطلع/مسئول: فقط خواندن از API؛ نوشتن در کلاینت با POST هم‌مبدأ /crm/client/assign/ (type 0 مطلع، 2 مسئول)
     assign_get    = function() return action_relation_get("assign") end,
     responsible_get = function() return action_relation_get("responsible") end,
-    whoami        = function() return { ok = true, user_id = current_user_id, version = CONFIG.ASSET_VERSION } end,
+    whoami        = function() return { ok = true, user_id = current_user_id, version = CONFIG.ASSET_VERSION, perms = permissions_summary() } end,
     sms_boxes     = action_sms_boxes,
     sms_send      = action_sms_send,
     email_boxes   = action_email_boxes,

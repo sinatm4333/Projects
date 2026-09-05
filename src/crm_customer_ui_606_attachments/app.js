@@ -123,6 +123,14 @@
   function cycleViewMode() { var order = ['auto', 'table', 'cards']; setViewMode(order[(order.indexOf(viewMode()) + 1) % order.length]); }
   window.addEventListener('resize', debounce(applyViewMode, 150));
 
+  // مجوز ارسال پیامک/ایمیل (سرور مرجع است؛ این‌جا فقط دکمه‌ها پنهان می‌شوند). تا زمان بارگذاری tree، مجاز فرض می‌شود.
+  function can(kind) { var p = state.tree && state.tree.perms; if (!p) { return true; } return kind === 'sms' ? p.can_sms !== false : p.can_email !== false; }
+  function applyPermissions() {
+    if (!state.tree || !state.tree.perms) { return; }
+    if (!can('sms')) { qa('[data-act="sms"], [data-act="bulk-sms"]').forEach(function (b) { b.remove(); }); }
+    if (!can('email')) { qa('[data-act="email"], [data-act="bulk-email"]').forEach(function (b) { b.remove(); }); }
+  }
+
   function themeName() {
     var t = store('theme');
     if (t === 'dark' || t === 'light') { return t; }
@@ -337,7 +345,7 @@
     sideEl.addEventListener('click', onSideClick);
     // هر جدولی که در main رندر شود خودکار سورت/فیلتر/برچسب موبایل می‌گیرد (بدون وابستگی به محل رندر)
     if (window.MutationObserver) {
-      new MutationObserver(function () { enhanceTables(mainEl); qa('table.grid', mainEl).forEach(function (t) { if (t.__relabel) { t.__relabel(); } if (t.__applyHidden) { t.__applyHidden(); } }); }).observe(mainEl, { childList: true, subtree: true });
+      new MutationObserver(function () { enhanceTables(mainEl); qa('table.grid', mainEl).forEach(function (t) { if (t.__relabel) { t.__relabel(); } if (t.__applyHidden) { t.__applyHidden(); } }); applyPermissions(); }).observe(mainEl, { childList: true, subtree: true });
     }
     // موبایل: پنل رده‌ها پیش‌فرض بسته (دراپ‌داون رده در نوار جستجو جایگزین آن است)
     if (window.innerWidth < 900 && store('side') === null) { layoutEl.classList.add('side-collapsed'); }
@@ -350,7 +358,7 @@
   /* ============================== side tree ============================== */
   function loadTree(force) {
     if (state.tree && !force) { return Promise.resolve(state.tree); }
-    return api('tree').then(function (d) { state.tree = d; renderSide(); updateQuickCounts(); return d; }).catch(function (e) { sideEl.innerHTML = '<div class="error-box">' + esc(e.message) + '</div>'; });
+    return api('tree').then(function (d) { state.tree = d; renderSide(); updateQuickCounts(); applyPermissions(); return d; }).catch(function (e) { sideEl.innerHTML = '<div class="error-box">' + esc(e.message) + '</div>'; });
   }
   function updateQuickCounts() {
     if (!state.tree) { return; }
