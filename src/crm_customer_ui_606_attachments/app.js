@@ -109,6 +109,33 @@
   }
   function debounce(fn, ms) { var t; return function () { var a = arguments, s = this; clearTimeout(t); t = setTimeout(function () { fn.apply(s, a); }, ms); }; }
 
+  /* ============================== نمای جدول (جدولی/کارتی/خودکار) + حالت روز/شب ============================== */
+  var VIEW_MODES = { auto: 'خودکار', table: 'جدولی', cards: 'کارتی' };
+  function viewMode() { var v = store('view_mode'); return VIEW_MODES[v] ? v : 'auto'; }
+  function cardsActive() { var m = viewMode(); return m === 'cards' || (m === 'auto' && window.innerWidth < 700); }
+  function applyViewMode() {
+    var on = cardsActive();
+    qa('.table-wrap.cardable').forEach(function (w) { w.classList.toggle('cards-on', on); });
+    qa('[data-role="view-mode-label"]').forEach(function (s) { s.textContent = VIEW_MODES[viewMode()]; });
+    qa('[data-role="tf-view"]').forEach(function (b) { b.textContent = on ? '☷ جدولی' : '▦ کارتی'; b.title = on ? 'نمایش به‌صورت جدول' : 'نمایش به‌صورت کارت'; });
+  }
+  function setViewMode(mode) { store('view_mode', mode); applyViewMode(); toast('نمای جدول‌ها: ' + VIEW_MODES[mode]); }
+  function cycleViewMode() { var order = ['auto', 'table', 'cards']; setViewMode(order[(order.indexOf(viewMode()) + 1) % order.length]); }
+  window.addEventListener('resize', debounce(applyViewMode, 150));
+
+  function themeName() {
+    var t = store('theme');
+    if (t === 'dark' || t === 'light') { return t; }
+    try { return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; } catch (e) { return 'light'; }
+  }
+  function applyTheme() {
+    var dark = themeName() === 'dark';
+    root.classList.toggle('theme-dark', dark);
+    try { document.body.style.background = dark ? '#111' : ''; } catch (e) { }
+    qa('[data-act="theme"]').forEach(function (b) { b.textContent = dark ? '☀ حالت روز' : '🌙 حالت شب'; });
+  }
+  function toggleTheme() { store('theme', themeName() === 'dark' ? 'light' : 'dark'); applyTheme(); }
+
   /* ============================== toasts ============================== */
   var toastBox = el('div', { 'class': 'toasts' });
   document.body.appendChild(toastBox);
@@ -278,6 +305,8 @@
       '<button type="button" class="btn ghost" data-act="toggle-side" title="نمایش/پنهان کردن پنل رده‌ها">☰ رده‌ها</button>' +
       '<button type="button" class="btn ghost" data-act="new-client">＋ مشتری جدید</button>' +
       '<button type="button" class="btn ghost" data-act="export">خروجی Excel</button>' +
+      '<button type="button" class="btn ghost" data-act="view-mode" title="نمای جدول‌ها: خودکار / جدولی / کارتی">نما: <span data-role="view-mode-label"></span></button>' +
+      '<button type="button" class="btn ghost" data-act="theme"></button>' +
       '<button type="button" class="btn ghost" data-act="fullscreen">تمام صفحه</button>' +
       '<button type="button" class="btn ghost" data-act="help">راهنما</button>' +
       '</div>';
@@ -300,7 +329,11 @@
       if (act === 'export') { exportExcel(); }
       if (act === 'fullscreen') { root.classList.toggle('is-fullscreen'); b.textContent = root.classList.contains('is-fullscreen') ? 'خروج از تمام صفحه' : 'تمام صفحه'; }
       if (act === 'help') { showHelp(); }
+      if (act === 'view-mode') { cycleViewMode(); }
+      if (act === 'theme') { toggleTheme(); }
     });
+    applyTheme();
+    applyViewMode();
     sideEl.addEventListener('click', onSideClick);
     // هر جدولی که در main رندر شود خودکار سورت/فیلتر/برچسب موبایل می‌گیرد (بدون وابستگی به محل رندر)
     if (window.MutationObserver) {
@@ -1342,9 +1375,13 @@
     var sortOpts = '<option value="">مرتب‌سازی…</option>' + ths.map(function (th, i) { return (labels[i] && (th.hasAttribute('data-sort') || th.hasAttribute('data-lsort'))) ? '<option value="' + i + '">' + esc(labels[i]) + '</option>' : ''; }).join('');
     bar.innerHTML = '<input type="search" placeholder="فیلتر در این جدول…" aria-label="فیلتر جدول"><span class="note" data-role="tf-count"></span>' +
       '<span class="tf-sort"><select data-role="tf-sort" aria-label="مرتب‌سازی">' + sortOpts + '</select><button type="button" class="icon-btn" data-role="tf-dir" data-dir="asc" title="جهت مرتب‌سازی">↑ صعودی</button></span>' +
-      '<button type="button" class="btn small secondary" data-role="tf-cols" title="پنهان/نمایش ستون‌های این جدول">ستون‌ها</button>';
+      '<button type="button" class="btn small secondary" data-role="tf-cols" title="پنهان/نمایش ستون‌های این جدول">ستون‌ها</button>' +
+      '<button type="button" class="btn small secondary" data-role="tf-view"></button>';
     wrap.parentNode.insertBefore(bar, wrap);
     wrap.classList.add('cardable');
+    // سوییچ جدولی/کارتی (تنظیم سراسری کاربر؛ «خودکار» = کارتی فقط روی صفحهٔ باریک)
+    q('[data-role="tf-view"]', bar).addEventListener('click', function () { setViewMode(cardsActive() ? 'table' : 'cards'); });
+    applyViewMode();
     var sortSel = q('[data-role="tf-sort"]', bar), dirBtn = q('[data-role="tf-dir"]', bar);
     function applySortControl() { var i = parseInt(sortSel.value, 10); if (isNaN(i)) { return; } sortByHeader(tbl, ths[i], dirBtn.getAttribute('data-dir')); }
     sortSel.addEventListener('change', applySortControl);
@@ -1642,6 +1679,8 @@
       '<li><b>پروفایل مشتری:</b> هدر با اطلاعات کلیدی و دکمه‌های سریع، شاخص‌ها (فروش خالص، فاکتورها، برگشت، آخرین فاکتور، اقدام‌های باز، رویدادها، توضیحات، مطلعین) و تب‌ها: بررسی، رابط‌ها، رده/بخش، مطلع، فروش (با زیرتب نوع و جمع مبلغ)، خرید، اقدام، توضیحات، اسناد، ایمیل، پیامک، گفتگو، رویدادها، نظرسنجی، پروژه، فایل‌های صوتی، تاریخچه و ابزارها. سرستون جدول‌های تب‌ها مرتب‌سازی سمت کلاینت دارند.</li>' +
       '<li><b>ویرایش / مشتری جدید:</b> فرم چندتبی (عمومی، تماس، جزئیات، آدرس، سایر). قبل از ثبت خلاصه تأیید می‌شود و ثبت از طریق API رسمی ماژول مشتری انجام می‌شود؛ هر خطای اعتبارسنجی کل ثبت را متوقف می‌کند (ثبت ناقص انجام نمی‌شود).</li>' +
       '<li><b>خروجی Excel:</b> در لیست، همهٔ ردیف‌های فیلتر فعال (تا ۳۰۰۰ ردیف) با ستون‌های نمایش‌داده‌شده؛ در پروفایل، تب فعال.</li>' +
+      '<li><b>نما (جدولی / کارتی / خودکار):</b> دکمهٔ «نما» در نوار بالا بین سه حالت می‌چرخد و برای همهٔ جدول‌ها ذخیره می‌شود؛ «خودکار» روی صفحهٔ باریک کارتی و روی دسکتاپ جدولی است. کنار فیلتر هر جدول هم دکمهٔ «▦ کارتی / ☷ جدولی» همان تنظیم را تغییر می‌دهد. در نمای کارتی، سورت از کنترل «مرتب‌سازی…» انجام می‌شود.</li>' +
+      '<li><b>حالت روز/شب:</b> دکمهٔ «🌙 حالت شب / ☀ حالت روز» در نوار بالا؛ پیش‌فرض از تنظیم سیستم شما گرفته می‌شود و انتخابتان در مرورگر ذخیره می‌شود.</li>' +
       '<li><b>تمام صفحه:</b> نمای بدون حاشیه؛ Escape پنجره‌ها را می‌بندد.</li>' +
       '<li><b>«↗»</b> یعنی صفحهٔ اصلی تیم‌یار در تب جدید باز می‌شود (برای مواردی که فرم اختصاصی پرتال لازم است: کاربر پورتال، پیش‌فاکتور/سفارش، VOIP…).</li>' +
       '</ul><p class="note">نسخهٔ ' + esc(CFG.version) + ' — تحلیل و ایجاد: سینا مقدم ۰۹۱۲۱۰۱۱۷۷۸</p>', null, { wide: true });
